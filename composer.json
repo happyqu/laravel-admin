@@ -1,0 +1,82 @@
+{
+    "name": "happyqu/laravel-admin",
+    "description": "Laravel Admin with customized frontend, global navigation and iframe tabs",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "admin",
+        "iframe",
+        "tabs"
+    ],
+    "require": {
+        "php": "^8.1",
+        "ext-fileinfo": "*",
+        "ext-dom": "*",
+        "laravel/framework": "^10.0|^11.0|^12.0|^13.0"
+    },
+    "replace": {
+        "encore/laravel-admin": "1.8.19"
+    },
+    "suggest": {
+        "intervention/image": "Required for image handling and manipulation (^2.7).",
+        "spatie/eloquent-sortable": "Required for orderable grids.",
+        "maatwebsite/excel": "Required for Excel exports (^3.1).",
+        "matthiasmullie/minify": "Required for the admin:minify command (^1.3)."
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5|^11.0|^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Encore\\Admin\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Encore\\Admin\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Encore\\Admin\\AdminServiceProvider"
+            ],
+            "aliases": {
+                "Admin": "Encore\\Admin\\Facades\\Admin"
+            }
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "build-field-assets": "@php tools/build-field-assets.php"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "archive": {
+        "exclude": [
+            "/vendor",
+            "/build",
+            "/examples",
+            "/docs",
+            "/composer.lock",
+            "/.env",
+            "/.env.*",
+            "/.idea",
+            "/.vscode",
+            "/.github",
+            "/.gitignore",
+            "/.gitattributes",
+            "/phpunit.xml.dist",
+            "/tests",
+            "/tools"
+        ]
+    },
+    "conflict": {
+        "ichynul/iframe-tabs": "*"
+    }
+}

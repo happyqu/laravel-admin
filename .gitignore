@@ -1,0 +1,22 @@
+/vendor/
+/composer.lock
+/build/
+/.idea/
+/.vscode/
+/.phpunit.cache/
+/.phpunit.result.cache
+
+# 本地环境与运行产物，避免把宿主配置、密钥或日志带进仓库
+.env
+.env.*
+!.env.example
+*.log
+Thumbs.db
+.DS_Store
+desktop.ini
+
+/examples/
+*.zip
+
+# 内部工作记录与基准数据，单独存放并忽略
+/docs/internal/
