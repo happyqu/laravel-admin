@@ -12,7 +12,7 @@ $(document).off('click', '.ie-content .ie-submit').on('click', '.ie-content .ie-
     var original = $trigger.data('original');
 
     if (val == original) {
-        $('[data-toggle="popover"]').popover('hide');
+        hideInlinePopovers();
         return;
     }
 
@@ -32,21 +32,21 @@ $(document).off('click', '.ie-content .ie-submit').on('click', '.ie-content .ie-
 
             {{ $slot }}
 
-            $trigger.data('value', val)
-                .data('original', val);
-
-            $('[data-toggle="popover"]').popover('hide');
+            $trigger.data('value', val).data('original', val);
+            hideInlinePopovers();
         },
         statusCode: {
-            422: function(xhr) {
+            422: function (xhr) {
                 $popover.find('.error').empty();
                 var errors = xhr.responseJSON.errors;
                 for (var key in errors) {
-                    $popover.find('.error').append('<div><i class="fa fa-times-circle-o"></i> '+errors[key]+'</div>')
+                    $popover.find('.error').append(
+                        $('<div>').append($('<i class="fa fa-times-circle-o"></i>')).append(' ' + errors[key])
+                    );
                 }
             },
-            401: function() {
-                $('[data-toggle="popover"]').popover('hide');
+            401: function () {
+                hideInlinePopovers();
             }
         }
     });

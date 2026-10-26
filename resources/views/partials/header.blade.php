@@ -1,4 +1,4 @@
-<nav class="app-header navbar navbar-expand">
+<nav class="app-header navbar navbar-expand navbar-static-top">
     <div class="container-fluid">
 
         <!-- Left navbar links -->

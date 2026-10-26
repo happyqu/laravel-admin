@@ -320,7 +320,7 @@ class Field implements Renderable
                 .'<div class="mailbox-attachment-info">'
                 .'<div class="mailbox-attachment-name"><i class="fa fa-paperclip"></i> '.e($name).'</div>'
                 .'<span class="mailbox-attachment-size">'.e($size).'&nbsp;'
-                .'<a href="'.e($url).'" class="btn btn-default btn-xs pull-right" target="_blank" '.$download.'>'
+                .'<a href="'.e($url).'" class="btn btn-outline-secondary btn-sm float-end" target="_blank" rel="noopener" '.$download.'>'
                 .'<i class="fa fa-cloud-download"></i></a></span></div></li></ul>';
         });
     }
@@ -358,9 +358,10 @@ class Field implements Renderable
             }
 
             $style = preg_match('/^[A-Za-z0-9_-]+$/', (string) $style) ? $style : 'success';
+            $style = ['blue' => 'primary', 'green' => 'success', 'red' => 'danger', 'yellow' => 'warning', 'aqua' => 'info', 'purple' => 'primary', 'black' => 'dark'][$style] ?? $style;
 
             return collect((array) $value)->map(function ($name) use ($style) {
-                return "<span class='label label-{$style}'>".e($name)."</span>";
+                return "<span class='badge text-bg-{$style}'>".e($name)."</span>";
             })->implode('&nbsp;');
         });
     }
@@ -380,9 +381,10 @@ class Field implements Renderable
             }
 
             $style = preg_match('/^[A-Za-z0-9_-]+$/', (string) $style) ? $style : 'blue';
+            $style = ['blue' => 'primary', 'green' => 'success', 'red' => 'danger', 'yellow' => 'warning', 'aqua' => 'info', 'purple' => 'primary', 'black' => 'dark'][$style] ?? $style;
 
             return collect((array) $value)->map(function ($name) use ($style) {
-                return "<span class='badge bg-{$style}'>".e($name)."</span>";
+                return "<span class='badge text-bg-{$style}'>".e($name)."</span>";
             })->implode('&nbsp;');
         });
     }

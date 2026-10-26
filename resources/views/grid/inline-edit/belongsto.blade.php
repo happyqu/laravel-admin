@@ -1,6 +1,6 @@
-<span class="grid-selector" data-toggle="modal" data-target="#{{ $modal }}" key="{{ $key }}" data-val="{{ $original }}">
-   <a href="javascript:void(0)" class="text-muted">
-       <i class="fa fa-check-square-o"></i>&nbsp;&nbsp;
+<span class="grid-selector" data-bs-toggle="modal" data-bs-target="#{{ $modal }}" data-key="{{ $key }}" data-val="{{ $original }}" role="button" tabindex="0">
+   <a href="javascript:void(0)" class="text-body-secondary text-decoration-none">
+       <i class="fa fa-check-square-o" aria-hidden="true"></i>&nbsp;&nbsp;
        <span class="text">{{ $value }}</span>
    </a>
 </span>
@@ -10,25 +10,24 @@
         cursor: pointer;
     }
 
-    .belongsto.modal .box {
+    .belongsto.modal .card {
         border-top: none;
         margin-bottom: 0;
         box-shadow: none;
     }
+
     .belongsto.modal .loading {
         margin: 50px;
     }
 </style>
 
 <template>
-    <div class="modal fade belongsto" id="{{ $modal }}" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content" style="border-radius: 5px;">
+    <div class="modal fade belongsto" id="{{ $modal }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                    <h4 class="modal-title">{{ admin_trans('admin.choose') }}</h4>
+                    <h5 class="modal-title">{{ admin_trans('admin.choose') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="loading text-center">
@@ -36,7 +35,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">{{ admin_trans('admin.cancel') }}</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ admin_trans('admin.cancel') }}</button>
                     <button type="button" class="btn btn-primary submit">{{ admin_trans('admin.submit') }}</button>
                 </div>
             </div>
@@ -45,13 +44,12 @@
 </template>
 
 <script>
-
     var $modal = $('#{{ $modal }}');
     var $related = null;
 
     var update = function (callback) {
         $.ajax({
-            url: "{{ $resource }}/" + $related.attr('key'),
+            url: "{{ $resource }}/" + $related.data('key'),
             type: "POST",
             data: {
                 '{{ $name }}': selected.length ? selected : [''],
@@ -62,7 +60,7 @@
                 callback(data);
             },
             error: function (xhr) {
-                $modal.modal('hide');
+                AdminUI.modal($modal[0], 'hide');
                 if (xhr.status !== 401) {
                     var message = (xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
@@ -80,15 +78,11 @@
     var load = function (url) {
         $.get(url, function (data) {
             $modal.find('.modal-body').html(data);
-            $modal.find('.select').iCheck({
-                radioClass:'iradio_minimal-blue',
-                checkboxClass:'icheckbox_minimal-blue'
-            });
-            $modal.find('.box-header:first').hide();
+            $modal.find('.card-header:first').hide();
 
-            $modal.find('input.select').each(function (index,    el) {
+            $modal.find('input.select').each(function (index, el) {
                 if ($(el).val() == selected) {
-                    $(el).iCheck('toggle');
+                    $(el).prop('checked', true);
                 }
             });
         });
@@ -98,19 +92,19 @@
         $related = $(e.relatedTarget);
         selected = $related.data('val');
         load("{!! $url !!}");
-    }).on('ifChecked', 'input.select', function (e) {
+    }).on('change', 'input.select', function () {
         selected = $(this).val();
     }).find('.modal-footer .submit').click(function () {
         update(function (data) {
             $related.data('val', selected);
             $related.find('.text').html(data.display["{{ $name }}"]);
-            $related.find('a').toggleClass('text-green text-muted');
+            $related.find('a').addClass('text-success').removeClass('text-body-secondary');
 
             setTimeout(function () {
-                $related.find('a').toggleClass('text-green text-muted');
+                $related.find('a').removeClass('text-success');
             }, 2000);
 
-            $modal.modal('toggle');
+            AdminUI.modal($modal[0], 'toggle');
 
             toastr.success(data.message);
         });
@@ -123,15 +117,11 @@
     var load = function (url) {
         $.get(url, function (data) {
             $modal.find('.modal-body').html(data);
-            $modal.find('.select').iCheck({
-                radioClass:'iradio_minimal-blue',
-                checkboxClass:'icheckbox_minimal-blue'
-            });
-            $modal.find('.box-header:first').hide();
+            $modal.find('.card-header:first').hide();
 
             $modal.find('input.select').each(function (index, el) {
-                if ($.inArray($(el).val().toString(), selected) >=0 ) {
-                    $(el).iCheck('toggle');
+                if ($.inArray($(el).val().toString(), selected) >= 0) {
+                    $(el).prop('checked', true);
                 }
             });
         });
@@ -139,33 +129,35 @@
 
     $modal.on('show.bs.modal', function (e) {
         $related = $(e.relatedTarget);
-        selected = $related.data('val').map(function (value) {
+        selected = ($related.data('val') || []).map(function (value) {
             return value.toString();
         });
 
         load("{!! $url !!}");
-    }).on('ifChecked', 'input.select', function (e) {
+    }).on('change', 'input.select', function () {
         var val = $(this).val().toString();
-        if (selected.indexOf(val) < 0) {
-            selected.push(val);
-        }
-    }).on('ifUnchecked', 'input.select', function (e) {
-        var val = $(this).val().toString();
-        var index = selected.indexOf(val);
-        if (index !== -1) {
-            selected.splice(index, 1);
+
+        if (this.checked) {
+            if (selected.indexOf(val) < 0) {
+                selected.push(val);
+            }
+        } else {
+            var index = selected.indexOf(val);
+            if (index !== -1) {
+                selected.splice(index, 1);
+            }
         }
     }).find('.modal-footer .submit').click(function () {
         update(function (data) {
             $related.data('val', selected);
             $related.find('.text').html(data.display["{{ $name }}"]);
-            $related.find('a').toggleClass('text-green text-muted');
+            $related.find('a').addClass('text-success').removeClass('text-body-secondary');
 
             setTimeout(function () {
-                $related.find('a').toggleClass('text-green text-muted');
+                $related.find('a').removeClass('text-success');
             }, 2000);
 
-            $modal.modal('toggle');
+            AdminUI.modal($modal[0], 'toggle');
 
             toastr.success(data.message);
         });
@@ -176,12 +168,11 @@
         load($(this).attr('href'));
         e.preventDefault();
     }).on('click', 'tr', function (e) {
-        $(this).find('input.select').iCheck('toggle');
+        $(this).find('input.select').prop('checked', function () { return !this.checked; }).trigger('change');
         e.preventDefault();
-    }).on('submit', '.box-header form', function (e) {
-        load($(this).attr('action')+'&'+$(this).serialize());
+    }).on('submit', '.card-header form', function (e) {
+        load($(this).attr('action') + '&' + $(this).serialize());
         e.preventDefault();
         return false;
-    })
-
+    });
 </script>

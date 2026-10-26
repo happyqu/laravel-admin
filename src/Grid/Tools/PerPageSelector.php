@@ -81,10 +81,9 @@ class PerPageSelector extends AbstractTool
 
         return <<<EOT
 
-<label class="control-label pull-right" style="margin-right: 10px; font-weight: 100;">
-
+<label class="form-label float-end" style="margin-right: 10px; font-weight: 100;">
         <small>{$trans['show']}</small>&nbsp;
-        <select class="input-sm {$this->grid->getPerPageName()}" name="per-page">
+        <select class="form-select form-select-sm d-inline-block {$this->grid->getPerPageName()}" name="per-page" style="width: auto;">
             $options
         </select>
         &nbsp;<small>{$trans['entries']}</small>

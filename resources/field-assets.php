@@ -6,22 +6,24 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.min.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\BelongsToMany' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.min.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Button' => 
@@ -46,44 +48,47 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/all.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/icheck.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\CheckboxButton' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/all.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/icheck.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\CheckboxCard' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/all.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/icheck.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Color' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/colorpicker/bootstrap-colorpicker.min.css',
+      0 => '/vendor/laravel-admin/pickr/themes/classic.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/colorpicker/bootstrap-colorpicker.min.js',
+      0 => '/vendor/laravel-admin/pickr/pickr.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Currency' => 
@@ -93,19 +98,19 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/input-mask/jquery.inputmask.bundle.min.js',
+      0 => '/vendor/laravel-admin/inputmask/jquery.inputmask.bundle.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Date' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\DateMultiple' => 
@@ -126,36 +131,36 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Datetime' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\DatetimeRange' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Decimal' => 
@@ -165,7 +170,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/input-mask/jquery.inputmask.bundle.min.js',
+      0 => '/vendor/laravel-admin/inputmask/jquery.inputmask.bundle.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Display' => 
@@ -208,12 +213,12 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=4.5.2',
+      0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=5.5.4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/canvas-to-blob.min.js',
-      1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=4.5.2',
+      1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=5.5.4',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\HasMany' => 
@@ -247,11 +252,9 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/fontawesome-iconpicker/dist/css/fontawesome-iconpicker.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/fontawesome-iconpicker/dist/js/fontawesome-iconpicker.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Id' => 
@@ -267,12 +270,12 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=4.5.2',
+      0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=5.5.4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/canvas-to-blob.min.js',
-      1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=4.5.2',
+      1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=5.5.4',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Ip' => 
@@ -282,7 +285,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/input-mask/jquery.inputmask.bundle.min.js',
+      0 => '/vendor/laravel-admin/inputmask/jquery.inputmask.bundle.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\KeyValue' => 
@@ -307,11 +310,12 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/bootstrap-duallistbox/dist/bootstrap-duallistbox.min.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/bootstrap-duallistbox/dist/jquery.bootstrap-duallistbox.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Mobile' => 
@@ -321,56 +325,57 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/input-mask/jquery.inputmask.bundle.min.js',
+      0 => '/vendor/laravel-admin/inputmask/jquery.inputmask.bundle.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Month' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\MultipleFile' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=4.5.2',
+      0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=5.5.4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/canvas-to-blob.min.js',
-      1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=4.5.2',
-      2 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/sortable.min.js?v=4.5.2',
+      1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=5.5.4',
+      2 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/sortable.min.js?v=5.5.4',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\MultipleImage' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=4.5.2',
+      0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=5.5.4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/canvas-to-blob.min.js',
-      1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=4.5.2',
-      2 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/sortable.min.js?v=4.5.2',
+      1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=5.5.4',
+      2 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/sortable.min.js?v=5.5.4',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\MultipleSelect' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.min.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Number' => 
@@ -380,7 +385,6 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/number-input/bootstrap-number-input.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Password' => 
@@ -396,33 +400,27 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/all.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/icheck.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\RadioButton' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/all.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/icheck.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\RadioCard' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/all.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/iCheck/icheck.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Rate' => 
@@ -438,34 +436,33 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.min.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Slider' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/ionslider/ion.rangeSlider.css',
-      1 => '/vendor/laravel-admin/AdminLTE/plugins/ionslider/ion.rangeSlider.skinNice.css',
+      0 => '/vendor/laravel-admin/ionslider/ion.rangeSlider.css',
+      1 => '/vendor/laravel-admin/ionslider/ion.rangeSlider.skinNice.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/ionslider/ion.rangeSlider.min.js',
+      0 => '/vendor/laravel-admin/ionslider/ion.rangeSlider.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\SwitchField' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/bootstrap-switch/dist/js/bootstrap-switch.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Table' => 
@@ -481,11 +478,12 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.min.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Text' => 
@@ -510,35 +508,36 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\TimeRange' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Timezone' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.min.css',
+      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
+      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/AdminLTE/plugins/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Url' => 
@@ -554,12 +553,12 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
     ),
   ),
 );

@@ -297,8 +297,8 @@ trait RegistersIframeTabs
 
     if ($('#terminal-box').length) {
         $(window).on('load', function () {
-            var height = $('.content-wrapper').height() - 247;
-            $('#terminal-box,.slimScrollDiv').css({ height: height + 'px' });
+            var height = $('.app-main').height() - 247;
+            $('#terminal-box').css({ height: height + 'px' });
         });
     }
 

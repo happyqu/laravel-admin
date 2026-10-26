@@ -78,7 +78,7 @@
             $(document).off('.adminPage');
             $('body').off('.adminPage');
             $(window).off('.adminPage');
-            $('#admin-content [data-toggle="popover"]').each(function () {
+            $('#admin-content [data-bs-toggle="popover"]').each(function () {
                 AdminUI.disposePopover(this);
             });
             $('#admin-content').replaceWith(document.importNode(content, true));
@@ -99,7 +99,7 @@
             }
             renderedUrl = window.location.href;
             inline.forEach(function (code) { window.eval(code); });
-            $('#admin-content [data-toggle="popover"]').each(function () {
+            $('#admin-content [data-bs-toggle="popover"]').each(function () {
                 AdminUI.popover(this);
             });
             window.scrollTo(0, options.scroll || 0);

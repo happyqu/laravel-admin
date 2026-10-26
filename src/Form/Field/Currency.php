@@ -13,7 +13,7 @@ class Currency extends Text
      * @var array
      */
     protected static $js = [
-        '/vendor/laravel-admin/AdminLTE/plugins/input-mask/jquery.inputmask.bundle.min.js',
+        '/vendor/laravel-admin/inputmask/jquery.inputmask.bundle.min.js',
     ];
 
     /**

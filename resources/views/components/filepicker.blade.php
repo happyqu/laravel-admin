@@ -1,13 +1,10 @@
-
 <template>
-    <div class="modal fade picker" id="{{ $modal }}" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content" style="border-radius: 5px;">
+    <div class="modal fade picker" id="{{ $modal }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                    <h4 class="modal-title">{{ admin_trans('admin.choose') }}</h4>
+                    <h5 class="modal-title">{{ admin_trans('admin.choose') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="loading text-center">
@@ -15,7 +12,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">{{ admin_trans('admin.cancel') }}</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ admin_trans('admin.cancel') }}</button>
                     <button type="button" class="btn btn-primary submit">{{ admin_trans('admin.submit') }}</button>
                 </div>
             </div>
@@ -24,103 +21,92 @@
 </template>
 
 <script>
-
 var pickInput = $("{{ $selector }}");
 var separator = '{{ $separator }}';
 var modal = $('#{{ $modal }}');
 var value;
 var refresh = function () {};
 
-modal.on('show.bs.modal', function (e) {
+modal.on('show.bs.modal', function () {
     load("{!! $url !!}");
 }).on('click', '.page-item a, .filter-box a', function (e) {
     load($(this).attr('href'));
     e.preventDefault();
 }).on('click', 'tr', function (e) {
-    $(this).find('input.select').iCheck('toggle');
+    var input = $(this).find('input.select');
+    input.prop('checked', function () { return !this.checked; }).trigger('change');
     e.preventDefault();
-}).on('submit', '.box-header form', function (e) {
-    load($(this).attr('action')+'&'+$(this).serialize());
+}).on('submit', '.card-header form', function (e) {
+    load($(this).attr('action') + '&' + $(this).serialize());
     return false;
-})
+});
 
 @if($multiple)
 
-    var updateValue = function () {
-        value = pickInput.val().split(separator).filter(function (val) {
-            return val != '';
+var updateValue = function () {
+    value = pickInput.val().split(separator).filter(function (val) {
+        return val != '';
+    });
+};
+
+var load = function (url) {
+    $.get(url, function (data) {
+        modal.find('.modal-body').html(data);
+        modal.find('.card-header:first').hide();
+
+        modal.find('input.select').each(function (index, el) {
+            if ($.inArray($(el).val().toString(), value) >= 0) {
+                $(el).prop('checked', true);
+            }
         });
-    };
+    });
+};
 
-    var load = function (url) {
-        $.get(url, function (data) {
-            modal.find('.modal-body').html(data);
-            modal.find('input.select').iCheck({
-                radioClass:'iradio_minimal-blue',
-                checkboxClass:'icheckbox_minimal-blue'
-            });
-            modal.find('.box-header:first').hide();
+modal.on('change', 'input.select', function () {
+    var val = $(this).val();
 
-            modal.find('input.select').each(function (index, el) {
-                if ($.inArray($(el).val().toString(), value) >=0 ) {
-                    $(el).iCheck('toggle');
-                }
-            });
-        });
-    };
-
-    modal.on('ifChecked', 'input.select', function (e) {
-        if ($(this).val().length == 0) {
-            return;
+    if (this.checked) {
+        if (value.indexOf(val) < 0) {
+            value.push(val);
         }
-
-        if (value.indexOf($(this).val()) < 0) {
-            value.push($(this).val());
-        }
-    }).on('ifUnchecked', 'input.select', function (e) {
-        var val = $(this).val();
+    } else {
         var index = value.indexOf(val);
         if (index !== -1) {
             value.splice(index, 1);
         }
-    }).find('.modal-footer .submit').click(function () {
-        pickInput.val(value.join(separator));
-        modal.modal('toggle');
-
-        refresh();
-    });
+    }
+}).find('.modal-footer .submit').click(function () {
+    pickInput.val(value.join(separator));
+    AdminUI.modal(modal[0], 'toggle');
+    refresh();
+});
 
 @else
 
-    var updateValue = function () {
-        value = pickInput.val();
-    };
+var updateValue = function () {
+    value = pickInput.val();
+};
 
-    var load = function (url) {
-        $.get(url, function (data) {
-            modal.find('.modal-body').html(data);
-            modal.find('input.select').iCheck({
-                radioClass:'iradio_minimal-blue',
-                checkboxClass:'icheckbox_minimal-blue'
-            });
-            modal.find('.box-header:first').hide();
+var load = function (url) {
+    $.get(url, function (data) {
+        modal.find('.modal-body').html(data);
+        modal.find('.card-header:first').hide();
 
-            modal.find('input.select').each(function (index, el) {
-                if ($(el).val() == value) {
-                    $(el).iCheck('toggle');
-                }
-            });
+        modal.find('input.select').each(function (index, el) {
+            if ($(el).val() == value) {
+                $(el).prop('checked', true);
+            }
         });
-    };
-
-    modal.on('ifChecked', 'input.select', function (e) {
-        value = $(this).val();
-    }).find('.modal-footer .submit').click(function () {
-        pickInput.val(value);
-        modal.modal('toggle');
-
-        refresh();
     });
+};
+
+modal.on('change', 'input.select', function () {
+    value = $(this).val();
+}).find('.modal-footer .submit').click(function () {
+    pickInput.val(value);
+    AdminUI.modal(modal[0], 'toggle');
+    refresh();
+});
 
 @endif
 
@@ -130,35 +116,33 @@ $('.picker-file-preview').on('click', 'a.remove', function () {
     var preview = $(this).parents('.file-preview-frame');
     var current = preview.data('val');
 
-    preview.addClass('hide');
+    preview.addClass('d-none');
 
     var input = pickInput.val().split(separator);
+    var index = input.indexOf(current);
 
-    var index = input.indexOf(current);value
     if (index !== -1) {
         input.splice(index, 1);
     }
 
     pickInput.val(input.join(separator));
-
     updateValue();
 
     if (input.length === 0) {
-        $(this).parents('.picker-file-preview').addClass('hide');
+        $(this).parents('.picker-file-preview').addClass('d-none');
     }
 });
 
 @if($is_file)
 refresh = function () {
-
     var values = (typeof value == 'string') ? [value] : value;
     var preview = pickInput.parent().siblings('.picker-file-preview');
     var url_tpl = '{{ $url_tpl }}';
 
     @if($is_image)
-    var template = $('template#image-preview')
+    var template = $('template#image-preview');
     @else
-    var template = $('template#file-preview')
+    var template = $('template#file-preview');
     @endif
 
     preview.empty();
@@ -174,11 +158,10 @@ refresh = function () {
     });
 
     if (values.length > 0) {
-        preview.removeClass('hide');
+        preview.removeClass('d-none');
     }
 };
 @endif
-
 </script>
 
 <style>
@@ -186,7 +169,7 @@ refresh = function () {
         cursor: pointer;
     }
 
-    .picker.modal .box {
+    .picker.modal .card {
         border-top: none;
         margin-bottom: 0;
         box-shadow: none;
@@ -196,7 +179,7 @@ refresh = function () {
     .picker-file-preview {
         overflow: hidden;
         border-radius: 5px;
-        border: 1px solid #ddd;
+        border: 1px solid var(--bs-border-color);
         padding: 8px;
         width: 100%;
         margin-bottom: 5px;
@@ -225,7 +208,7 @@ refresh = function () {
         height: 20px;
         margin: auto;
         font-size: 11px;
-        color: #777;
+        color: var(--bs-secondary-color);
     }
 
     .picker-file-preview .file-actions {
@@ -239,4 +222,3 @@ refresh = function () {
     }
     @endif
 </style>
-

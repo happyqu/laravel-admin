@@ -26,7 +26,7 @@
     var results = panel.querySelector('[data-dc-nav-results]');
     var categoryList = panel.querySelector('[data-dc-nav-category-list]');
     var searchInput = panel.querySelector('.dc-admin-nav-search');
-    var logoButton = document.querySelector('.main-header .logo');
+    var logoButton = document.querySelector('.app-sidebar .sidebar-brand .brand-link');
     var logoOriginalHtml = logoButton ? logoButton.innerHTML : '';
     var openButtons = document.querySelectorAll('[data-dc-nav-open]');
     var closeButtons = document.querySelectorAll('[data-dc-nav-close]');
@@ -158,16 +158,16 @@
     }
 
     function initializeModeSwitcher() {
-        var userFooter = document.querySelector('.main-header .user-menu .user-footer');
+        var userMenu = document.querySelector('.app-header .user-menu .dropdown-menu');
 
-        if (!userFooter || !userFooter.parentNode) {
+        if (!userMenu) {
             return;
         }
 
         var item = document.createElement('li');
         item.className = 'dc-admin-nav-mode-option';
-        item.innerHTML = '<a href="#" data-dc-nav-mode-switch role="button"><i class="fa" aria-hidden="true"></i><span></span></a>';
-        userFooter.parentNode.insertBefore(item, userFooter);
+        item.innerHTML = '<a class="dropdown-item" href="#" data-dc-nav-mode-switch role="button"><i class="fa" aria-hidden="true"></i><span></span></a>';
+        userMenu.insertBefore(item, userMenu.firstChild);
         modeSwitchButton = item.querySelector('[data-dc-nav-mode-switch]');
         updateModeSwitcher();
 
@@ -177,7 +177,8 @@
             applyNavigationMode(navigationMode === 'global' ? 'classic' : 'global', true);
 
             if ($) {
-                $('.main-header .user-menu').removeClass('open');
+                $('.app-header .user-menu .dropdown-menu').removeClass('show');
+                $('.app-header .user-menu .dropdown-toggle').attr('aria-expanded', 'false');
             }
         });
     }

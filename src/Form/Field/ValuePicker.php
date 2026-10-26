@@ -99,7 +99,7 @@ class ValuePicker
         $text = admin_trans('admin.browse');
 
         $btn = <<<HTML
-<a class="btn btn-primary" data-toggle="modal" data-target="#{$this->modal}">
+<a class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#{$this->modal}">
     <i class="fa fa-folder-open"></i>  {$text}
 </a>
 HTML;

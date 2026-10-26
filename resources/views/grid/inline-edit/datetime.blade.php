@@ -1,48 +1,31 @@
 @extends('admin::grid.inline-edit.comm')
 
+@php($inputType = str_contains($format, 'HH') ? 'datetime-local' : 'date')
+
 @section('field')
-    <input class="form-control ie-input"/>
+    <input type="{{ $inputType }}" class="form-control form-control-sm ie-input" @if($inputType === 'datetime-local') step="1" @endif>
 @endsection
 
 @section('assert')
-    <style>
-        .ie-content-{{ $name }} .ie-container  {
-            height: 290px;
-        }
-
-        .ie-content-{{ $name }} .ie-input {
-            display: none;
-        }
-    </style>
-
     <script>
         @component('admin::grid.inline-edit.partials.popover', compact('trigger'))
             @slot('content')
-            $template.find('input').attr('value', $trigger.data('value'));
-            @endslot
-            @slot('shown')
-            var $input  = $popover.find('.ie-input');
-
-            $popover.find('.ie-container').datetimepicker({
-                inline: true,
-                format: '{{ $format }}',
-                date: $input.val(),
-                locale: '{{ $locale }}'
-            }).on('dp.change', function (event) {
-                var date = event.date.format('{{ $format }}');
-                $input.val(date);
-            });
+            var value = $trigger.data('value');
+            if (value) {
+                value = String(value).replace(' ', 'T');
+            }
+            $template.find('input').attr('value', value);
             @endslot
         @endcomponent
     </script>
 
-    {{--after submit--}}
     <script>
-    @component('admin::grid.inline-edit.partials.submit', compact('resource', 'name'))
-        $popover.data('display').html(val);
-    @endcomponent
+        @component('admin::grid.inline-edit.partials.submit', compact('resource', 'name'))
+            @slot('val')
+                var val = String($popover.find('.ie-input').val() || '').replace('T', ' ');
+            @endslot
+
+            $popover.data('display').html(val);
+        @endcomponent
     </script>
-
 @endsection
-
-

@@ -528,7 +528,7 @@ class HasMany extends Field
          */
         $script = <<<EOT
 // var index = 0;
-var index = $('.has-many-{$this->column}-form').size();
+var index = $('.has-many-{$this->column}-form').length;
 $('#has-many-{$this->column}').off('click', '.add').on('click', '.add', function () {
 
     var tpl = $('template.{$this->column}-tpl');

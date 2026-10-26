@@ -50,17 +50,9 @@ class CheckFilter extends Filter
     protected function addScript()
     {
         $script = <<<SCRIPT
-$('.{$this->class['all']}').on('ifChanged', function () {
-    if (this.checked) {
-        $('.{$this->class['item']}').iCheck('check');
-    } else {
-        $('.{$this->class['item']}').iCheck('uncheck');
-    }
+$('.{$this->class['all']}').on('change', function () {
+    $('.{$this->class['item']}').prop('checked', this.checked);
     return false;
-});
-
-$('.{$this->class['item']},.{$this->class['all']}').iCheck({
-    checkboxClass:'icheckbox_minimal-blue'
 });
 SCRIPT;
 
@@ -80,10 +72,10 @@ SCRIPT;
             $checked = in_array($key, $value) ? 'checked' : '';
 
             return <<<HTML
-<li class="checkbox icheck" style="margin: 0;">
-    <label style="width: 100%;padding: 3px;">
-        <input type="checkbox" class="{$this->class['item']}" name="{$this->getColumnName()}[]" value="{$key}" {$checked}/>&nbsp;&nbsp;&nbsp;{$label}
-    </label>
+<li class="form-check">
+    <input type="checkbox" class="form-check-input {$this->class['item']}" id="{$this->class['item']}-{$key}"
+           name="{$this->getColumnName()}[]" value="{$key}" {$checked}>
+    <label class="form-check-label" for="{$this->class['item']}-{$key}">{$label}</label>
 </li>
 HTML;
         })->implode("\r\n");
@@ -91,31 +83,29 @@ HTML;
         $this->addScript();
 
         $allCheck = (count($value) == count($this->options)) ? 'checked' : '';
-        $active = empty($value) ? '' : 'text-yellow';
+        $active = empty($value) ? '' : 'text-warning';
 
         return <<<EOT
 <span class="dropdown">
-<form action="{$this->getFormAction()}" style="display: inline-block;">
-    <a href="javascript:void(0);" class="dropdown-toggle {$active}" data-toggle="dropdown">
-        <i class="fa fa-filter"></i>
+<form action="{$this->getFormAction()}" class="d-inline-block">
+    <a href="javascript:void(0);" class="dropdown-toggle {$active}" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa fa-filter" aria-hidden="true"></i>
     </a>
-    <ul class="dropdown-menu" role="menu" style="padding: 10px;box-shadow: 0 2px 3px 0 rgba(0,0,0,.2);left: -70px;border-radius: 0;">
-
-        <li>
-            <ul style='padding: 0;'>
-            <li class="checkbox icheck" style="margin: 0;">
-                <label style="width: 100%;padding: 3px;">
-                    <input type="checkbox" class="{$this->class['all']}" {$allCheck}/>&nbsp;&nbsp;&nbsp;{$this->trans('all')}
-                </label>
-            </li>
-                <li class="divider"></li>
-                {$lists}
-            </ul>
+    <ul class="dropdown-menu p-3" style="min-width: 220px;">
+        <li class="form-check">
+            <input type="checkbox" class="form-check-input {$this->class['all']}" id="{$this->class['all']}" {$allCheck}>
+            <label class="form-check-label" for="{$this->class['all']}">{$this->trans('all')}</label>
         </li>
-        <li class="divider"></li>
-        <li class="text-right">
-            <button class="btn btn-sm btn-flat btn-primary pull-left" data-loading-text="{$this->trans('search')}..."><i class="fa fa-search"></i>&nbsp;&nbsp;{$this->trans('search')}</button>
-            <span><a href="{$this->getFormAction()}" class="btn btn-sm btn-flat btn-default"><i class="fa fa-undo"></i></a></span>
+        <li><hr class="dropdown-divider"></li>
+        <li><ul class="list-unstyled mb-0">{$lists}</ul></li>
+        <li><hr class="dropdown-divider"></li>
+        <li class="d-flex align-items-center justify-content-between">
+            <button class="btn btn-sm btn-primary" data-loading-text="{$this->trans('search')}...">
+                <i class="fa fa-search" aria-hidden="true"></i>&nbsp;&nbsp;{$this->trans('search')}
+            </button>
+            <a href="{$this->getFormAction()}" class="btn btn-sm btn-outline-secondary">
+                <i class="fa fa-undo" aria-hidden="true"></i>
+            </a>
         </li>
     </ul>
 </form>

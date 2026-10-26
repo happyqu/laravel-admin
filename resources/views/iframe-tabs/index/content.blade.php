@@ -7,12 +7,6 @@
 
     $(function () {
 
-        //Note! You cannot use both layout-boxed and fixed at the same time. Anything else can be mixed together.
-        if(!$('body').hasClass('layout-boxed'))
-        {
-            $('body').addClass('fixed'); //layout Fixed: use the class .fixed to get a fixed header and sidebar.
-        }
-
         window.refresh_current = @json($trans['refresh_current'] ?? trans('admin.iframe_tabs.refresh_current'));
         window.open_in_new = @json($trans['open_in_new'] ?? trans('admin.iframe_tabs.open_in_new'));
         window.open_in_pop = @json($trans['open_in_pop'] ?? trans('admin.iframe_tabs.open_in_pop'));
@@ -168,7 +162,7 @@
                 }
             }
             var icon = '<i class="fa fa-file-text"></i>';
-            if ($(this).find('i.fa').size()) {
+            if ($(this).find('i.fa').length) {
                 icon = $(this).find('i.fa').prop("outerHTML");
             }
             var span = $(this).find('span');
@@ -178,7 +172,7 @@
             var id = path == window.home_uri ? '_admin_dashboard' : path.replace(/\W/g, '_');
             addTabs({
                 id: id,
-                title: span.size() ? span.text() : $(this).text().length ? $(this).text() : '*',
+                title: span.length ? span.text() : $(this).text().length ? $(this).text() : '*',
                 close: true,
                 url: url,
                 urlType: 'absolute',
@@ -188,11 +182,11 @@
             $(this).attr('data-pageid', id);
 
             var toggle = false;
-            if ($(this).parents('.dropdown').size() && (toggle = $(this).parents('.dropdown').find('.dropdown-toggle'))) {
+            if ($(this).parents('.dropdown').length && (toggle = $(this).parents('.dropdown').find('.dropdown-toggle'))) {
                 toggle.trigger('click');
             }
 
-            if ($(this).parents('.sidebar-form') && (toggle = $(this).parents('.sidebar-form').find('.input-group-btn button'))) {
+            if ($(this).parents('.sidebar-form').length && (toggle = $(this).parents('.sidebar-form').find('.input-group button'))) {
                 toggle.trigger('click');
             }
 
@@ -226,16 +220,11 @@
             $('body').html('....');
         }
 
-        $('body').on('click', '.main-header a.logo', function () {
-            return false;
-        });
-
-        $('.navbar-custom-menu').css('background-color', $('.main-header .navbar').css('background-color'));
-
-        $('.navbar-custom-menu').show(); // delete it in future
-
-        if (!$(".navbar-custom-menu>ul>*:first").hasClass('tab-options')) {
-            $(".navbar-custom-menu>ul>*:first").before($('.navbar-custom-menu>ul>li.tab-options'));
+        if ($(".navbar-custom-menu").length && !$(".navbar-custom-menu > *:first").hasClass('tab-options')) {
+            var $tabsOptions = $('.navbar-custom-menu > .tab-options');
+            if ($tabsOptions.length) {
+                $(".navbar-custom-menu > *:first").before($tabsOptions);
+            }
         }
 
         $('.content-tabs').css({

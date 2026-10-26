@@ -42,7 +42,35 @@ class DateTime extends Presenter
 
     protected function prepare()
     {
-        $script = "$('#{$this->filter->getId()}').datetimepicker(".json_encode($this->options).');';
+        $format = strtr($this->format, [
+            'YYYY' => 'Y', 'YY' => 'y', 'MM' => 'm', 'DD' => 'd',
+            'HH' => 'H', 'mm' => 'i', 'ss' => 'S',
+        ]);
+
+        $options = [
+            'dateFormat'    => $format,
+            'allowInput'    => true,
+            'enableTime'    => str_contains($format, 'H'),
+            'time_24hr'     => true,
+            'enableSeconds' => str_contains($format, 'S'),
+            'locale'        => str_starts_with((string) config('app.locale'), 'zh') ? 'zh' : 'default',
+        ];
+
+        $id = json_encode($this->filter->getId());
+        $options = json_encode($options);
+
+        Admin::css('vendor/laravel-admin/flatpickr/dist/flatpickr.min.css');
+        Admin::js('vendor/laravel-admin/flatpickr/dist/flatpickr.js');
+        Admin::js('vendor/laravel-admin/flatpickr/dist/l10n/zh.js');
+
+        $script = <<<SCRIPT
+(function () {
+    var element = document.getElementById({$id});
+    if (element && window.flatpickr) {
+        flatpickr(element, {$options});
+    }
+})();
+SCRIPT;
 
         Admin::script($script);
     }

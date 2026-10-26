@@ -12,10 +12,13 @@ class QRCode extends AbstractDisplayer
     protected function addScript()
     {
         $script = <<<'SCRIPT'
-$('.grid-column-qrcode').popover({
-    html: true,
-    container: 'body',
-    trigger: 'focus'
+document.querySelectorAll('.grid-column-qrcode').forEach(function (element) {
+    AdminUI.popover(element, {
+        html: true,
+        sanitize: false,
+        trigger: 'focus',
+        content: element.getAttribute('data-content')
+    });
 });
 SCRIPT;
 
@@ -41,7 +44,7 @@ SCRIPT;
             (int) $width
         );
 
-        return '<a href="javascript:void(0);" class="grid-column-qrcode text-muted" data-content="'.e($img).'" data-toggle="popover" tabindex="0">'
+        return '<a href="javascript:void(0);" class="grid-column-qrcode text-body-secondary" data-content="'.e($img).'" tabindex="0">'
             .'<i class="fa fa-qrcode"></i></a>&nbsp;'.e($this->getValue());
     }
 }

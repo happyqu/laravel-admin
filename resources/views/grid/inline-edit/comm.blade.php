@@ -4,16 +4,16 @@
     <a
         href="javascript:void(0);"
         class="{{ $trigger }}"
-        data-toggle="popover"
-        data-target="{{ $target }}"
+        data-ie-popover="1"
+        data-ie-target="{{ $target }}"
         data-value="{{ $value }}"
         data-original="{{ $value }}"
         data-key="{{ $key }}"
         data-name="{{ $name }}"
+        role="button"
     >
         <span class="ie-display">{{ $display }}</span>
-
-        <i class="fa fa-edit" style="visibility: hidden;"></i>
+        <i class="fa fa-edit" style="visibility: hidden;" aria-hidden="true"></i>
     </a>
 </span>
 
@@ -22,59 +22,60 @@
         <div class="ie-content ie-content-{{ $name }}">
             <div class="ie-container">
                 @yield('field')
-                <div class="error"></div>
+                <div class="error text-danger small mt-1"></div>
             </div>
-            <div class="ie-action">
-                <button class="btn btn-primary btn-sm ie-submit">{{ __('admin.submit') }}</button>
-                <button class="btn btn-default btn-sm ie-cancel">{{ __('admin.cancel') }}</button>
+            <div class="ie-action d-flex justify-content-end gap-2 mt-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm ie-cancel">{{ __('admin.cancel') }}</button>
+                <button type="button" class="btn btn-primary btn-sm ie-submit">{{ __('admin.submit') }}</button>
             </div>
         </div>
     </template>
 </template>
 
 <style>
-    .ie-wrap>a {
+    .ie-wrap > a {
         padding: 3px;
         border-radius: 3px;
-        color:#777;
-    }
-
-    .ie-wrap>a:hover {
+        color: var(--bs-secondary-color);
         text-decoration: none;
-        background-color: #ddd;
-        color:#777;
     }
 
-    .ie-wrap>a:hover i {
+    .ie-wrap > a:hover {
+        background-color: var(--bs-tertiary-bg);
+        color: var(--bs-body-color);
+    }
+
+    .ie-wrap > a:hover i {
         visibility: visible !important;
     }
 
-    .ie-action button {
-        margin: 10px 0 10px 10px;
-        float: right;
-    }
-
-    .ie-container  {
+    .ie-container {
         width: 250px;
         position: relative;
     }
 
     .ie-container .error {
-        color: #dd4b39;
-        font-weight: 700;
+        font-weight: 600;
     }
 </style>
 
 <script>
+    function hideInlinePopovers() {
+        document.querySelectorAll('.ie-wrap > a').forEach(function (element) {
+            var instance = window.bootstrap && window.bootstrap.Popover.getInstance(element);
+            if (instance) {
+                instance.hide();
+            }
+        });
+    }
+
     $(document).on('click.adminPage', '.ie-action .ie-cancel', function () {
-        $('[data-toggle="popover"]').popover('hide');
+        hideInlinePopovers();
     });
 
     $('body').on('click.adminPage', function (e) {
-        if ($(e.target).data('toggle') !== 'popover'
-            && $(e.target).parents('[data-toggle="popover"]').length === 0
-            && $(e.target).parents('.popover.in').length === 0) {
-            $('[data-toggle="popover"]').popover('hide');
+        if ($(e.target).closest('.ie-wrap > a, .popover').length === 0) {
+            hideInlinePopovers();
         }
     });
 </script>

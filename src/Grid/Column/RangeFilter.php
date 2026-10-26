@@ -51,24 +51,7 @@ class RangeFilter extends Filter
 
     protected function addScript()
     {
-        $options = [
-            'locale'           => config('app.locale'),
-            'allowInputToggle' => true,
-        ];
-
-        if ($this->type == 'date') {
-            $options['format'] = 'YYYY-MM-DD';
-        } elseif ($this->type == 'time') {
-            $options['format'] = 'HH:mm:ss';
-        } elseif ($this->type == 'datetime') {
-            $options['format'] = 'YYYY-MM-DD HH:mm:ss';
-        } else {
-            return;
-        }
-
-        $options = json_encode($options);
-
-        Admin::script("$('.{$this->class['start']},.{$this->class['end']}').datetimepicker($options);");
+        // Native date/time inputs need no JavaScript initializer.
     }
 
     /**
@@ -89,29 +72,30 @@ SCRIPT;
         $this->addScript();
 
         $value = array_merge(['start' => '', 'end' => ''], $this->getFilterValue([]));
-        $active = empty(array_filter($value)) ? '' : 'text-yellow';
+        $active = empty(array_filter($value)) ? '' : 'text-warning';
+        $inputType = $this->type === 'datetime' ? 'datetime-local' : (in_array($this->type, ['date', 'time'], true) ? $this->type : 'text');
 
         return <<<EOT
 <span class="dropdown">
-<form action="{$this->getFormAction()}" style="display: inline-block;">
-    <a href="javascript:void(0);" class="dropdown-toggle {$active}" data-toggle="dropdown">
+<form action="{$this->getFormAction()}" class="d-inline-block">
+    <a href="javascript:void(0);" class="dropdown-toggle {$active}" data-bs-toggle="dropdown" aria-expanded="false">
         <i class="fa fa-filter"></i>
     </a>
-    <ul class="dropdown-menu" role="menu" style="padding: 10px;box-shadow: 0 2px 3px 0 rgba(0,0,0,.2);left: -70px;border-radius: 0;">
+    <ul class="dropdown-menu p-3" style="min-width: 220px;">
         <li>
-            <input type="text" class="form-control input-sm {$this->class['start']}" name="{$this->getColumnName()}[start]" value="{$value['start']}" autocomplete="off"/>
+            <input type="{$inputType}" class="form-control form-control-sm {$this->class['start']}" name="{$this->getColumnName()}[start]" value="{$value['start']}" autocomplete="off"/>
         </li>
-        <li style="margin: 5px;"></li>
+        <li class="my-2 text-center text-body-secondary">~</li>
         <li>
-            <input type="text" class="form-control input-sm {$this->class['start']}" name="{$this->getColumnName()}[end]"  value="{$value['end']}" autocomplete="off"/>
+            <input type="{$inputType}" class="form-control form-control-sm {$this->class['end']}" name="{$this->getColumnName()}[end]" value="{$value['end']}" autocomplete="off"/>
         </li>
-        <li class="divider"></li>
-        <li class="text-right">
-            <button class="btn btn-sm btn-primary btn-flat column-filter-submit pull-left" data-loading-text="{$this->trans('search')}..."><i class="fa fa-search"></i>&nbsp;&nbsp;{$this->trans('search')}</button>
-            <span><a href="{$this->getFormAction()}" class="btn btn-sm btn-default btn-flat column-filter-all"><i class="fa fa-undo"></i></a></span>
+        <li><hr class="dropdown-divider"></li>
+        <li class="d-flex align-items-center justify-content-between">
+            <button class="btn btn-sm btn-primary column-filter-submit" data-loading-text="{$this->trans('search')}..."><i class="fa fa-search"></i>&nbsp;&nbsp;{$this->trans('search')}</button>
+            <a href="{$this->getFormAction()}" class="btn btn-sm btn-outline-secondary column-filter-all"><i class="fa fa-undo"></i></a>
         </li>
     </ul>
-    </form>
+</form>
 </span>
 EOT;
     }

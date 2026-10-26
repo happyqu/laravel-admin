@@ -6,10 +6,11 @@ class Time extends Date
 {
     protected $format = 'HH:mm:ss';
 
+    protected $icon = 'fa-clock-o';
+
     public function render()
     {
-        $this->prepend('<i class="fa fa-clock-o fa-fw"></i>')
-            ->defaultAttribute('style', 'width: 150px');
+        $this->defaultAttribute('style', 'width: 150px');
 
         return parent::render();
     }

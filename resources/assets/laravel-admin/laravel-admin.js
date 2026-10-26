@@ -213,7 +213,7 @@ $(function () {
     var $menu = $('.sidebar-menu .nav-link[href$="' + current + '"]').first().addClass('active');
     $menu.parents('.nav-item').addClass('menu-open').children('.nav-link').addClass('active');
 
-    $('[data-toggle="popover"]').each(function () {
+    $('[data-bs-toggle="popover"]').each(function () {
         AdminUI.popover(this);
     });
 

@@ -114,20 +114,49 @@ class Between extends AbstractFilter
     protected function setupDatetime($options = [])
     {
         $options['format'] = Arr::get($options, 'format', 'YYYY-MM-DD HH:mm:ss');
-        $options['locale'] = Arr::get($options, 'locale', config('app.locale'));
 
-        $startOptions = json_encode($options);
-        $endOptions = json_encode($options + ['useCurrent' => false]);
+        $format = strtr($options['format'], [
+            'YYYY' => 'Y', 'YY' => 'y', 'MM' => 'm', 'DD' => 'd',
+            'HH' => 'H', 'mm' => 'i', 'ss' => 'S',
+        ]);
+
+        $dateOptions = [
+            'dateFormat'    => $format,
+            'allowInput'    => true,
+            'enableTime'    => true,
+            'time_24hr'     => true,
+            'enableSeconds' => str_contains($format, 'S'),
+            'locale'        => str_starts_with((string) config('app.locale'), 'zh') ? 'zh' : 'default',
+        ];
+
+        $startId = json_encode($this->id['start']);
+        $endId = json_encode($this->id['end']);
+        $dateOptions = json_encode($dateOptions);
+
+        Admin::css('vendor/laravel-admin/flatpickr/dist/flatpickr.min.css');
+        Admin::js('vendor/laravel-admin/flatpickr/dist/flatpickr.js');
+        Admin::js('vendor/laravel-admin/flatpickr/dist/l10n/zh.js');
 
         $script = <<<EOT
-            $('#{$this->id['start']}').datetimepicker($startOptions);
-            $('#{$this->id['end']}').datetimepicker($endOptions);
-            $("#{$this->id['start']}").on("dp.change", function (e) {
-                $('#{$this->id['end']}').data("DateTimePicker").minDate(e.date);
-            });
-            $("#{$this->id['end']}").on("dp.change", function (e) {
-                $('#{$this->id['start']}').data("DateTimePicker").maxDate(e.date);
-            });
+(function () {
+    var startElement = document.getElementById({$startId});
+    var endElement = document.getElementById({$endId});
+
+    if (!startElement || !endElement || !window.flatpickr) {
+        return;
+    }
+
+    var start = flatpickr(startElement, {$dateOptions});
+    var end = flatpickr(endElement, {$dateOptions});
+
+    start.config.onChange.push(function (dates) {
+        if (dates[0]) { end.set('minDate', dates[0]); }
+    });
+
+    end.config.onChange.push(function (dates) {
+        if (dates[0]) { start.set('maxDate', dates[0]); }
+    });
+})();
 EOT;
 
         Admin::script($script);

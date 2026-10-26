@@ -5,11 +5,11 @@ namespace Encore\Admin\Form\Field;
 class Color extends Text
 {
     protected static $css = [
-        '/vendor/laravel-admin/AdminLTE/plugins/colorpicker/bootstrap-colorpicker.min.css',
+        '/vendor/laravel-admin/pickr/themes/classic.min.css',
     ];
 
     protected static $js = [
-        '/vendor/laravel-admin/AdminLTE/plugins/colorpicker/bootstrap-colorpicker.min.js',
+        '/vendor/laravel-admin/pickr/pickr.min.js',
     ];
 
     /**
@@ -49,9 +49,55 @@ class Color extends Text
      */
     public function render()
     {
-        $options = json_encode($this->options);
+        $format = $this->options['format'] ?? 'hex';
 
-        $this->script = "$('{$this->getElementClassSelector()}').parent().colorpicker($options);";
+        $this->script = <<<SCRIPT
+(function () {
+    var input = $("{$this->getElementClassSelector()}");
+    var format = '{$format}';
+
+    if (!window.Pickr || !input.length) {
+        return;
+    }
+
+    var picker = Pickr.create({
+        el: input.parent()[0],
+        theme: 'classic',
+        default: input.val() || '#000000',
+        swatches: [],
+        components: {
+            preview: true,
+            opacity: format === 'rgba',
+            hue: true,
+            interaction: {
+                hex: true,
+                rgba: format !== 'hex',
+                input: true,
+                clear: true,
+                save: true
+            }
+        }
+    });
+
+    picker.on('save', function (color) {
+        if (!color) {
+            return;
+        }
+
+        var value = color.toHEXA().toString();
+
+        if (format === 'rgb') {
+            var rgba = color.toRGBA();
+            value = 'rgb(' + rgba[0] + ', ' + rgba[1] + ', ' + rgba[2] + ')';
+        } else if (format === 'rgba') {
+            value = color.toRGBA().toString();
+        }
+
+        input.val(value).trigger('change');
+        picker.hide();
+    });
+})();
+SCRIPT;
 
         $this->prepend('<i></i>')
             ->defaultAttribute('style', 'width: 140px');

@@ -203,21 +203,21 @@
         $('.table-fixed-right tbody tr').eq(index).removeClass('active');
     });
 
-    $('.{{ $rowName }}-checkbox').iCheck({checkboxClass:'icheckbox_minimal-blue'}).on('ifChanged', function () {
+    $('.{{ $rowName }}-checkbox').on('change', function () {
 
         var id = $(this).data('id');
         var index = $(this).closest('tr').index();
 
         if (this.checked) {
-        $.admin.grid.select(id);
-            $('.table-main tbody tr').eq(index).css('background-color', '#ffffd5');
-            $('.table-fixed-left tbody tr').eq(index).css('background-color', '#ffffd5');
-            $('.table-fixed-right tbody tr').eq(index).css('background-color', '#ffffd5');
+            $.admin.grid.select(id);
+            $('.table-main tbody tr').eq(index).addClass('table-active');
+            $('.table-fixed-left tbody tr').eq(index).addClass('table-active');
+            $('.table-fixed-right tbody tr').eq(index).addClass('table-active');
         } else {
-        $.admin.grid.unselect(id);
-            $('.table-main tbody tr').eq(index).css('background-color', '');
-            $('.table-fixed-left tbody tr').eq(index).css('background-color', '');
-            $('.table-fixed-right tbody tr').eq(index).css('background-color', '');
+            $.admin.grid.unselect(id);
+            $('.table-main tbody tr').eq(index).removeClass('table-active');
+            $('.table-fixed-left tbody tr').eq(index).removeClass('table-active');
+            $('.table-fixed-right tbody tr').eq(index).removeClass('table-active');
         }
     }).on('ifClicked', function () {
 

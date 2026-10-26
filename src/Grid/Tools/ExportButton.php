@@ -71,16 +71,15 @@ SCRIPT;
 
         return <<<EOT
 
-<div class="btn-group pull-right" style="margin-right: 10px">
-    <a href="{$this->grid->getExportUrl('all')}" target="_blank" class="btn btn-sm btn-twitter" title="{$trans['export']}"><i class="fa fa-download"></i><span class="hidden-xs"> {$trans['export']}</span></a>
-    <button type="button" class="btn btn-sm btn-twitter dropdown-toggle" data-toggle="dropdown">
-        <span class="caret"></span>
-        <span class="sr-only">Toggle Dropdown</span>
+<div class="btn-group" style="margin-right: 10px">
+    <a href="{$this->grid->getExportUrl('all')}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary" title="{$trans['export']}"><i class="fa fa-download"></i><span class="d-none d-sm-inline"> {$trans['export']}</span></a>
+    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="visually-hidden">Toggle Dropdown</span>
     </button>
-    <ul class="dropdown-menu" role="menu">
-        <li><a href="{$this->grid->getExportUrl('all')}" target="_blank">{$trans['all']}</a></li>
-        <li><a href="{$this->grid->getExportUrl('page', $page)}" target="_blank">{$trans['current_page']}</a></li>
-        <li><a href="{$this->grid->getExportUrl('selected', '__rows__')}" target="_blank" class='{$this->grid->getExportSelectedName()}'>{$trans['selected_rows']}</a></li>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="{$this->grid->getExportUrl('all')}" target="_blank" rel="noopener">{$trans['all']}</a></li>
+        <li><a class="dropdown-item" href="{$this->grid->getExportUrl('page', $page)}" target="_blank" rel="noopener">{$trans['current_page']}</a></li>
+        <li><a class="dropdown-item {$this->grid->getExportSelectedName()}" href="{$this->grid->getExportUrl('selected', '__rows__')}" target="_blank" rel="noopener">{$trans['selected_rows']}</a></li>
     </ul>
 </div>
 EOT;

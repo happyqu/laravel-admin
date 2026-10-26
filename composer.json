@@ -53,11 +53,14 @@
     "scripts": {
         "test": "phpunit",
         "build-field-assets": "@php tools/build-field-assets.php",
+        "build-manifest": "@php tools/build-source-manifest.php",
         "check-frontend": [
             "@php tools/check-frontend-assets.php",
-            "@php tools/check-legacy-frontend.php"
+            "@php tools/check-legacy-frontend.php",
+            "@php tools/build-source-manifest.php --check"
         ],
-        "check-legacy": "@php tools/check-legacy-frontend.php --fail"
+        "check-legacy": "@php tools/check-legacy-frontend.php --fail",
+        "check-manifest": "@php tools/build-source-manifest.php --check"
     },
     "config": {
         "sort-packages": true

@@ -75,8 +75,6 @@
             var input = $(this);
             if (input.data('select2') && $.fn.select2) input.select2('destroy');
             if (input.data('fileinput') && $.fn.fileinput) input.fileinput('destroy');
-            if (input.data('DateTimePicker')) input.data('DateTimePicker').destroy();
-            if (input.data('iCheck') && $.fn.iCheck) input.iCheck('destroy');
         });
     }
     function modal() {
@@ -100,10 +98,10 @@
                     var data = new root.FormData(form);
                     data.set('_action_token', current.ticket);
                     data.set('_token', $.admin.token);
-                    shell.find(':submit').button('loading');
+                    shell.find(':submit').each(function () { AdminUI.setButtonLoading(this, true); });
                     clearErrors();
                     return send(current, data, true);
-                }).catch(notify).finally(function () { state.unlock(); shell.find(':submit').button('reset'); });
+                }).catch(notify).finally(function () { state.unlock(); shell.find(':submit').each(function () { AdminUI.setButtonLoading(this, false); }); });
             });
         }
         return shell;
@@ -151,7 +149,7 @@
                     throw { responseJSON: result, adminActionReported: !!(result.toastr || result.swal) };
                 }
                 if (result.status === true && shell && current.mode === 'form') {
-                    state.unlock(); shell.modal('hide');
+                    state.unlock(); AdminUI.modal(shell[0], 'hide');
                 }
                 return result;
             }).catch(function (error) {
@@ -220,7 +218,8 @@
         }
         if (mode === 'form') {
             modal(); destroyFields();
-            shell.html('<div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button></div><div class="modal-body"><i class="fa fa-spinner fa-spin"></i></div></div></div>').modal('show');
+            shell.html('<div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><i class="fa fa-spinner fa-spin"></i></div></div></div>');
+            AdminUI.modal(shell[0], 'show');
         }
         var request = $.ajax({ url: button.attr('data-admin-load'), method: 'GET', data: { _action_token: current.ticket, _key: keys }, dataType: 'json', cache: false });
         state.request = request;

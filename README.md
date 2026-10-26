@@ -5,6 +5,7 @@
 - 支持 Laravel 10.0–10.50、11、12、13
 - PHP 8.1–8.4
 - 零额外 Composer 包，只依赖 `laravel/framework` 和 PHP 扩展
+- 前端为 AdminLTE 4.9.1 + Bootstrap 5.3.8 + jQuery 3.7.1，无旧版兼容层
 - 不再使用 PJAX；表单、筛选和分页通过 AJAX 更新内容区
 
 Iframe Tabs 已并入核心代码，由 `Encore\Admin\AdminServiceProvider` 注册，使用 `Encore\Admin\IframeTabs` 命名空间。前端、视图和配置均属于本包，无需安装额外扩展。
@@ -16,13 +17,14 @@ Iframe Tabs 已并入核心代码，由 `Encore\Admin\AdminServiceProvider` 注�
 | PHP | 8.1+（Laravel 13 需要 8.3+） |
 | Laravel | `^10.0`、`^11.0`、`^12.0`、`^13.0` |
 | 扩展 | `ext-fileinfo`、`ext-dom` |
+| 浏览器 | 现代 evergreen 浏览器（AdminLTE 4 不支持 IE） |
 
 本包没有额外的 Composer 运行时依赖。图片处理、Orderable Grid、Excel 导出和 Minify 功能分别使用 `intervention/image`、`spatie/eloquent-sortable`、`maatwebsite/excel`、`matthiasmullie/minify`，只在需要时安装。
 
 ## 安装
 
 ```bash
-composer require happyqu/laravel-admin:^2.0
+composer require happyqu/laravel-admin:^3.0
 ```
 
 本包支持 Composer 自动发现。正常情况下无需手工注册 Provider 或 Alias。
@@ -85,6 +87,22 @@ php artisan admin:install
 未配置自定义首页时使用包内 dashboard。`/admin` 是标签容器，`/admin/dashboard` 是首页内容。设置 `iframe_tabs.enable=false` 后，安装生成的路由使用标准 `HomeController@index`。`admin.route.file` 可指定后台目录中的路由文件，默认 `routes.php`。
 
 默认使用经典侧栏，在 `.env` 中设置 `ADMIN_GLOBAL_NAVIGATION=true` 可启用全局菜单。它支持搜索、业务分类、收藏、最近访问和导航模式切换，并按管理员隔离状态。
+
+## 3.0 前端变化
+
+3.0 将后台前端从 AdminLTE 2 / Bootstrap 3 升级到 **AdminLTE 4.9.1 / Bootstrap 5.3.8 / jQuery 3.7.1**。这是一次 breaking change，不提供 BS3 jQuery API 桥接或 AdminLTE 2 兼容 CSS。
+
+主要变化：
+
+- `.main-header`、`.main-sidebar`、`.content-wrapper`、`.box` 等类改为 AdminLTE 4 的 `.app-*` / `.card`；
+- `.modal()`、`.popover()`、`.tooltip()`、`.tab()`、`.button()` 等 BS3 jQuery 插件 API 改为 Bootstrap 5 API；
+- `data-toggle` / `data-target` / `data-dismiss` 改为 `data-bs-*`；
+- 移除 iCheck、X-Editable、Eonasdan datetimepicker、Moment、Bootstrap Switch、Duallistbox、Colorpicker、slimScroll、Glyphicons；
+- 日期时间统一使用 Flatpickr，颜色使用 Pickr，文件上传使用 bootstrap-fileinput 5.x；
+- 主题配置改为 `admin.theme`（`blue`/`green`/`purple`/`red`/`yellow`/`black`）和 `admin.color_mode`（`light`/`dark`/`auto`），原 `admin.skin` 的 12 个值不再运行时映射；
+- 布局配置只接受 AdminLTE 4 支持的值：`layout-fixed`、`sidebar-mini`、`sidebar-collapse`、`sidebar-expand-lg`、`fixed-header`、`fixed-footer`。
+
+宿主升级步骤和完整映射表见 [UPGRADE-3.0.md](UPGRADE-3.0.md)。
 
 ## 2.0 导航变化
 
@@ -149,7 +167,9 @@ php artisan admin:import log-viewer
 
 ## 前端资源
 
-所有资源统一维护在 `resources/assets`，发布到 `public/vendor/laravel-admin`。内置标签页资源位于该目录的 `iframe-tabs` 子目录。JS、CSS、图片、字体均随包分发，无需 npm 构建。
+所有资源统一维护在 `resources/assets`，发布到 `public/vendor/laravel-admin`。当前前端栈为 AdminLTE 4.9.1、Bootstrap 5.3.8、jQuery 3.7.1、Select2 4.1.0、Flatpickr 4.6.13、bootstrap-fileinput 5.5.4 和 Pickr 1.10.2；内置标签页资源位于 `iframe-tabs` 子目录。JS、CSS、图片、字体均随包分发，无需 npm 构建。
+
+主题通过 `config/admin.php` 的 `theme` 和 `color_mode` 配置，颜色变量位于 `resources/assets/laravel-admin/themes.css`。`skin-*`、`layout-boxed`、`layout-top-nav` 已移除，升级时按 [UPGRADE-3.0.md](UPGRADE-3.0.md) 调整。
 
 AJAX 请求自动显示进度条，超过 180 毫秒时显示加载提示，并发请求全部结束后关闭。后台轮询等静默请求可在 `$.ajax` 选项中设置 `adminLoading: false`，其他错误处理保持正常。
 
@@ -187,7 +207,7 @@ PHP、PHTML、PHAR、HTML、SVG 等危险上传类型被禁止，不能通过白
 
 ## 开发和分发
 
-图片、字体及其他前端资源均作为普通 Git 文件分发。发布前可使用 `source-manifest.json` 中的 SHA256 校验资源完整性。
+图片、字体及其他前端资源均作为普通 Git 文件分发。发布前可使用 `source-manifest.json` 中的 SHA256 校验资源完整性，并可运行旧前端静态检查：
 
 ```bash
 composer install
@@ -195,7 +215,8 @@ composer validate --strict
 composer test
 npm ci --ignore-scripts
 npm test
-composer archive --format=zip --dir=build --file=happyqu-laravel-admin-2.0.0
+composer check-frontend
+composer archive --format=zip --dir=build --file=happyqu-laravel-admin-3.0.0
 ```
 
 Node.js 仅用于运行前端回归测试，安装本包和发布前端资源不需要 Node.js 或 npm 构建。

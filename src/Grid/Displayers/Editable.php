@@ -17,7 +17,7 @@ class Editable extends AbstractDisplayer
      *
      * @var string
      */
-    protected $type = '';
+    protected $type = 'text';
 
     /**
      * Options of editable function.
@@ -25,7 +25,7 @@ class Editable extends AbstractDisplayer
      * @var array
      */
     protected $options = [
-        'emptytext'  => '<i class="fa fa-pencil"></i>',
+        'emptytext' => '<i class="fa fa-pencil"></i>',
     ];
 
     /**
@@ -53,18 +53,14 @@ class Editable extends AbstractDisplayer
         $this->attributes = array_merge($this->attributes, $attributes);
     }
 
-    /**
-     * Text type editable.
-     */
     public function text()
     {
+        $this->type = 'text';
     }
 
-    /**
-     * Textarea type editable.
-     */
     public function textarea()
     {
+        $this->type = 'textarea';
     }
 
     /**
@@ -87,6 +83,8 @@ class Editable extends AbstractDisplayer
             $source[] = compact('value', 'text');
         }
 
+        $this->type = 'select';
+
         if ($useClosure) {
             $this->addAttributes(['data-source' => json_encode($source)]);
         } else {
@@ -94,52 +92,34 @@ class Editable extends AbstractDisplayer
         }
     }
 
-    /**
-     * Date type editable.
-     */
     public function date()
     {
-        $this->combodate();
+        $this->type = 'date';
     }
 
-    /**
-     * Datetime type editable.
-     */
     public function datetime()
     {
-        $this->combodate('YYYY-MM-DD HH:mm:ss');
+        $this->type = 'datetime';
     }
 
-    /**
-     * Year type editable.
-     */
     public function year()
     {
-        $this->combodate('YYYY');
+        $this->type = 'year';
     }
 
-    /**
-     * Month type editable.
-     */
     public function month()
     {
-        $this->combodate('MM');
+        $this->type = 'month';
     }
 
-    /**
-     * Day type editable.
-     */
     public function day()
     {
-        $this->combodate('DD');
+        $this->type = 'date';
     }
 
-    /**
-     * Time type editable.
-     */
     public function time()
     {
-        $this->combodate('HH:mm:ss');
+        $this->type = 'time';
     }
 
     /**
@@ -149,16 +129,17 @@ class Editable extends AbstractDisplayer
      */
     public function combodate($format = 'YYYY-MM-DD')
     {
-        $this->type = 'combodate';
-
-        $this->addOptions([
-            'format'     => $format,
-            'viewformat' => $format,
-            'template'   => $format,
-            'combodate'  => [
-                'maxYear' => 2035,
-            ],
-        ]);
+        if (str_contains($format, 'HH') && str_contains($format, 'YYYY')) {
+            $this->type = 'datetime';
+        } elseif (str_contains($format, 'HH')) {
+            $this->type = 'time';
+        } elseif ($format === 'YYYY') {
+            $this->type = 'year';
+        } elseif ($format === 'MM') {
+            $this->type = 'month';
+        } else {
+            $this->type = 'date';
+        }
     }
 
     /**
@@ -168,7 +149,9 @@ class Editable extends AbstractDisplayer
     {
         $this->type = Arr::get($arguments, 0, 'text');
 
-        call_user_func_array([$this, $this->type], array_slice($arguments, 1));
+        if (method_exists($this, $this->type)) {
+            call_user_func_array([$this, $this->type], array_slice($arguments, 1));
+        }
     }
 
     /**
@@ -176,38 +159,28 @@ class Editable extends AbstractDisplayer
      */
     public function display()
     {
-        $this->options['name'] = $column = $this->getName();
-
-        $class = 'grid-editable-'.preg_replace('/[^A-Za-z0-9_-]/', '-', (string) $column);
+        $column = $this->getName();
 
         $this->buildEditableOptions(func_get_args());
 
-        $options = json_encode($this->options, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
-
-        $options = substr($options, 0, -1).<<<'STR'
-    ,
-    "success":function(response, newValue){
-        if (response.status){
-            $.admin.toastr.success(response.message, '', {positionClass:"toast-top-center"});
-        } else {
-            $.admin.toastr.error(response.message, '', {positionClass:"toast-top-center"});
-        }
-    }
-}
-STR;
-
-        Admin::script("$('.$class').editable($options);");
-
-        $value = e($this->value ?? '');
+        $class = 'grid-editable-'.preg_replace('/[^A-Za-z0-9_-]/', '-', (string) $column);
+        $value = (string) ($this->value ?? '');
 
         $attributes = [
-            'href'       => '#',
-            'class'      => $class,
-            'data-type'  => $this->type,
-            'data-pk'    => (string) $this->getKey(),
-            'data-url'   => "{$this->getResource()}/{$this->getKey()}",
-            'data-value' => $value,
+            'href'              => 'javascript:void(0);',
+            'class'             => $class,
+            'data-inline-edit'  => '1',
+            'data-type'         => $this->type,
+            'data-pk'           => (string) $this->getKey(),
+            'data-url'          => "{$this->getResource()}/{$this->getKey()}",
+            'data-name'         => $column,
+            'data-value'        => $value,
+            'data-original'     => $value,
         ];
+
+        if (!empty($this->options['source'])) {
+            $attributes['data-source'] = json_encode($this->options['source']);
+        }
 
         if (!empty($this->attributes)) {
             $attributes = array_merge($attributes, $this->attributes);
@@ -219,8 +192,10 @@ STR;
             return $name === '' ? '' : $name.'="'.e($attribute).'"';
         })->filter()->implode(' ');
 
-        $html = $this->type === 'select' ? '' : $value;
+        $html = $value !== '' ? e($value) : ($this->options['emptytext'] ?? '');
 
-        return "<a $attributes>{$html}</a>";
+        Admin::js('vendor/laravel-admin/laravel-admin/grid-inline-edit.js');
+
+        return "<a $attributes><span class=\"ie-display\">{$html}</span> <i class=\"fa fa-pencil\" style=\"visibility: hidden;\"></i></a>";
     }
 }

@@ -5,7 +5,7 @@ namespace Encore\Admin\Form\Field;
 class Mobile extends Text
 {
     protected static $js = [
-        '/vendor/laravel-admin/AdminLTE/plugins/input-mask/jquery.inputmask.bundle.min.js',
+        '/vendor/laravel-admin/inputmask/jquery.inputmask.bundle.min.js',
     ];
 
     /**
