@@ -25,6 +25,7 @@
 - jQuery 3 兼容：`.size()`、`.load(fn)`、`$.globalEval`。
 - `admin.default_avatar` 指向新资源路径。
 - 修正 Select2 的 JS 资源路径，Select/Tags/多选字段可正常初始化。
+- 修正 iframe tabs 标签栏以 View 对象直接输出导致的 `/admin` 500。
 - 标签页和全局导航适配 AdminLTE 4 布局。
 
 ## 2.0.0

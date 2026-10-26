@@ -43,7 +43,7 @@ class IframeTabsController extends Controller
         ];
 
         \View::share($items);
-        \View::share('iframe_tabs_bar', view('admin::iframe-tabs.ext.tabs'));
+        \View::share('iframe_tabs_bar', true);
 
         Admin::navbar(function (Navbar $navbar) {
             $navbar->right(view('admin::iframe-tabs.ext.options'));

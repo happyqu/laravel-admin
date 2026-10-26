@@ -109,6 +109,7 @@ function browserDemoTable(): void
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $isNavigation = $path === '/admin/nav';
+$isIframe = $path === '/admin/iframe' || $path === '/admin/dashboard';
 
 if ($path === '/favicon.ico') {
     http_response_code(204);
@@ -147,7 +148,7 @@ if (str_starts_with($path, $prefix)) {
     return;
 }
 
-if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form', '/admin/fields', '/admin/grid', '/admin/show', '/admin/nav'], true)) {
+if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form', '/admin/fields', '/admin/grid', '/admin/show', '/admin/nav', '/admin/iframe', '/admin/dashboard'], true)) {
     http_response_code(404);
     echo 'Not found';
     return;
@@ -167,7 +168,7 @@ $app['config']->set('admin.title', 'Admin');
 $app['config']->set('admin.route.prefix', 'admin');
 $app['config']->set('admin.auth.guard', 'admin');
 $app['config']->set('admin.database.menu_model', BrowserFakeMenu::class);
-$app['config']->set('admin.iframe_tabs.enable', false);
+$app['config']->set('admin.iframe_tabs.enable', $isIframe);
 $app['config']->set('admin.navigation.enabled', $isNavigation);
 
 $app->register(Encore\Admin\AdminServiceProvider::class);
@@ -301,6 +302,21 @@ $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/nav', functi
 
     return $content;
 });
+
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/iframe', function () use ($app) {
+    $controller = $app->make(Encore\Admin\IframeTabs\Http\Controllers\IframeTabsController::class);
+    $content = $app->make(Encore\Admin\Layout\Content::class);
+
+    return $controller->index($content);
+})->name('iframes.index');
+
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/dashboard', function () {
+    $content = new Encore\Admin\Layout\Content();
+    $content->title('Dashboard')->description('Iframe home page');
+    $content->body('<div class="card"><div class="card-body">Iframe home content.</div></div>');
+
+    return $content;
+})->name('iframes.dashboard');
 
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 $request = Illuminate\Http\Request::capture();

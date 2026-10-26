@@ -13,7 +13,7 @@
         </ul>
 
         @if(!empty($iframe_tabs_bar))
-            {!! $iframe_tabs_bar !!}
+            @include('admin::iframe-tabs.ext.tabs')
         @endif
 
         <!-- Right navbar links -->
