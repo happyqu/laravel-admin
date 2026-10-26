@@ -274,7 +274,7 @@ $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/grid', funct
     $grid = new Encore\Admin\Grid(new BrowserDemoModel());
     $grid->column('id', 'ID')->sortable();
     $grid->column('name', 'Name');
-    $grid->column('email', 'Email');
+    $grid->column('email', 'Email')->editable();
     $grid->column('status', 'Status')->using(['active' => 'Active', 'disabled' => 'Disabled']);
     $grid->column('active', 'Active')->switch();
     $grid->column('date', 'Date');
