@@ -78,6 +78,13 @@ class BrowserFakeMenu
     }
 }
 
+class BrowserDemoModel extends Illuminate\Database\Eloquent\Model
+{
+    protected $table = 'browser_demos';
+    protected $guarded = [];
+    public $timestamps = false;
+}
+
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
 if ($path === '/favicon.ico') {
@@ -117,7 +124,7 @@ if (str_starts_with($path, $prefix)) {
     return;
 }
 
-if (!in_array($path, ['/login', '/admin', '/admin/users'], true)) {
+if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form'], true)) {
     http_response_code(404);
     echo 'Not found';
     return;
@@ -159,6 +166,30 @@ $app['router']->middleware('web')->get('/admin/users', function () {
     $content = new Encore\Admin\Layout\Content();
     $content->title('Users')->description('Users page');
     $content->body('<div class="card"><div class="card-body">Users page body.</div></div>');
+
+    return $content;
+});
+
+$app['router']->middleware('web')->get('/admin/form', function () {
+    $model = new BrowserDemoModel([
+        'name' => 'Alice',
+        'email' => 'alice@example.com',
+        'status' => 'active',
+        'active' => 1,
+        'date' => '2026-10-26',
+    ]);
+
+    $form = new Encore\Admin\Form($model);
+    $form->text('name')->default('Alice');
+    $form->email('email')->default('alice@example.com');
+    $form->select('status')->options(['active' => 'Active', 'disabled' => 'Disabled'])->default('active');
+    $form->switch('active')->default(1);
+    $form->date('date')->default('2026-10-26');
+    $form->setAction('/admin/form');
+
+    $content = new Encore\Admin\Layout\Content();
+    $content->title('Form')->description('Form field smoke test');
+    $content->body($form);
 
     return $content;
 });
