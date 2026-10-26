@@ -34,6 +34,16 @@ test('renders a field matrix with real Form field views and plugins', async ({ p
     await expect(page.locator('input[name="time"]')).toHaveCount(1);
     await expect(page.locator('.pcr-app')).not.toHaveCount(0);
     await expect(page.locator('input[name="number"]')).toHaveCount(1);
+    await expect(page.locator('input[name="price"]')).toHaveCount(1);
+    await expect(page.locator('input[name="amount"]')).toHaveCount(1);
+    await expect(page.locator('input[name="mobile"]')).toHaveCount(1);
+    await expect(page.locator('input[name="ip"]')).toHaveCount(1);
+    await expect(page.locator('input[name="month"]')).toHaveCount(1);
+    await expect(page.locator('input[name="year"]')).toHaveCount(1);
+    await expect(page.locator('select[name="timezone"]')).toHaveCount(1);
+    await expect(page.locator('input[name="hidden_field"]')).toHaveCount(1);
+    await expect(page.locator('input[name="icon"]')).toHaveCount(1);
+    await expect(page.locator('.alert-info')).toContainText('HTML field');
     await expect(page.locator('input[type="file"][name="file"]')).toHaveCount(1);
     await expect(page.locator('.select2-container')).not.toHaveCount(0);
     await expect(page.locator('.flatpickr-input')).not.toHaveCount(0);

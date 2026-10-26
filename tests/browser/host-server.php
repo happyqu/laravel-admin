@@ -241,6 +241,17 @@ $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/fields', fun
     $form->time('time');
     $form->color('color');
     $form->number('number');
+    $form->currency('price');
+    $form->decimal('amount');
+    $form->mobile('mobile');
+    $form->ip('ip');
+    $form->month('month');
+    $form->year('year');
+    $form->timezone('timezone');
+    $form->hidden('hidden_field');
+    $form->icon('icon');
+    $form->divider('Divider');
+    $form->html('<div class="alert alert-info">HTML field</div>');
     $form->email('email');
     $form->url('url');
     $form->password('password');
