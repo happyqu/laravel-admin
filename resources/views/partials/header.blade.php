@@ -12,6 +12,10 @@
             {!! Admin::getNavbar()->render('left') !!}
         </ul>
 
+        @if(!empty($iframe_tabs_bar))
+            {!! $iframe_tabs_bar !!}
+        @endif
+
         <!-- Right navbar links -->
         <ul class="navbar-nav ms-auto navbar-custom-menu">
             {!! Admin::getNavbar()->render() !!}

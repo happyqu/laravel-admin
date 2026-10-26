@@ -108,8 +108,8 @@
                 },
                 {
                     "path": "custom.css",
-                    "sha256": "558e886167cdb1d89ba28643a90facb99ccede62a0d8f12cd52e672055809219",
-                    "bytes": 1857
+                    "sha256": "4b624783147779993665daefc05f9dee5fb801da6a4066e11d31523be55c145a",
+                    "bytes": 1471
                 },
                 {
                     "path": "flatpickr/dist/flatpickr.js",
@@ -443,8 +443,8 @@
                 },
                 {
                     "path": "laravel-admin/laravel-admin.css",
-                    "sha256": "afe8fc5a8e6b8472ac5d351297257b0866c2ca4783fbd8aa725fd537002fd042",
-                    "bytes": 2165
+                    "sha256": "5e2c33996e3a2558278994155c696a4a66feef189777262b6d2b767713212b8c",
+                    "bytes": 1828
                 },
                 {
                     "path": "laravel-admin/laravel-admin.js",

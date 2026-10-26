@@ -21,44 +21,27 @@ input.label {
     border-radius: inherit !important;
 }
 
-.box-show {
+.card-show {
     border-radius: 0 !important;
     box-shadow: none !important;
 }
 
 a.editable-empty {
-    color: #3c8dbc;
+    color: var(--bs-primary);
     border-bottom: none !important;
 }
 
-.form-group > label.asterisk:before {
+.admin-field > label.asterisk:before {
     content: "* ";
-    color: red;
+    color: var(--bs-danger);
 }
 
 .mailbox-attachments li {
     width: 300px !important;
 }
 
-.table-has-many .form-group {
+.table-has-many .admin-field {
     margin-bottom: 0 !important;
-}
-
-
-.table-has-many label.control-label[for=inputError] {
-    position: absolute;
-    z-index: 100;
-    background-color: #fff;
-    border: 1px solid #dd4b39;
-    border-radius: 5px;
-    text-align: left;
-    top: 34px;
-    padding: 8px;
-    line-height: 1.2;
-}
-
-.table-has-many label.control-label[for=inputError]+br {
-    display: none;
 }
 
 #totop {
@@ -80,7 +63,7 @@ a.editable-empty {
     opacity: 1;
 }
 
-.file-input .glyphicon-folder-open {
+.file-input .fa-folder-open {
     display: inline;
 }
 

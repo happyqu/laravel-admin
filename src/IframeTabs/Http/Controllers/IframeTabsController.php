@@ -39,13 +39,13 @@ class IframeTabsController extends Controller
             'iframes_index' => admin_url(),
             'tabs_left' => IframeTabs::config('tabs_left', '42'),
             'bind_urls' => IframeTabs::config('bind_urls', 'none'),
-            'bind_selecter' => IframeTabs::config('bind_selecter', '.box-body table.table tbody a.grid-row-view,.box-body table.table tbody a.grid-row-edit,.box-header .pull-right .btn-success'),
+            'bind_selecter' => IframeTabs::config('bind_selecter', '.card-body table.table tbody a.grid-row-view,.card-body table.table tbody a.grid-row-edit,.card-header .ms-auto .btn-success'),
         ];
 
         \View::share($items);
+        \View::share('iframe_tabs_bar', view('admin::iframe-tabs.ext.tabs'));
 
         Admin::navbar(function (Navbar $navbar) {
-            $navbar->left(view('admin::iframe-tabs.ext.tabs'));
             $navbar->right(view('admin::iframe-tabs.ext.options'));
         });
 
