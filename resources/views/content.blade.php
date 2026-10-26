@@ -1,7 +1,7 @@
 @extends('admin::index', ['header' => strip_tags($header)])
 
 @section('content')
-    <div class="app-content-header">
+    <div class="app-content-header{{ config('admin.show_content_header', false) ? '' : ' d-none' }}">
         <div class="container-fluid">
             <div class="row align-items-center">
                 <div class="col-sm-6">

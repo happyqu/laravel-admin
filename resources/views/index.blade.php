@@ -26,7 +26,7 @@
 </head>
 
 <body class="{{ join(' ', config('admin.layout', [])) }} bg-body-tertiary"
-      data-admin-theme="{{ config('admin.theme', 'blue') }}"
+      data-admin-theme="{{ config('admin.theme', 'default') }}"
       @if(config('admin.color_mode') === 'light') data-bs-theme="light" @endif
       @if(config('admin.color_mode') === 'dark') data-bs-theme="dark" @endif>
 

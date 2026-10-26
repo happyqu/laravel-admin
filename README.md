@@ -34,7 +34,7 @@ php artisan admin:install
 
 ```dotenv
 ADMIN_GLOBAL_NAVIGATION=true
-ADMIN_THEME=blue
+ADMIN_THEME=default
 ADMIN_COLOR_MODE=light
 ```
 

@@ -1,31 +1,3 @@
-input.content {
-    min-height: 0 !important;
-    padding: 6px 12px !important;
-    margin: 0 !important;
-}
-
-input.label:empty {
-    display: inherit !important;
-}
-
-input.label {
-    display: inherit !important;
-    padding: 6px 12px !important;
-    font-size: 14px !important;
-    font-weight: inherit !important;
-    line-height: 1.42857143 !important;
-    color: #555 !important;
-    text-align: inherit !important;
-    white-space: inherit !important;
-    vertical-align: inherit !important;
-    border-radius: inherit !important;
-}
-
-.card-show {
-    border-radius: 0 !important;
-    box-shadow: none !important;
-}
-
 a.editable-empty {
     color: var(--bs-primary);
     border-bottom: none !important;
@@ -97,4 +69,89 @@ a.editable-empty {
 body.swal2-shown .admin-ajax-loading,
 body.swal2-shown #nprogress {
     display: none;
+}
+
+/* Keep column labels intact; wide grids scroll inside .table-responsive. */
+.grid-table > thead > tr > th {
+    white-space: nowrap;
+}
+
+/* Compact list presentation; the surrounding shell keeps AdminLTE defaults. */
+.grid-box {
+    font-size: 14px;
+    --bs-card-border-radius: 3px;
+    --bs-card-border-color: var(--bs-border-color-translucent);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .08);
+}
+
+.grid-box > .card-header {
+    padding: 10px;
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+.grid-box > .card-header > .d-flex {
+    flex-wrap: wrap;
+}
+
+.grid-table {
+    --bs-table-border-color: var(--bs-secondary-bg);
+}
+
+.grid-table > :not(caption) > * > * {
+    padding: 8px;
+}
+
+.grid-table > thead > tr > th {
+    font-weight: 600;
+}
+
+.grid-box > .card-footer {
+    padding: 10px;
+}
+
+.grid-box .pagination {
+    --bs-pagination-font-size: 14px;
+    --bs-pagination-padding-y: 4px;
+    --bs-pagination-padding-x: 10px;
+    margin-bottom: 0;
+}
+
+.grid-dropdown-actions .grid-row-actions-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    text-decoration: none;
+}
+
+.grid-dropdown-actions > .dropdown-menu {
+    --bs-dropdown-min-width: 70px;
+    --bs-dropdown-font-size: 14px;
+    --bs-dropdown-border-radius: 0;
+    --bs-dropdown-padding-y: 5px;
+    --bs-dropdown-item-padding-y: 3px;
+    --bs-dropdown-item-padding-x: 20px;
+    --bs-dropdown-link-color: var(--bs-secondary-color);
+    --bs-dropdown-divider-margin-y: 9px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, .2);
+}
+
+/* RowAction subclasses may return plain links rather than .dropdown-item. */
+.grid-dropdown-actions > .dropdown-menu > li > a {
+    display: block;
+    padding: var(--bs-dropdown-item-padding-y) var(--bs-dropdown-item-padding-x);
+    color: var(--bs-dropdown-link-color);
+    font-weight: 400;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.grid-dropdown-actions > .dropdown-menu > li > a:hover,
+.grid-dropdown-actions > .dropdown-menu > li > a:focus {
+    color: var(--bs-dropdown-link-hover-color);
+    background-color: var(--bs-dropdown-link-hover-bg);
 }

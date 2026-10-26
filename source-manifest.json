@@ -108,8 +108,8 @@
                 },
                 {
                     "path": "custom.css",
-                    "sha256": "4b624783147779993665daefc05f9dee5fb801da6a4066e11d31523be55c145a",
-                    "bytes": 1471
+                    "sha256": "f0ba0800c571edcc89a3f7dfffa016b7757aa0a8b94da762d905e6e0f8430c84",
+                    "bytes": 302
                 },
                 {
                     "path": "flatpickr/dist/flatpickr.js",
@@ -183,7 +183,7 @@
                 },
                 {
                     "path": "global-navigation.css",
-                    "sha256": "0aeba03fbf54c86a8d5a35c0368d1ba8754332477a3f17dd671000c291c6a283",
+                    "sha256": "8f802aad0de18e0e4c5d9fc0923c4d5121334fc7804b86149906d19f16772b2d",
                     "bytes": 15263
                 },
                 {
@@ -313,8 +313,8 @@
                 },
                 {
                     "path": "iframe-tabs/bootstrap-tab.js",
-                    "sha256": "053bdc0f6403cd8fe38edb6c83e77d14e6d6b9dd97a8537f057ba837c55e86c9",
-                    "bytes": 25816
+                    "sha256": "4221e82bfc2cc92833739dd14c54ab188f4262f2d339214b03814237c0053063",
+                    "bytes": 25603
                 },
                 {
                     "path": "iframe-tabs/content.css",
@@ -323,8 +323,8 @@
                 },
                 {
                     "path": "iframe-tabs/dashboard.css",
-                    "sha256": "e46e1efd3e0aa75a84d45f1d82890a582c82e0ae3c86ae8b08d591e1877f77dc",
-                    "bytes": 3456
+                    "sha256": "a2b9c58a921bae3861b1b05879b0916973c4caeaf03f6eee9c471ad7ed4fd729",
+                    "bytes": 3052
                 },
                 {
                     "path": "iframe-tabs/images/loading-spinner-grey.gif",
@@ -453,8 +453,8 @@
                 },
                 {
                     "path": "laravel-admin/laravel-admin.css",
-                    "sha256": "df3da22285b84cc211846767be6875d17a0a0028e568d3f8e678f28181112d5b",
-                    "bytes": 1985
+                    "sha256": "3382759cc8940623ee15a8c510ab07852b321117e32d04dab04e2543392653d2",
+                    "bytes": 3558
                 },
                 {
                     "path": "laravel-admin/laravel-admin.js",
@@ -468,8 +468,8 @@
                 },
                 {
                     "path": "laravel-admin/themes.css",
-                    "sha256": "f27f159376eba423234c6dca6ffea151e3380d47b6cecdc8044015ae806095e5",
-                    "bytes": 3451
+                    "sha256": "283c18ed99ce6747f961bc110e12f8c50c513791436916f7fecbf4879257ba3c",
+                    "bytes": 962
                 },
                 {
                     "path": "nestable/jquery.nestable.js",

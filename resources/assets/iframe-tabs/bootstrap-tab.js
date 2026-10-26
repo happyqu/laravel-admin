@@ -288,7 +288,7 @@ var scrollToTab = function (element) {
         marginRightVal = calSumWidth($(element).nextAll()); //后面所有tab的总宽度
     //一些按钮(向左,向右滑动)的总宽度
     // tab(a标签)显示区域的总宽度
-    var visibleWidth = $('.navbar.navbar-static-top').outerWidth() - window.tabs_left - $('.navbar-custom-menu').outerWidth();
+    var visibleWidth = $('.content-tabs').innerWidth();
     //将要滚动的长度
     var scrollVal = 0;
     if ($(".page-tabs-content").outerWidth() < visibleWidth) {
@@ -317,7 +317,7 @@ var scrollToTab = function (element) {
 //滚动条滚动到左边
 var scrollTabLeft = function () {
     var marginLeftVal = Math.abs(parseInt($('.page-tabs-content').css('margin-left')));
-    var visibleWidth = $('.navbar.navbar-static-top').outerWidth() - window.tabs_left - $('.navbar-custom-menu').outerWidth();
+    var visibleWidth = $('.content-tabs').innerWidth();
     var scrollVal = 0;
     if ($(".page-tabs-content").width() < visibleWidth) {
         return false;
@@ -344,7 +344,7 @@ var scrollTabLeft = function () {
 //滚动条滚动到右边
 var scrollTabRight = function () {
     var marginLeftVal = Math.abs(parseInt($('.page-tabs-content').css('margin-left')));
-    var visibleWidth = $('.navbar.navbar-static-top').outerWidth() - window.tabs_left - $('.navbar-custom-menu').outerWidth();
+    var visibleWidth = $('.content-tabs').innerWidth();
     var scrollVal = 0;
     if ($(".page-tabs-content").width() < visibleWidth) {
         return false;

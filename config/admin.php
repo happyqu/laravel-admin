@@ -299,10 +299,10 @@ return [
     | This value selects the AdminLTE 4 color preset.
     | @see https://adminlte.io/themes/v4/docs/
     |
-    | Supported: "blue", "green", "purple", "red", "yellow", "black".
+    | Supported: "default" (AdminLTE), "blue", "green", "purple", "red", "yellow", "black".
     |
     */
-    'theme' => env('ADMIN_THEME', 'blue'),
+    'theme' => env('ADMIN_THEME', 'default'),
 
     /*
     |--------------------------------------------------------------------------
@@ -326,7 +326,7 @@ return [
     | "sidebar-expand-lg", "fixed-header", "fixed-footer".
     |
     */
-    'layout' => ['layout-fixed', 'sidebar-mini', 'sidebar-collapse', 'sidebar-expand-lg'],
+    'layout' => ['layout-fixed', 'sidebar-expand-lg'],
 
     /*
     |--------------------------------------------------------------------------
@@ -376,6 +376,9 @@ return [
     | Whether enable default breadcrumb for every page content.
     */
     'enable_default_breadcrumb' => true,
+
+    // Show the page title, description and breadcrumbs above the content.
+    'show_content_header' => false,
 
     /*
     |--------------------------------------------------------------------------

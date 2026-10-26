@@ -1,8 +1,3 @@
-.app-header,
-.app-sidebar {
-    display: block;
-}
-
 .app-footer {
     display: none;
 }
@@ -11,10 +6,6 @@ html,
 body,
 .app-wrapper {
     height: 100%;
-}
-
-.app-header {
-    position: relative;
 }
 
 #admin-content {
@@ -28,14 +19,18 @@ body,
 }
 
 .content-tabs {
-    position: absolute;
-    height: 45px;
-    font-size: 12px;
+    position: static;
+    flex: 1 1 0%;
+    min-width: 0;
+    height: 2.5rem;
+    font-size: inherit;
     display: block;
     overflow: hidden;
-    top: 5px;
-    left: 42px;
     color: var(--admin-header-color, #fff);
+}
+
+.app-header .navbar-nav {
+    flex-shrink: 0;
 }
 
 .content-tabs button {
@@ -60,20 +55,21 @@ body,
 }
 
 .content-tabs .page-tabs a {
-    display: block;
+    display: flex;
+    align-items: center;
     float: left;
-    padding: 0 4px;
+    padding: 0 12px;
     text-decoration: none;
     color: inherit;
     height: 100%;
-    line-height: 45px;
+    border-bottom: 3px solid transparent;
     margin: 0 3px;
-    border-radius: 4px 4px 0 0;
 }
 
 .content-tabs .page-tabs a.active,
 .content-tabs .page-tabs a.active:hover {
-    background: var(--bs-body-bg);
+    background: var(--bs-tertiary-bg);
+    border-bottom-color: var(--bs-primary);
     color: var(--bs-body-color) !important;
 }
 
@@ -90,9 +86,6 @@ body,
 }
 
 .content-tabs .page-tabs a i {
-    margin-top: -10px;
-    right: 0;
-    position: relative;
     margin-left: 7px;
 }
 
@@ -178,20 +171,4 @@ body,
 
 .app-header .navbar-custom-menu {
     position: relative;
-}
-
-.app-header .navbar-nav > .nav-item > .nav-link {
-    padding: 0 7px !important;
-    line-height: 40px !important;
-}
-
-.app-header .navbar-custom-menu .navbar-nav {
-    position: relative;
-    top: 5px;
-    padding-left: 5px;
-    border-left: 1px dashed rgba(255, 255, 255, 0.35);
-}
-
-.app-header .navbar-nav > .user-menu .user-image {
-    margin-top: 3px !important;
 }

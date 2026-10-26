@@ -1,66 +1,6 @@
-.app-footer {
-    display: none !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-}
-
-.app-sidebar .info p {
-    width: 150px;
-    word-break: break-all;
-    white-space: break-spaces;
-    line-height: 1.2;
-    margin-bottom: 6px;
-}
-
-.app-sidebar .info a {
-    display: none;
-}
-
-#app > .app-content-header {
-    display: none;
-}
-
-#totop {
-    top: 99999px !important;
-}
-
-.sidebar-menu .nav-item a .fa:first-child {
-    display: none !important;
-}
-
-.sidebar-collapse .sidebar-menu .nav-item a .fa:first-child {
-    display: block !important;
-}
-
-.grid-dropdown-actions .dropdown-menu.show {
-    right: 96% !important;
-    top: 5px !important;
-    left: auto !important;
-}
-
-tr:first-child .grid-dropdown-actions .dropdown-menu.show,
-tr:nth-child(2) .grid-dropdown-actions .dropdown-menu.show {
-    top: 5px !important;
-    bottom: auto !important;
-}
-
-tr:last-child .grid-dropdown-actions .dropdown-menu.show,
-tr:nth-last-child(2) .grid-dropdown-actions .dropdown-menu.show {
-    top: auto !important;
-    bottom: 0 !important;
-}
-
 .dd-handle {
     word-break: break-all;
     overflow-wrap: break-word;
-}
-
-@media (min-width: 1000px) {
-    .col-lg-6 {
-        width: 50%;
-        float: left;
-    }
 }
 
 .red_tip {

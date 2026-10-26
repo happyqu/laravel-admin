@@ -1,4 +1,4 @@
-<nav class="app-header navbar navbar-expand navbar-static-top">
+<nav class="app-header navbar navbar-expand{{ config('admin.theme', 'default') === 'default' ? ' bg-body' : '' }}">
     <div class="container-fluid">
 
         <!-- Left navbar links -->

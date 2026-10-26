@@ -1,4 +1,4 @@
-<aside class="app-sidebar{{ empty($navigationClass) ? '' : ' '.$navigationClass }}">
+<aside class="app-sidebar bg-body-secondary shadow{{ empty($navigationClass) ? '' : ' '.$navigationClass }}" data-bs-theme="dark">
     <div class="sidebar-brand">
         <a href="{{ admin_url('/') }}" class="brand-link">
             <span class="brand-text fw-light">{!! config('admin.logo') ?: config('admin.name') !!}</span>

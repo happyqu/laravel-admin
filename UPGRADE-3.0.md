@@ -17,12 +17,14 @@ php artisan optimize:clear
 
 | 2.x | 3.0 |
 |---|---|
-| `admin.skin`（12 个 `skin-*`） | `admin.theme`：`blue`、`green`、`purple`、`red`、`yellow`、`black` |
+| `admin.skin`（12 个 `skin-*`） | `admin.theme`：`default`（AdminLTE 官方默认）、`blue`、`green`、`purple`、`red`、`yellow`、`black`（可选顶栏配色） |
 | 无 | `admin.color_mode`：`light`、`dark`、`auto` |
 | `layout` 支持 `fixed`、`layout-boxed`、`layout-top-nav` | 只支持 `layout-fixed`、`sidebar-mini`、`sidebar-collapse`、`sidebar-expand-lg`、`fixed-header`、`fixed-footer` |
 | `default_avatar` 指向 `AdminLTE/dist/img` | 指向 `adminlte4/img` |
 
 `skin-blue-light` 等旧值需要在宿主配置和 `.env` 中改为新的 `ADMIN_THEME` / `ADMIN_COLOR_MODE`。
+
+默认使用 AdminLTE 4 的浅色顶栏、深色侧栏及原生 Bootstrap 5 控件尺寸。已有项目如需使用默认外观，请设置 `ADMIN_THEME=default`；默认 `layout` 为 `['layout-fixed', 'sidebar-expand-lg']`，侧栏初始展开。列表沿用 2.0 的紧凑密度，行操作菜单采用三点入口并向左展开。标题、描述和面包屑区域默认隐藏，可通过 `admin.show_content_header=true` 开启。旧版强制隐藏页脚、菜单图标，以及覆盖 Bootstrap 栅格和下拉菜单定位的样式已移除。
 
 `iframe_tabs.bind_selecter` 中 `.box-header .pull-right .btn-success` 已改为 `.card-header .ms-auto .btn-success`。
 
