@@ -1,6 +1,6 @@
-<li>
-    <a href="javascript:void(0);" class="container-refresh">
-        <i class="fa fa-refresh"></i>
+<li class="nav-item">
+    <a href="javascript:void(0);" class="nav-link container-refresh" role="button" title="{{ trans('admin.refresh') }}" aria-label="{{ trans('admin.refresh') }}">
+        <i class="fa fa-refresh" aria-hidden="true"></i>
     </a>
 </li>
 <script>

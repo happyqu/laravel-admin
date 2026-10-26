@@ -12,7 +12,6 @@
             </div>
             <div class="info ms-2">
                 <a href="#" class="d-block text-decoration-none">{{ Admin::user()->name }}</a>
-                <span class="small text-success"><i class="fa fa-circle" aria-hidden="true"></i> {{ trans('admin.online') }}</span>
             </div>
         </div>
 
@@ -38,7 +37,6 @@
 
         <nav class="mt-1" aria-label="{{ trans('admin.menu') }}">
             <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu" data-accordion="false">
-                <li class="nav-header">{{ trans('admin.menu') }}</li>
                 @each('admin::partials.menu', Admin::menu(), 'item')
             </ul>
         </nav>

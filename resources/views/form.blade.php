@@ -1,4 +1,4 @@
-<div class="card card-info">
+<div class="card admin-form-card">
     <div class="card-header d-flex align-items-center">
         <h3 class="card-title mb-0">{{ $form->title() }}</h3>
         <div class="card-tools ms-auto">{!! $form->renderTools() !!}</div>

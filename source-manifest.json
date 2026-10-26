@@ -313,8 +313,8 @@
                 },
                 {
                     "path": "iframe-tabs/bootstrap-tab.js",
-                    "sha256": "4221e82bfc2cc92833739dd14c54ab188f4262f2d339214b03814237c0053063",
-                    "bytes": 25603
+                    "sha256": "8f5bd407681baf9cd1b4af9b12ac70e1e281aa6a7cfd08f1dec2cb734e6655a1",
+                    "bytes": 24678
                 },
                 {
                     "path": "iframe-tabs/content.css",
@@ -465,6 +465,11 @@
                     "path": "laravel-admin/listbox.js",
                     "sha256": "1d7d8b02c75e95f77227be5c08c0dcbf4e67d8db2e9f5e71a90a20c9cf340185",
                     "bytes": 7899
+                },
+                {
+                    "path": "laravel-admin/pro.css",
+                    "sha256": "5ba55f15f42f4afca1e8dac9df2e8e815d15688203fb8038dba688e1dc0e8d24",
+                    "bytes": 14838
                 },
                 {
                     "path": "laravel-admin/themes.css",

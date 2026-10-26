@@ -1,6 +1,7 @@
 <li class="nav-item tab-options dropdown">
     <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-        {{ $trans['oprations'] }}
+        <i class="fa fa-ellipsis-h d-sm-none" aria-hidden="true"></i>
+        <span class="d-none d-sm-inline">{{ $trans['oprations'] }}</span>
     </a>
     <ul class="dropdown-menu dropdown-menu-end">
         <li><a class="dropdown-item tabReload" href="javascript:;" onclick="refreshTab();">{{ $trans['refresh_current'] }}</a></li>

@@ -24,7 +24,7 @@ php artisan optimize:clear
 
 `skin-blue-light` 等旧值需要在宿主配置和 `.env` 中改为新的 `ADMIN_THEME` / `ADMIN_COLOR_MODE`。
 
-默认使用 AdminLTE 4 的浅色顶栏、深色侧栏及原生 Bootstrap 5 控件尺寸。已有项目如需使用默认外观，请设置 `ADMIN_THEME=default`；默认 `layout` 为 `['layout-fixed', 'sidebar-expand-lg']`，侧栏初始展开。列表沿用 2.0 的紧凑密度，行操作菜单采用三点入口并向左展开。标题、描述和面包屑区域默认隐藏，可通过 `admin.show_content_header=true` 开启。旧版强制隐藏页脚、菜单图标，以及覆盖 Bootstrap 栅格和下拉菜单定位的样式已移除。
+默认界面在 AdminLTE 4 / Bootstrap 5 上使用包内 `laravel-admin/pro.css`：保留 2.0 的紧凑列表与表单流程，视觉参考 Ant Design Pro，统一 14px 正文字号、蓝色主操作、轻量卡片及悬停、焦点、选中和禁用状态，不引入 React 或 Ant Design 组件依赖。支持浅色、深色和自动模式。已有项目请设置 `ADMIN_THEME=default`；默认 `layout` 为 `['layout-fixed', 'sidebar-expand-lg']`，侧栏初始展开。行操作菜单采用三点入口并向左展开。标题、描述和面包屑区域默认隐藏，可通过 `admin.show_content_header=true` 开启。旧版强制隐藏页脚、菜单图标，以及覆盖 Bootstrap 栅格和下拉菜单定位的样式已移除。
 
 `iframe_tabs.bind_selecter` 中 `.box-header .pull-right .btn-success` 已改为 `.card-header .ms-auto .btn-success`。
 

@@ -38,6 +38,8 @@ ADMIN_THEME=default
 ADMIN_COLOR_MODE=light
 ```
 
+默认界面保留 2.0 的紧凑操作布局，结合 Ant Design Pro 的设计语言，统一表格、表单、菜单、分页和弹窗样式；支持浅色与深色模式。视觉层位于 `resources/assets/laravel-admin/pro.css`，底层仍使用 AdminLTE 4 / Bootstrap 5。
+
 日志查看器默认位于 `/admin/logs`，读取 `storage/logs`。图片处理、Excel 导出等可选功能的依赖见 [composer.json](composer.json) 中的 `suggest`。
 
 ## 升级

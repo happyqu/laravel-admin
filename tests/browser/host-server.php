@@ -280,7 +280,14 @@ $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/grid', funct
     $grid->column('date', 'Date');
     $grid->paginate(2);
     $grid->filter(function ($filter) {
-        $filter->like('name', 'Name');
+        $filter->column(1 / 2, function ($column) {
+            $column->like('name', 'Name');
+            $column->between('active', 'Active range');
+        });
+        $filter->column(1 / 2, function ($column) {
+            $column->equal('status', 'Status')->select(['active' => 'Active', 'disabled' => 'Disabled']);
+            $column->like('email', 'Email');
+        });
     });
 
     $content = new Encore\Admin\Layout\Content();
@@ -317,6 +324,10 @@ $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/nav', functi
 });
 
 $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/iframe', function () use ($app) {
+    Encore\Admin\Facades\Admin::navbar(function ($navbar) {
+        $navbar->right('<li><a class="fixture-cache-tools" href="#tools"><i class="fa fa-trash" aria-hidden="true"></i><span>Cache tools</span></a></li>');
+        $navbar->right('<li><a class="fixture-apps" href="#apps" aria-label="Apps"><i class="fa fa-th" aria-hidden="true"></i></a></li>');
+    });
     $controller = $app->make(Encore\Admin\IframeTabs\Http\Controllers\IframeTabsController::class);
     $content = $app->make(Encore\Admin\Layout\Content::class);
 

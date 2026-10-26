@@ -6,7 +6,7 @@
 
         <div class="col-md-{{ $width['field'] }} d-flex flex-wrap align-items-center gap-3">
             @if(in_array('reset', $buttons))
-                <button type="reset" class="btn btn-outline-warning">{{ trans('admin.reset') }}</button>
+                <button type="reset" class="btn btn-outline-secondary">{{ trans('admin.reset') }}</button>
             @endif
 
             @if(in_array('submit', $buttons))

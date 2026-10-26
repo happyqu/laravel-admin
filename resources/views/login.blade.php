@@ -12,6 +12,7 @@
 
     <link rel="stylesheet" href="{{ admin_asset('vendor/laravel-admin/adminlte4/css/adminlte.min.css') }}">
     <link rel="stylesheet" href="{{ admin_asset('vendor/laravel-admin/font-awesome/css/font-awesome.min.css') }}">
+    <link rel="stylesheet" href="{{ admin_asset('vendor/laravel-admin/laravel-admin/pro.css') }}">
 </head>
 <body class="login-page bg-body-secondary"
       @if(config('admin.login_background_image')) style="background: url({{ config('admin.login_background_image') }}) no-repeat; background-size: cover;" @endif>

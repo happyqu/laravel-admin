@@ -93,7 +93,7 @@ var addTabs = function (options) {
 
         //是否允许关闭
         if (options.close) {
-            var $i = $("<i class='fa fa-times-circle page_tab_close' style='cursor: pointer' onclick='closeTab(this);'></i>").attr(pageIdField, pageId).appendTo($title);
+            var $i = $("<i class='fa fa-times page_tab_close' style='cursor: pointer' onclick='closeTab(this);'></i>").attr(pageIdField, pageId).appendTo($title);
             // title += ' <i class="fa fa-times-circle page_tab_close" style="cursor: pointer;" data-id="' + pageId + '" onclick="closeTab(this)"></i>';
         }
 
@@ -282,38 +282,21 @@ var calSumWidth = function (element) {
 };
 //滚动到指定选项卡
 var scrollToTab = function (element) {
-    //element是tab(a标签),装有标题那个
-    //div.content-tabs > div.page-tabs-content
-    var marginLeftVal = calSumWidth($(element).prevAll()), //前面所有tab的总宽度
-        marginRightVal = calSumWidth($(element).nextAll()); //后面所有tab的总宽度
-    //一些按钮(向左,向右滑动)的总宽度
-    // tab(a标签)显示区域的总宽度
+    var tab = $(element);
+    var strip = $('.page-tabs-content');
     var visibleWidth = $('.content-tabs').innerWidth();
-    //将要滚动的长度
-    var scrollVal = 0;
-    if ($(".page-tabs-content").outerWidth() < visibleWidth) {
-        //所有的tab都可以显示的情况
-        scrollVal = 0;
-    } else if (marginRightVal <= (visibleWidth - $(element).outerWidth(true) - $(element).next().outerWidth(true))) {
-        //向右滚动
-        //marginRightVal(后面所有tab的总宽度)小于可视区域-(当前tab和下一个tab的宽度)
-        if ((visibleWidth - $(element).next().outerWidth(true)) > marginRightVal) {
-            scrollVal = marginLeftVal;
-            var tabElement = element;
-            while ((scrollVal - $(tabElement).outerWidth()) > ($(".page-tabs-content").outerWidth() - visibleWidth)) {
-                scrollVal -= $(tabElement).prev().outerWidth();
-                tabElement = $(tabElement).prev();
-            }
-        }
-    } else if (marginLeftVal > (visibleWidth - $(element).outerWidth(true) - $(element).prev().outerWidth(true))) {
-        //向左滚动
-        scrollVal = marginLeftVal - $(element).prev().outerWidth(true);
-    }
-    //执行动画
-    $('.page-tabs-content').animate({
-        marginLeft: 0 - scrollVal + 'px'
-    }, "fast");
+    if (!tab.length || !visibleWidth) { return; }
+    var start = calSumWidth(tab.prevAll());
+    var end = start + tab.outerWidth(true);
+    var offset = Math.abs(parseFloat(strip.css('margin-left')) || 0);
+    if (start < offset) { offset = start; }
+    if (end > offset + visibleWidth) { offset = end - visibleWidth; }
+    offset = Math.max(0, Math.min(offset, strip.outerWidth() - visibleWidth));
+    strip.stop(true).animate({marginLeft: -offset + 'px'}, 'fast');
 };
+$(window).on('resize.adminTabsLayout', function () {
+    scrollToTab($('.page-tabs-content .menu_tab.active'));
+});
 //滚动条滚动到左边
 var scrollTabLeft = function () {
     var marginLeftVal = Math.abs(parseInt($('.page-tabs-content').css('margin-left')));

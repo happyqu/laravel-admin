@@ -1,5 +1,5 @@
 <div class="btn-group" style="margin-right: 5px">
-    <button type="button" class="btn btn-sm btn-outline-secondary {{ $btn_class }} {{ $expand ? 'active' : '' }}" title="{{ trans('admin.filter') }}">
+    <button type="button" class="btn btn-sm btn-outline-secondary {{ $btn_class }} {{ $expand ? 'active' : '' }}" title="{{ trans('admin.filter') }}" aria-controls="{{ $filter_id }}" aria-expanded="{{ $expand ? 'true' : 'false' }}">
         <i class="fa fa-filter" aria-hidden="true"></i><span class="d-none d-sm-inline">&nbsp;&nbsp;{{ trans('admin.filter') }}</span>
     </button>
 
@@ -23,5 +23,6 @@ var $filter = $('#{{ $filter_id }}');
 
 $btn.off('click').on('click', function () {
     $filter.toggleClass('d-none');
+    $btn.toggleClass('active', !$filter.hasClass('d-none')).attr('aria-expanded', String(!$filter.hasClass('d-none')));
 });
 </script>
