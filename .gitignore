@@ -6,6 +6,8 @@
 /.vscode/
 /.phpunit.cache/
 /.phpunit.result.cache
+/test-results/
+/playwright-report/
 
 # 本地环境与运行产物，避免把宿主配置、密钥或日志带进仓库
 .env

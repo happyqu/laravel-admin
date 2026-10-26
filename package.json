@@ -2,9 +2,13 @@
   "name": "laravel-admin-frontend-tests",
   "private": true,
   "scripts": {
-    "test": "node --test tests/Form/*.test.js tests/IframeTabs/*.test.js tests/Assets/*.test.js"
+    "test": "node --test tests/Form/*.test.js tests/IframeTabs/*.test.js tests/Assets/*.test.js",
+    "test:browser": "playwright test",
+    "test:browser:headed": "playwright test --headed",
+    "test:all": "npm test && npm run test:browser"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "jsdom": "26.1.0"
   }
 }
