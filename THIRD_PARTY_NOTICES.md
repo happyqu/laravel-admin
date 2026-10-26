@@ -76,4 +76,4 @@ Log Viewer 基于 `laravel-admin-ext/log-viewer` 修改，上游地址为 https:
 6. **修改过的文件**：`resources/assets/iframe-tabs/bootstrap-tab.js`、`resources/assets/iframe-tabs/layer/layer.js` 及本包自有的 `custom.css`、`global-navigation.js`、`global-navigation.css`、`actions.js`、`iframe.css` 由本项目维护或修改，仍按对应上游许可证（MIT）分发。
 7. **业务资源**：业务品牌资源、业务入口和业务服务不纳入包内。
 8. **来源清单**：`source-manifest.json` 中 `packages` 记录导入时的原始库文件与哈希，`assets` 记录每个前端文件的原始来源、当前包内路径及 SHA256。源码和 Blade 因内置化、安全修复与发布前清理而调整，`assets` 中的哈希对应当前包内基线。
-9. **图片与字体**：由 Git LFS 管理，LFS 不改变工作区资源内容；发布 ZIP 时必须包含真实文件而非 LFS 指针。
+9. **图片与字体**：作为普通 Git 文件随包分发，文件内容可通过 `source-manifest.json` 中的 SHA256 校验。

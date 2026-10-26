@@ -166,18 +166,9 @@ PHP、PHTML、PHAR、HTML、SVG 等危险上传类型被禁止，不能通过白
 
 默认 `admin` 磁盘为 `public/uploads`；宿主自定义同名磁盘优先。图片裁切、缩略图等功能按需安装 `intervention/image:^2.7`。
 
-## Git LFS
-
-图片和字体通过 Git LFS 管理，PHP、Blade、JS、CSS 使用普通 Git。克隆源码后执行：
-
-```bash
-git lfs install
-git lfs pull
-```
-
-发布 ZIP 必须包含完整图片和字体，不能包含 LFS 指针。使用 `composer archive` 从已取回 LFS 文件的工作区打包，再用 SHA256 清单核对。若使用托管平台自动生成的源码归档作为 Composer dist，应先确认归档包含真实 LFS 对象。
-
 ## 开发和分发
+
+图片、字体及其他前端资源均作为普通 Git 文件分发。发布前可使用 `source-manifest.json` 中的 SHA256 校验资源完整性。
 
 ```bash
 composer install
