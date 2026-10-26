@@ -52,7 +52,7 @@
 
         window.openTab = function (url, title, icon, page_id, close, urlType) {
             if (!url) {
-                alert('url is empty.');
+                $.admin.swal({type: 'error', title: @json(trans('admin.request_failed'))});
                 return;
             }
             if (icon) {
@@ -84,7 +84,7 @@
                     $('.tab-content .loading-message').remove();
                 },
                 open: function () {
-                    alert('layer.js dose not work.');
+                    $.admin.swal({type: 'error', title: @json(trans('admin.request_failed'))});
                 }
             };
         }

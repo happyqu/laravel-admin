@@ -76,6 +76,7 @@ $(function () {
     var tailUrl = @json($tailPath);
     var interval = null;
     var pending = null;
+    var confirming = false;
 
     function stop() {
         clearInterval(interval);
@@ -84,8 +85,31 @@ $(function () {
     }
 
     $viewer.find('.log-refresh').on('click', function () { $.admin.reload(); });
-    $viewer.find('.log-delete-form').on('submit', function () {
-        return window.confirm(@json(trans('admin.delete_confirm')));
+    $viewer.find('.log-delete-form').on('submit', function (event) {
+        event.preventDefault();
+        if (confirming) { return; }
+        confirming = true;
+        var form = this;
+        var saving = false;
+        $.admin.swal({
+            title: @json(trans('admin.delete_confirm')),
+            type: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#DD6B55',
+            confirmButtonText: @json(trans('admin.confirm')),
+            cancelButtonText: @json(trans('admin.cancel')),
+            showLoaderOnConfirm: true,
+            allowOutsideClick: function () { return !saving; },
+            allowEscapeKey: function () { return !saving; },
+            preConfirm: function () {
+                if (saving) { return Promise.reject(); }
+                saving = true;
+                return $.admin.submitForm(form).then(function (saved) {
+                    if (!saved) { throw new Error('Deletion failed.'); }
+                    return saved;
+                }).finally(function () { saving = false; });
+            }
+        }).catch(function () {}).finally(function () { confirming = false; });
     });
     $viewer.find('.log-live').on('click', function () {
         if (interval !== null) { stop(); return; }

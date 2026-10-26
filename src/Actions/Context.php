@@ -110,12 +110,13 @@ class Context
         return [$action, $model, $token, $keys];
     }
 
-    public function executionTicket(string $definition, array $keys, $model): string
+    public function executionTicket(string $definition, array $keys, $model, int $lifetime = 1800): string
     {
         $tickets = $this->tickets();
         $token = bin2hex(random_bytes(24));
         $tickets[$token] = ['phase' => 'execute', 'definition' => $definition, 'selected' => $keys,
-            'versions' => $this->versions($model), 'identity' => $this->identity(), 'expires' => time() + 1800];
+            'versions' => $this->versions($model), 'identity' => $this->identity(),
+            'expires' => min(time() + $lifetime, $tickets[$definition]['expires'])];
         $this->store($tickets);
         return $token;
     }

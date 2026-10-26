@@ -6421,8 +6421,8 @@
                 },
                 {
                     "path": "actions.js",
-                    "sha256": "9e8d668f13806e3b4a2a33eb1efbec74c1e1245f6f1f62dea795d62c8d9f2631",
-                    "bytes": 12901,
+                    "sha256": "ad1f22ca0d823a6f4ee7f50178412227f170b30af5da2b6f50e393c9c98db1b3",
+                    "bytes": 14328,
                     "origin": "happyqu/laravel-admin action runtime"
                 }
             ],

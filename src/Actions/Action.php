@@ -364,11 +364,30 @@ abstract class Action implements Renderable
         if (!in_array('vendor/laravel-admin/actions.js', Admin::$js, true)) {
             Admin::js('vendor/laravel-admin/actions.js', false);
         }
-        $this->attribute('data-admin-action', app(Context::class)->register($this));
+        $context = app(Context::class);
+        $definition = $context->register($this);
+        $this->attribute('data-admin-action', $definition);
         $this->attribute('data-admin-mode', $this->interaction());
         $this->attribute('data-admin-batch', $this instanceof BatchAction ? '1' : '0');
         $this->attribute('data-admin-load', admin_url('_load_action_'));
         $this->attribute('data-admin-execute', $this->getHandleRoute());
+
+        if ($this->interaction() === 'dialog') {
+            $model = $this instanceof RowAction ? $this->getRow() : $this->contextModel();
+            $this->setResolvedModel($model);
+            $this->attribute('data-admin-dialog', json_encode(
+                $this->loadInteraction()['settings'], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE
+            ));
+            if ($this instanceof BatchAction) {
+                // Selection is known only at click time. Resolve its execution
+                // ticket after confirmation, before sending the mutation.
+                $this->attribute('data-admin-prepare', '1');
+            } else {
+                $this->attribute('data-admin-action', $context->executionTicket(
+                    $definition, $this->contextKeys(), $model, 7200
+                ));
+            }
+        }
     }
 
     /**

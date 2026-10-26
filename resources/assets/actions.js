@@ -168,13 +168,47 @@
             return this.classList.contains(name);
         }).map(function () { return this.getAttribute('data-id'); }).get();
     }
+    function showDialog(current, settings, sequence) {
+        settings = Object.assign({}, settings);
+        settings.preConfirm = function (value) {
+            if (!state.current(sequence) || !state.lock()) return Promise.reject();
+            var ready = Promise.resolve();
+            if (current.prepare) {
+                ready = Promise.resolve($.ajax({ url: current.loadUrl, method: 'GET',
+                    data: { _action_token: current.ticket, _key: current.keys }, dataType: 'json', cache: false }))
+                    .then(function (payload) {
+                        if ($.admin.isResponseError(payload)) { throw { responseJSON: payload }; }
+                        if (!payload.ticket) { throw new Error('Unable to prepare this action.'); }
+                        current.ticket = payload.ticket;
+                        current.prepare = false;
+                    }).catch(function (error) { notify(error); throw error; });
+            }
+            function execute() {
+                var data = new root.FormData();
+                append(data, '_input', value);
+                data.set('_action_token', current.ticket); data.set('_token', $.admin.token);
+                return send(current, data, true);
+            }
+            return (current.prepare ? ready.then(execute) : execute()).finally(function () { state.unlock(); });
+        };
+        settings.allowOutsideClick = function () { return !state.saving; };
+        settings.allowEscapeKey = function () { return !state.saving; };
+        Promise.resolve($.admin.swal(settings)).catch(function () {});
+    }
     function open(button) {
         if (closing) { queued = button; return; }
         var sequence = state.open();
         if (sequence === null) return;
         var keys = selected(button), mode = button.attr('data-admin-mode');
         if (button.attr('data-admin-batch') === '1' && !keys.length) { $.admin.toastr.warning('No data selected!'); return; }
-        var current = { target: button, url: button.attr('data-admin-execute'), ticket: button.attr('data-admin-action'), mode: mode };
+        var current = { target: button, url: button.attr('data-admin-execute'), ticket: button.attr('data-admin-action'), mode: mode,
+            prepare: button.attr('data-admin-prepare') === '1', loadUrl: button.attr('data-admin-load'), keys: keys };
+        var inlineDialog = button.attr('data-admin-dialog');
+        if (mode === 'dialog' && inlineDialog) {
+            try { showDialog(current, JSON.parse(inlineDialog), sequence); }
+            catch (error) { notify(error); }
+            return;
+        }
         if (mode === 'direct') {
             state.lock();
             send(current, { _action_token: current.ticket, _key: keys, _token: $.admin.token }, false)
@@ -202,15 +236,7 @@
                     (payload.styles || []).forEach(function (style) { $('<style>').text(style).appendTo(shell); });
                     (payload.scripts || []).forEach(function (script) { Function('jQuery', '$', script).call(root, $, $); });
                 } else if (payload.mode === 'dialog') {
-                    var settings = Object.assign({}, payload.settings);
-                    settings.preConfirm = function (value) {
-                        if (!state.lock()) return Promise.reject();
-                        var data = new root.FormData();
-                        append(data, '_input', value);
-                        data.set('_action_token', current.ticket); data.set('_token', $.admin.token);
-                        return send(current, data, true).finally(function () { state.unlock(); });
-                    };
-                    Promise.resolve($.admin.swal(settings)).catch(function () {});
+                    showDialog(current, payload.settings, sequence);
                 }
             });
         }).catch(function (error) {

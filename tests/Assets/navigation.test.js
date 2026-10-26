@@ -373,3 +373,108 @@ test('a failed delete cannot run a refresh command and can be retried', async t 
     assert.equal(rejected, true);
     assert.deepEqual(app.errors, ['删除失败', '系统异常']);
 });
+
+test('inline delete confirmation opens immediately, cancel sends nothing, and confirm sends one POST', async t => {
+    const app = await page('<a id="delete" data-admin-action="execution" data-admin-mode="dialog" data-admin-load="/admin/_load_action_" data-admin-execute="/admin/_handle_action_" data-_key="2">Delete</a>');
+    t.after(() => app.window.close());
+    app.$('#delete').attr('data-admin-dialog', JSON.stringify({ title: 'Delete?', showCancelButton: true, showLoaderOnConfirm: true }));
+    const confirmations = [];
+    app.$.admin.swal = settings => { confirmations.push(settings); return Promise.resolve({ dismiss: 'cancel' }); };
+    app.window.eval(read('resources/assets/actions.js'));
+    app.$('#delete').trigger('click');
+    assert.equal(confirmations.length, 1); // Synchronous: no loading request first.
+    assert.equal(app.requests.length, 0);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(app.requests.length, 0); // Cancel never contacts the server.
+    app.$('#delete').trigger('click');
+    const confirmation = confirmations[1];
+    const task = confirmation.preConfirm();
+    assert.equal(app.requests.length, 1);
+    assert.equal(app.requests[0].options.method, 'POST');
+    assert.equal(app.requests[0].options.url, '/admin/_handle_action_');
+    assert.equal(app.requests[0].options.data.get('_action_token'), 'execution');
+    assert.equal(confirmation.allowOutsideClick(), false);
+    assert.equal(confirmation.allowEscapeKey(), false);
+    await assert.rejects(confirmation.preConfirm());
+    assert.equal(app.requests.length, 1); // A second confirmation cannot duplicate the delete.
+    app.requests[0].resolve({ status: true });
+    await task;
+    assert.equal(confirmation.allowOutsideClick(), true);
+});
+
+test('batch confirmations do not load tickets until confirmed and retain the original selection', async t => {
+    const app = await page('<div class="grid-box"><input type="checkbox" data-id="2" class="rows-checkbox" checked><a id="batch" data-admin-action="definition" data-admin-mode="dialog" data-admin-prepare="1" data-admin-batch="1" data-admin-selection="rows-checkbox" data-admin-load="/admin/_load_action_" data-admin-execute="/admin/_handle_action_">Batch</a></div>');
+    t.after(() => app.window.close());
+    app.$('#batch').attr('data-admin-dialog', JSON.stringify({ title: 'Confirm batch?' }));
+    let confirmation;
+    app.$.admin.swal = settings => { confirmation = settings; return Promise.resolve({ dismiss: 'cancel' }); };
+    app.window.eval(read('resources/assets/actions.js'));
+    app.$('#batch').trigger('click');
+    assert.ok(confirmation);
+    assert.equal(app.requests.length, 0);
+    app.$('input').prop('checked', false);
+    const task = confirmation.preConfirm();
+    assert.equal(app.requests.length, 1);
+    assert.equal(app.requests[0].options.method, 'GET');
+    assert.deepEqual(Array.from(app.requests[0].options.data._key), ['2']);
+    app.requests[0].resolve({ mode: 'dialog', ticket: 'selected-execution' });
+    await until(() => app.requests.length === 2);
+    assert.equal(app.requests[1].options.method, 'POST');
+    assert.equal(app.requests[1].options.data.get('_action_token'), 'selected-execution');
+    app.requests[1].resolve({ status: true });
+    await task;
+});
+
+test('a rejected batch preparation never sends the mutation', async t => {
+    const app = await page('<a id="batch" data-admin-action="definition" data-admin-mode="dialog" data-admin-prepare="1" data-admin-load="/admin/_load_action_" data-admin-execute="/admin/_handle_action_">Batch</a>');
+    t.after(() => app.window.close());
+    app.$('#batch').attr('data-admin-dialog', JSON.stringify({ title: 'Confirm?' }));
+    let confirmation;
+    app.$.admin.swal = settings => { confirmation = settings; return Promise.resolve({}); };
+    app.window.eval(read('resources/assets/actions.js'));
+    app.$('#batch').trigger('click');
+    const task = confirmation.preConfirm();
+    app.requests[0].resolve({ success: false, msg: 'Permission denied' });
+    await assert.rejects(task);
+    assert.equal(app.requests.length, 1);
+    assert.deepEqual(app.errors, ['Permission denied']);
+});
+
+async function logPage(action) {
+    const app = await page(`<div id="admin-log-viewer"><form class="log-delete-form" method="post" action="${action}"><input name="_token" value="csrf"><input name="_method" value="DELETE"><button>Delete</button></form></div>`);
+    const script = read('resources/views/log-viewer/logs.blade.php').match(/<script>\s*([\s\S]*?)<\/script>/)[1]
+        .replace(/@json\(trans\('([^']+)'\)\)/g, (_, key) => JSON.stringify(key))
+        .replace('@json($end)', '0').replace('@json($tailPath)', '""');
+    app.window.confirm = () => { throw new Error('Native confirmation must not be used'); };
+    app.window.eval(script);
+    await until(() => app.$._data(app.$('form')[0], 'events')?.submit);
+    return app;
+}
+
+for (const action of ['/admin/logs/file/delete', '/admin/logs/delete-all']) {
+    test('log deletion uses the shared confirmation and sends only after confirm: ' + action, async t => {
+        const app = await logPage(action);
+        t.after(() => app.window.close());
+        const dialogs = [];
+        let dismiss;
+        app.$.admin.swal = settings => { dialogs.push(settings); return new Promise(resolve => { dismiss = resolve; }); };
+        app.$('form').trigger('submit').trigger('submit');
+        assert.equal(dialogs.length, 1);
+        assert.equal(dialogs[0].title, 'admin.delete_confirm');
+        assert.equal(app.requests.length, 0);
+        dismiss({ dismiss: 'cancel' });
+        await new Promise(resolve => setTimeout(resolve, 0));
+        assert.equal(app.requests.length, 0);
+        app.$('form').trigger('submit');
+        assert.equal(dialogs.length, 2);
+        const task = dialogs[1].preConfirm();
+        assert.equal(app.requests.length, 1);
+        assert.equal(new URL(app.requests[0].options.url).pathname, action);
+        assert.equal(app.requests[0].options.data.get('_method'), 'DELETE');
+        assert.equal(app.requests[0].options.data.get('_token'), 'csrf');
+        await assert.rejects(dialogs[1].preConfirm());
+        assert.equal(app.requests.length, 1);
+        app.requests[0].resolve(html('<div id="admin-log-viewer">Logs</div>'), 'http://localhost/admin/logs');
+        await task;
+    });
+}
