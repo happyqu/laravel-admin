@@ -28,10 +28,13 @@ test('renders a field matrix with real Form field views and plugins', async ({ p
     await expect(page.locator('input[name="gender"]')).not.toHaveCount(0);
     await expect(page.locator('input[role="switch"]')).toHaveCount(1);
     await expect(page.locator('input[name="date"]')).toHaveCount(1);
+    await expect(page.locator('input[name="start_date"]')).toHaveCount(1);
+    await expect(page.locator('input[name="end_date"]')).toHaveCount(1);
     await expect(page.locator('input[name="published_at"]')).toHaveCount(1);
     await expect(page.locator('input[name="time"]')).toHaveCount(1);
     await expect(page.locator('.pcr-app')).not.toHaveCount(0);
     await expect(page.locator('input[name="number"]')).toHaveCount(1);
+    await expect(page.locator('input[type="file"][name="file"]')).toHaveCount(1);
     await expect(page.locator('.select2-container')).not.toHaveCount(0);
     await expect(page.locator('.flatpickr-input')).not.toHaveCount(0);
     await expect(page.locator('.pcr-app')).not.toHaveCount(0);

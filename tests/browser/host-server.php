@@ -236,6 +236,7 @@ $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/fields', fun
     $form->radio('gender')->options(['m' => 'Male', 'f' => 'Female']);
     $form->switch('active');
     $form->date('date');
+    $form->dateRange('start_date', 'end_date');
     $form->datetime('published_at');
     $form->time('time');
     $form->color('color');
@@ -243,6 +244,7 @@ $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/fields', fun
     $form->email('email');
     $form->url('url');
     $form->password('password');
+    $form->file('file');
     $form->tags('tags');
     $form->listbox('listbox')->options(['a' => 'A', 'b' => 'B', 'c' => 'C']);
     $form->slider('slider');
