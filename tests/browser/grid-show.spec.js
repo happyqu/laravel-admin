@@ -29,6 +29,14 @@ test('renders a real Grid with pagination and Filter without BS3 markup', async 
     await expect(page.locator('.filter-box input[name="name"]')).toHaveCount(1);
     await expect(page.locator('.grid-editable-email')).not.toHaveCount(0);
 
+    await page.locator('button[title="Filter"]').click();
+    await page.locator('.filter-box input[name="name"]').fill('Bob');
+    await page.locator('.filter-box button.submit').click();
+    await expect(page).toHaveURL(/name=Bob/);
+    await expect(page.locator('table.grid-table tbody tr')).toHaveCount(1);
+    await expect(page.locator('table.grid-table')).toContainText('Bob');
+
+    await page.goto('http://127.0.0.1:4175/admin/grid');
     await page.locator('.grid-editable-email').first().click();
     await expect(page.locator('.popover .admin-inline-edit')).toHaveCount(1);
     await expect(page.locator('.popover .admin-inline-edit input')).toHaveValue('alice@example.com');
