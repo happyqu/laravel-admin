@@ -25,7 +25,8 @@
         "matthiasmullie/minify": "Required for the admin:minify command (^1.3)."
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.5|^11.0|^12.0"
+        "phpunit/phpunit": "^10.5|^11.0|^12.0",
+        "orchestra/testbench": "^8.39|^9.0|^10.0|^11.0"
     },
     "autoload": {
         "psr-4": {
