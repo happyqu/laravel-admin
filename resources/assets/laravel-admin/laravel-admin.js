@@ -313,6 +313,14 @@ $('#totop').on('click', function (e) {
     $.admin.toastr = toastr;
     $.admin.grid = new Grid();
 
+    $.admin.isResponseError = function (data) {
+        return !!data && (data.status === false || data.success === false);
+    };
+
+    $.admin.responseMessage = function (data, fallback) {
+        return (data && (data.message || data.msg)) || fallback;
+    };
+
     $.admin.reload = function () {
         if ($.admin.navigate) {
             return $.admin.navigate(window.location.href, {replace: true});

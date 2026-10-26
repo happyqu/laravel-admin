@@ -43,8 +43,8 @@
         if (error && typeof error === 'object') error.adminActionReported = true;
         // 401 is handled globally by laravel-admin.js (redirect to login).
         if (error && error.status === 401) return;
-        var message = error && error.responseJSON && error.responseJSON.message;
-        $.admin.toastr.error(message || (error && error.message) || 'Unable to complete this action.');
+        var message = $.admin.responseMessage(error && error.responseJSON, $.admin.responseMessage(error));
+        $.admin.toastr.error(message || 'Unable to complete this action.');
     }
     var resources = new Resources(function (kind, url) {
         var absolute = new URL(url, root.document.baseURI).href;
@@ -130,7 +130,7 @@
     function response(data, target) {
         if (data.html !== undefined) target.html(data.html);
         if (data.swal) $.admin.swal(data.swal);
-        var command = data.then || null;
+        var command = $.admin.isResponseError(data) ? null : (data.then || null);
         if (data.toastr && data.toastr.type) {
             $.admin.toastr[data.toastr.type](data.toastr.content, '', data.toastr.options);
             // Let the toast stay visible briefly before the page goes away.
@@ -144,6 +144,9 @@
             processData: false, contentType: multipart ? false : 'application/json', dataType: 'json' }))
             .then(function (result) {
                 response(result, current.target);
+                if ($.admin.isResponseError(result)) {
+                    throw { responseJSON: result, adminActionReported: !!(result.toastr || result.swal) };
+                }
                 if (result.status === true && shell && current.mode === 'form') {
                     state.unlock(); shell.modal('hide');
                 }
@@ -185,6 +188,7 @@
         var request = $.ajax({ url: button.attr('data-admin-load'), method: 'GET', data: { _action_token: current.ticket, _key: keys }, dataType: 'json', cache: false });
         state.request = request;
         Promise.resolve(request).then(function (payload) {
+            if ($.admin.isResponseError(payload)) { throw { responseJSON: payload }; }
             return assets(payload.assets).then(function () {
                 if (!state.current(sequence)) return;
                 current.ticket = payload.ticket;

@@ -105,7 +105,7 @@
     }
 
     function validation(form, payload) {
-        if (!form) { error(payload.message); return; }
+        if (!form) { error($.admin.responseMessage(payload)); return; }
         var $form = $(form);
         $form.find('.admin-ajax-error').remove();
         $form.find('.has-error').removeClass('has-error');
@@ -119,7 +119,7 @@
                 .closest('.form-group').addClass('has-error')
                 .append($('<span class="help-block admin-ajax-error"></span>').text(message));
         });
-        var alert = $('<div class="alert alert-danger admin-ajax-error" role="alert" tabindex="-1"></div>').text(messages.join(' ') || payload.message || 'Validation failed.');
+        var alert = $('<div class="alert alert-danger admin-ajax-error" role="alert" tabindex="-1"></div>').text(messages.join(' ') || $.admin.responseMessage(payload) || 'Validation failed.');
         $form.prepend(alert);
         alert[0].focus();
     }
@@ -145,11 +145,14 @@
             var contentType = xhr.getResponseHeader('Content-Type') || '';
             if (/json/i.test(contentType)) {
                 var payload = JSON.parse(body);
-                if (payload.status === false || payload.errors || payload.validation) {
+                if ($.admin.isResponseError(payload) || payload.errors || payload.validation) {
                     validation(options.form, payload);
                     return false;
                 }
-                if (payload.message) { $.admin.toastr.success(payload.message); }
+                if (payload.redirect && options.form && $.admin.afterFormSaved && $.admin.afterFormSaved(options.form, payload)) {
+                    return true;
+                }
+                if ($.admin.responseMessage(payload)) { $.admin.toastr.success($.admin.responseMessage(payload)); }
                 return $.admin.navigate(payload.redirect || payload.url || window.location.href, {replace: true});
             }
             return render(body, destination, options, id);
@@ -165,7 +168,7 @@
             } else if (options.history === false) {
                 window.location.assign(url);
             } else {
-                error(payload && payload.message);
+                error($.admin.responseMessage(payload));
             }
             return false;
         });

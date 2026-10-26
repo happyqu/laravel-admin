@@ -6265,8 +6265,8 @@
                 },
                 {
                     "path": "laravel-admin/admin-navigation.js",
-                    "sha256": "2355df36d11abac0fca8f293732e8730e7e4a05145a6e8bf2f286376d3f1de0e",
-                    "bytes": 12044,
+                    "sha256": "c12bd3ca4579d60356c97e3b12500ad14febdc37486565adba8d3de49cc36e39",
+                    "bytes": 12308,
                     "source_path": "resources/assets/laravel-admin/admin-navigation.js"
                 },
                 {
@@ -6277,8 +6277,8 @@
                 },
                 {
                     "path": "laravel-admin/laravel-admin.js",
-                    "sha256": "75b8ac24fcb189e416ced2bea1cbae96c6e3f5a5b365d9daf0ec1f93790f4687",
-                    "bytes": 11341,
+                    "sha256": "07f39ec70adacdebe053d13c945b05a7cd92a8c128c748931ffe75b448099f39",
+                    "bytes": 11612,
                     "source_path": "public/vendor/laravel-admin/laravel-admin/laravel-admin.js"
                 },
                 {
@@ -6421,8 +6421,8 @@
                 },
                 {
                     "path": "actions.js",
-                    "sha256": "15c1abfd9618088c2671c933505169d77a911c91525dc326a3452202938505b1",
-                    "bytes": 12594,
+                    "sha256": "9e8d668f13806e3b4a2a33eb1efbec74c1e1245f6f1f62dea795d62c8d9f2631",
+                    "bytes": 12901,
                     "origin": "happyqu/laravel-admin action runtime"
                 }
             ],

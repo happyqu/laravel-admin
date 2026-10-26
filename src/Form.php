@@ -635,6 +635,19 @@ class Form implements Renderable
             $url = $this->isSafeRedirectUrl($previous) ? $previous : $resourcesPath;
         }
 
+        if (request()->header('X-Admin-Navigation') === 'true') {
+            // AJAX navigation chooses the destination without first following a 302
+            // inside an editor iframe that will immediately be closed.
+            request()->session()->forget(['_iframe_id_', 'after_save']);
+
+            return response()->json([
+                'status' => true,
+                'message' => trans('admin.save_succeeded'),
+                'redirect' => $url,
+                'after_save' => (string) request('after-save', ''),
+            ]);
+        }
+
         admin_toastr(trans('admin.save_succeeded'));
 
         return redirect($url);

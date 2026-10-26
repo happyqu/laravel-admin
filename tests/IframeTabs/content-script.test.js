@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../../src/Concerns/RegistersIframeTabs.php'), 'utf8');
 const script = source.match(/\$script = <<<'EOT'\r?\n([\s\S]*?)\r?\nEOT;/)[1];
 
-function savedPage(mode, iframeId = '') {
+function savedPage(mode, iframeId = '', currentId = 'iframe_editor') {
     const events = [];
     const opener = { contentWindow: { location: { reload() { events.push('reload-list'); } } } };
     const top = {
@@ -19,13 +19,15 @@ function savedPage(mode, iframeId = '') {
         document: { getElementById() { return null; } },
         layer: { getFrameIndex() { return 1; }, close() { events.push('close-popup'); } },
     } : top;
-    const window = { top, parent, name: 'editor', frameElement: { id: 'iframe_editor' } };
+    const window = { top, parent, name: 'editor', frameElement: { id: currentId } };
     const payload = {
         iframeId, listIframeId: 'iframe_list', listAfterSave: '',
         bindUrls: mode, successMessage: 'Saved',
     };
 
-    vm.runInNewContext(script.replace('__ADMIN_IFRAME_PAYLOAD__', JSON.stringify(payload)), { window, parent });
+    const $ = () => ({ length: 0, each() {}, off() { return this; }, addClass() { return this; }, on() { return this; } });
+    $.admin = {};
+    vm.runInNewContext(script.replace('__ADMIN_IFRAME_PAYLOAD__', JSON.stringify(payload)), { window, parent, $ });
 
     return events;
 }
@@ -40,4 +42,8 @@ test('new tab save closes the editor after redirect drops the opener query param
 
 test('new tab save keeps the opener tab when its query parameter survives', () => {
     assert.deepEqual(savedPage('new_tab', 'iframe_list'), ['reload-list', 'notify', 'close-tab:editor']);
+});
+
+test('a native save returning to its own list frame does not refresh or close it again', () => {
+    assert.deepEqual(savedPage('new_tab', '', 'iframe_list'), []);
 });

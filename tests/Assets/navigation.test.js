@@ -44,7 +44,7 @@ async function page(content) {
             else { deferred.reject(new Error('Unexpected asset: ' + options.url)); }
             return deferred.promise();
         }
-        const transport = options.xhr();
+        const transport = options.xhr ? options.xhr() : {};
         let contentType = 'text/html';
         const xhr = deferred.promise({
             status: 200, statusText: '',
@@ -62,6 +62,7 @@ async function page(content) {
                 xhr.status = status;
                 contentType = type;
                 xhr.responseText = JSON.stringify(body);
+                if (/json/i.test(type)) { xhr.responseJSON = body; }
                 deferred.reject(xhr);
             },
         };
@@ -80,6 +81,62 @@ async function until(condition) {
     }
     assert.fail('Expected browser update did not occur');
 }
+
+function iframePage(app, openerId, currentId = 'iframe_editor') {
+    Object.defineProperty(app.window, 'frameElement', { value: { id: currentId }, configurable: true });
+    const source = read('src/Concerns/RegistersIframeTabs.php');
+    const script = source.match(/\$script = <<<'EOT'\r?\n([\s\S]*?)\r?\nEOT;/)[1];
+    app.window.eval(script.replace('__ADMIN_IFRAME_PAYLOAD__', JSON.stringify({
+        iframeId: openerId, bindUrls: 'popup', bindSelecter: '', layerSize: '900px,90%',
+    })));
+}
+
+test('ordinary AJAX saves request the redirect destination once and keep its URL', async t => {
+    const app = await page('<form id="edit" method="post" action="/admin/users/1"><input name="name" value="Alice"><button>Save</button></form>');
+    t.after(() => app.window.close());
+    // The opener id may survive a same-frame edit; this is still the current tab.
+    iframePage(app, 'iframe_list', 'iframe_list');
+    const task = app.$.admin.submitForm(app.$('#edit')[0]);
+    app.requests[0].resolve(JSON.stringify({ status: true, message: 'Saved', redirect: '/admin/users?page=2', after_save: '' }), undefined, 'application/json');
+    await until(() => app.requests.length === 2);
+    assert.equal(app.requests[1].options.url, 'http://localhost/admin/users?page=2');
+    app.requests[1].resolve(html('<p id="saved-list">Saved list</p>'));
+    await task;
+    assert.equal(app.requests.length, 2); // One save and one destination GET.
+    assert.equal(app.window.location.search, '?page=2');
+    assert.ok(app.$('#saved-list').length);
+});
+
+test('popup AJAX saves refresh the opener once without loading the list inside the editor', async t => {
+    const app = await page('<iframe id="iframe_list"></iframe><form id="edit" method="post" action="/admin/users/1"><button>Save</button></form>');
+    t.after(() => app.window.close());
+    const events = [];
+    const opener = app.$('#iframe_list')[0].contentWindow;
+    opener.$ = { admin: { reload() { events.push('refresh-list'); } } };
+    app.window.layer = { getFrameIndex() { return 1; }, close() { events.push('close-popup'); } };
+    iframePage(app, 'iframe_list');
+    const task = app.$.admin.submitForm(app.$('#edit')[0]);
+    app.requests[0].resolve(JSON.stringify({ status: true, message: 'Saved', redirect: '/admin/users?page=2', after_save: '' }), undefined, 'application/json');
+    await task;
+    assert.deepEqual(events, ['refresh-list', 'close-popup']);
+    assert.equal(app.requests.length, 1); // No redundant GET in the editor.
+});
+
+test('continue editing in a popup follows the destination and leaves the opener alone', async t => {
+    const app = await page('<iframe id="iframe_list"></iframe><form id="edit" method="post" action="/admin/users/1"><button>Save</button></form>');
+    t.after(() => app.window.close());
+    const events = [];
+    app.$('#iframe_list')[0].contentWindow.$ = { admin: { reload() { events.push('refresh'); } } };
+    app.window.layer = { getFrameIndex() { return 1; }, close() { events.push('close'); } };
+    iframePage(app, 'iframe_list');
+    const task = app.$.admin.submitForm(app.$('#edit')[0]);
+    app.requests[0].resolve(JSON.stringify({ status: true, message: 'Saved', redirect: '/admin/users/1/edit', after_save: '1' }), undefined, 'application/json');
+    await until(() => app.requests.length === 2);
+    app.requests[1].resolve(html('<form id="still-editing"></form>'));
+    await task;
+    assert.deepEqual(events, []);
+    assert.equal(app.window.location.pathname, '/admin/users/1/edit');
+});
 
 test('pagination replaces content, executes new page scripts and keeps the shell', async t => {
     const app = await page('<div class="pagination"><a href="?page=2">Next</a></div>');
@@ -265,4 +322,54 @@ test('invalid forms, downloads and explicit native opt-outs are not sent with AJ
     assert.equal(app.$.admin.canSubmitForm(app.window.document.getElementById('native')), false);
     app.$('a')[0].click();
     assert.equal(app.requests.length, 0);
+});
+
+test('a custom failure envelope keeps the form and shows msg without refreshing', async t => {
+    const app = await page('<form id="edit" method="post"><input name="name" value="Alice"><button>Save</button></form>');
+    t.after(() => app.window.close());
+    const form = app.window.document.getElementById('edit');
+    const task = app.$.admin.submitForm(form);
+    app.requests[0].resolve(JSON.stringify({ success: false, msg: '系统异常', errcode: 50021 }), undefined, 'application/json');
+    assert.equal(await task, false);
+    assert.equal(app.requests.length, 1);
+    assert.equal(form.querySelector('.admin-ajax-error').textContent, '系统异常');
+    assert.equal(form.elements.name.value, 'Alice');
+});
+
+test('an action load failure envelope reports msg and does not open a confirmation', async t => {
+    const app = await page('<a id="delete" data-admin-action="definition" data-admin-mode="dialog" data-admin-load="/admin/_load_action_" data-admin-execute="/admin/_handle_action_" data-_key="1">Delete</a>');
+    t.after(() => app.window.close());
+    let confirmations = 0;
+    app.$.admin.swal = () => { confirmations++; };
+    app.window.eval(read('resources/assets/actions.js'));
+    app.$('#delete').trigger('click');
+    app.requests[0].resolve({ success: false, msg: '系统异常', errcode: 50021 });
+    await until(() => app.errors.length);
+    assert.deepEqual(app.errors, ['系统异常']);
+    assert.equal(confirmations, 0);
+    assert.equal(app.requests.length, 1);
+});
+
+test('a failed delete cannot run a refresh command and can be retried', async t => {
+    const app = await page('<a id="delete" data-admin-action="definition" data-admin-mode="dialog" data-admin-load="/admin/_load_action_" data-admin-execute="/admin/_handle_action_" data-_key="1">Delete</a>');
+    t.after(() => app.window.close());
+    let confirmation;
+    app.$.admin.swal = settings => { confirmation = settings; return Promise.resolve({}); };
+    app.window.eval(read('resources/assets/actions.js'));
+    app.$('#delete').trigger('click');
+    app.requests[0].resolve({ mode: 'dialog', ticket: 'execution', settings: { title: 'Delete?' } });
+    await until(() => confirmation);
+    const task = confirmation.preConfirm();
+    assert.equal(app.requests[1].options.data.get('_action_token'), 'execution');
+    app.requests[1].resolve({ success: false, msg: '删除失败', then: { action: 'refresh' } });
+    await assert.rejects(task);
+    assert.deepEqual(app.errors, ['删除失败']);
+    assert.equal(app.requests.length, 2);
+    const retry = confirmation.preConfirm();
+    assert.equal(app.requests.length, 3);
+    app.requests[2].reject(500, { success: false, msg: '系统异常' });
+    let rejected = false;
+    await retry.catch(() => { rejected = true; });
+    assert.equal(rejected, true);
+    assert.deepEqual(app.errors, ['删除失败', '系统异常']);
 });

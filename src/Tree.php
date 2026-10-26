@@ -271,20 +271,20 @@ class Tree implements Renderable
                                 _token:LA.token,
                             },
                             success: function (data) {
-                                if (data && data.status === false) {
+                                if ($.admin.isResponseError(data)) {
                                     deleting = false;
                                     resolve();
-                                    swal(data.message || {$js(trans('admin.delete_failed'))}, '', 'error');
+                                    swal($.admin.responseMessage(data) || {$js(trans('admin.delete_failed'))}, '', 'error');
                                     return;
                                 }
                                 resolve(data);
-                                $.admin.notifyThenNavigate((data && data.message) ? data.message : {$js($trans['delete_succeeded'])}, 'success');
+                                $.admin.notifyThenNavigate($.admin.responseMessage(data) ? $.admin.responseMessage(data) : {$js($trans['delete_succeeded'])}, 'success');
                             },
                             error: function (xhr) {
                                 deleting = false;
                                 resolve();
-                                var message = (xhr.responseJSON && xhr.responseJSON.message)
-                                    ? xhr.responseJSON.message
+                                var message = ($.admin.responseMessage(xhr.responseJSON))
+                                    ? $.admin.responseMessage(xhr.responseJSON)
                                     : {$js(trans('admin.request_failed'))};
                                 if (xhr.status === 401) {
                                     message = {$js(trans('admin.authentication_expired'))};
@@ -307,15 +307,15 @@ class Tree implements Renderable
                 _order: JSON.stringify(serialize)
             })
             .done(function (data) {
-                if (data && data.status === false) {
-                    $.admin.notifyThenNavigate(data.message || {$js(trans('admin.request_failed'))}, 'error');
+                if ($.admin.isResponseError(data)) {
+                    $.admin.notifyThenNavigate($.admin.responseMessage(data) || {$js(trans('admin.request_failed'))}, 'error');
                     return;
                 }
-                $.admin.notifyThenNavigate(data && data.message ? data.message : {$js($trans['save_succeeded'])}, 'success');
+                $.admin.notifyThenNavigate($.admin.responseMessage(data) ? $.admin.responseMessage(data) : {$js($trans['save_succeeded'])}, 'success');
             })
             .fail(function (xhr) {
-                var message = (xhr.responseJSON && xhr.responseJSON.message)
-                    ? xhr.responseJSON.message
+                var message = ($.admin.responseMessage(xhr.responseJSON))
+                    ? $.admin.responseMessage(xhr.responseJSON)
                     : {$js(trans('admin.request_failed'))};
                 if (xhr.status === 401) {
                     message = {$js(trans('admin.authentication_expired'))};

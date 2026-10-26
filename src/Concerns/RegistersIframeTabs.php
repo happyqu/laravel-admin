@@ -241,7 +241,14 @@ trait RegistersIframeTabs
         }
     }
 
-    if (data.listIframeId && !data.listAfterSave) {
+    function isCurrentFrame(id) {
+        var frame = window.frameElement;
+        return !!frame && frame.id === id;
+    }
+
+    // A same-frame save already has its destination; only a separate editor
+    // needs to refresh and return to its opener.
+    if (data.listIframeId && !data.listAfterSave && !isCurrentFrame(data.listIframeId)) {
         reloadFrame(data.listIframeId);
         notify(data.successMessage);
 
@@ -253,6 +260,26 @@ trait RegistersIframeTabs
 
         return;
     }
+
+    $.admin.afterFormSaved = function (form, result) {
+        var id = $(form).find('input[name="_iframe_id_"]').val();
+        if (!id || isCurrentFrame(id) || result.after_save
+            || (data.bindUrls !== 'popup' && data.bindUrls !== 'new_tab')) {
+            return false;
+        }
+        var doc = topDocument();
+        if (!doc || !doc.getElementById(id)) {
+            return false;
+        }
+        reloadFrame(id);
+        notify(result.message);
+        if (data.bindUrls === 'popup') {
+            closeCurrentPopup();
+        } else {
+            closeCurrentTab();
+        }
+        return true;
+    };
 
     if (data.iframeId) {
         $('form').each(function () {
