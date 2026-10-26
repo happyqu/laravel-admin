@@ -83,7 +83,16 @@
             "/.github",
             "/.gitignore",
             "/.gitattributes",
+            "/.phpunit.cache",
+            "/.phpunit.result.cache",
+            "/.php-cs-fixer.cache",
+            "/.eslintcache",
+            "/coverage",
+            "/.nyc_output",
+            "/test-results",
+            "/playwright-report",
             "/phpunit.xml.dist",
+            "/playwright.config.js",
             "/tests",
             "/tools"
         ]

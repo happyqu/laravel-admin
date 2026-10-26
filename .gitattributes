@@ -4,7 +4,20 @@
 /.gitattributes export-ignore
 
 # 不进入 composer archive / git archive
+/vendor export-ignore
+/node_modules export-ignore
+/build export-ignore
 /examples export-ignore
+/docs export-ignore
+/composer.lock export-ignore
+/.phpunit.cache export-ignore
+/.phpunit.result.cache export-ignore
+/.php-cs-fixer.cache export-ignore
+/.eslintcache export-ignore
+/coverage export-ignore
+/.nyc_output export-ignore
+/test-results export-ignore
+/playwright-report export-ignore
 /.env export-ignore
 /.env.* export-ignore
 /.idea export-ignore

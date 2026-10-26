@@ -33,6 +33,7 @@ Core package
   happyqu/laravel-admin changes       Copyright (c) happyqu contributors
 
 Frontend libraries
+  Font Awesome Icon Picker           Copyright (c) Javi Aguilar
   AdminLTE 4.9.1                      Copyright (c) Colorlib / Almsaeed Studio
   Bootstrap 5.3.8                     Copyright (c) 2011-2026 The Bootstrap Authors
   jQuery 3.7.1                        Copyright (c) OpenJS Foundation and jQuery contributors

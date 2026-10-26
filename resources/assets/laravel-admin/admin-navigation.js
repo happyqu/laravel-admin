@@ -75,6 +75,13 @@
                 }
             });
             $(window).trigger('admin:before-navigate');
+            $('#admin-content [data-admin-listbox]').each(function () {
+                if (window.AdminListbox) { AdminListbox.destroy(this); }
+            });
+            $('#admin-content input').each(function () {
+                var picker = $(this).data('iconpicker');
+                if (picker) { picker.destroy(); }
+            });
             $(document).off('.adminPage');
             $('body').off('.adminPage');
             $(window).off('.adminPage');

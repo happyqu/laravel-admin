@@ -7,11 +7,15 @@ namespace Encore\Admin\Form\Field;
  */
 class Listbox extends MultipleSelect
 {
+    protected static $css = [];
+
+    protected static $js = ['/vendor/laravel-admin/laravel-admin/listbox.js'];
+
     protected $settings = [];
 
     public function settings(array $settings)
     {
-        $this->settings = $settings;
+        $this->settings = array_replace($this->settings, $settings);
 
         return $this;
     }
@@ -25,7 +29,7 @@ class Listbox extends MultipleSelect
      */
     public function height($height = 200)
     {
-        return $this->settings(['size' => max(3, (int) round($height / 30))]);
+        return $this->settings(['selectorMinimalHeight' => max(0, (int) $height)]);
     }
 
     /**
@@ -43,17 +47,12 @@ $.ajax($ajaxOptions).done(function(data) {
 
   var listbox = $("{$this->getElementClassSelector()}");
 
-    var value = listbox.data('value') + '';
-    
-    if (value) {
-      value = value.split(',');
-    }
-    
-    for (var key in data) {
-        var selected =  ($.inArray(key, value) >= 0) ? 'selected' : '';
-        listbox.append('<option value="'+key+'" '+selected+'>'+data[key]+'</option>');
-    }
-
+    if (!listbox.length || !document.documentElement.contains(listbox[0])) { return; }
+    var values = JSON.parse(listbox.attr('data-listbox-values') || '[]').map(String);
+    $.each(data, function (key, label) {
+        listbox.append(new Option(label, key, false, values.indexOf(String(key)) !== -1));
+    });
+    listbox.each(function () { AdminListbox.refresh(this); });
     listbox.trigger('change');
 });
 EOT;
@@ -63,11 +62,24 @@ EOT;
 
     public function render()
     {
-        if (isset($this->settings['size'])) {
-            $this->attribute('size', (int) $this->settings['size']);
-        }
+        $settings = json_encode(array_merge([
+            'infoText' => trans('admin.listbox.text_total'),
+            'infoTextEmpty' => trans('admin.listbox.text_empty'),
+            'infoTextFiltered' => trans('admin.listbox.filtered'),
+            'filterTextClear' => trans('admin.listbox.filter_clear'),
+            'filterPlaceHolder' => trans('admin.listbox.filter_placeholder'),
+            'selectorMinimalHeight' => 200,
+        ], $this->settings), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
+
+        $this->script .= <<<SCRIPT
+$("{$this->getElementClassSelector()}").each(function () {
+    AdminListbox.mount(this, {$settings});
+});
+SCRIPT;
 
         $this->attribute('data-value', implode(',', (array) $this->value()));
+        $this->attribute('data-admin-listbox', 'true');
+        $this->attribute('data-listbox-values', json_encode(array_values((array) old($this->column, $this->value()))));
 
         return parent::render();
     }

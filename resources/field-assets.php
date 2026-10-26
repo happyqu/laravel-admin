@@ -252,9 +252,11 @@ return array (
   array (
     'css' => 
     array (
+      0 => '/vendor/laravel-admin/fontawesome-iconpicker/fontawesome-iconpicker.min.css',
     ),
     'js' => 
     array (
+      0 => '/vendor/laravel-admin/fontawesome-iconpicker/fontawesome-iconpicker.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Id' => 
@@ -310,12 +312,10 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/select2/css/select2.min.css',
-      1 => '/vendor/laravel-admin/adminlte4/css/adminlte-select2.min.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
+      0 => '/vendor/laravel-admin/laravel-admin/listbox.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Mobile' => 

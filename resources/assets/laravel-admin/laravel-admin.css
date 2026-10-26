@@ -91,3 +91,10 @@ a.editable-empty {
 .admin-ajax-loading .fa {
     font-size: 22px;
 }
+
+/* Dialogs provide their own loading state. Keep tracking pending requests so
+   page feedback resumes if the dialog closes while a request is still active. */
+body.swal2-shown .admin-ajax-loading,
+body.swal2-shown #nprogress {
+    display: none;
+}

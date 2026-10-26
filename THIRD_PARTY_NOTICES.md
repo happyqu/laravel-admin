@@ -41,6 +41,7 @@ Log Viewer 基于 `laravel-admin-ext/log-viewer` 修改，上游地址为 https:
 | Select2 | 4.1.0 | MIT | Copyright (c) Kevin Brown, Igor Vaynberg, Select2 contributors | `licenses/MIT.txt` |
 | flatpickr | 4.6.13 | MIT | Copyright (c) Gregory Petrosyan | `licenses/MIT.txt` |
 | Pickr | 1.10.2 | MIT | Copyright (c) Simon Reinisch | `licenses/MIT.txt` |
+| Font Awesome Icon Picker | 随包，适配 Bootstrap 5 | MIT | Copyright (c) Javi Aguilar | `licenses/MIT.txt` |
 | bootstrap-fileinput | 5.5.4 | BSD-3-Clause | Copyright (c) 2014-2024 Kartik Visweswaran, Krajee.com | `licenses/BSD-3-Clause.txt` |
 | toastr | 2.1.3 | MIT | Copyright (c) John Papa, Hans Fjällemark, Tim Ferrell | `licenses/MIT.txt` |
 | SweetAlert2 | 7.26.12 | MIT | Copyright (c) Limon Monte | `licenses/MIT.txt` |

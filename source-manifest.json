@@ -172,6 +172,16 @@
                     "bytes": 77160
                 },
                 {
+                    "path": "fontawesome-iconpicker/fontawesome-iconpicker.min.css",
+                    "sha256": "825d299a7867a5b86382ec8c85e7d91ddb1b7aab6609ebd3810f097d3a909199",
+                    "bytes": 6626
+                },
+                {
+                    "path": "fontawesome-iconpicker/fontawesome-iconpicker.min.js",
+                    "sha256": "a551813f2eb60bacbf1283f4a5030f7022df8b3f123585f863d8c4258d034fc4",
+                    "bytes": 31149
+                },
+                {
                     "path": "global-navigation.css",
                     "sha256": "0aeba03fbf54c86a8d5a35c0368d1ba8754332477a3f17dd671000c291c6a283",
                     "bytes": 15263
@@ -428,8 +438,8 @@
                 },
                 {
                     "path": "laravel-admin/admin-navigation.js",
-                    "sha256": "a77861b3539e63ce8babda208e3333503904c24b9c7183121b63df7d85369578",
-                    "bytes": 12555
+                    "sha256": "2fcecc032123b667c5aea6034b7bb43f731185af876c4d0e8a923ee051964af4",
+                    "bytes": 12896
                 },
                 {
                     "path": "laravel-admin/admin-ui.js",
@@ -443,13 +453,18 @@
                 },
                 {
                     "path": "laravel-admin/laravel-admin.css",
-                    "sha256": "5e2c33996e3a2558278994155c696a4a66feef189777262b6d2b767713212b8c",
-                    "bytes": 1828
+                    "sha256": "df3da22285b84cc211846767be6875d17a0a0028e568d3f8e678f28181112d5b",
+                    "bytes": 1985
                 },
                 {
                     "path": "laravel-admin/laravel-admin.js",
                     "sha256": "7751c46a50628258698fc0cb7202ed0ea75719bd8558c2d1b2eddd7c639f484a",
                     "bytes": 10970
+                },
+                {
+                    "path": "laravel-admin/listbox.js",
+                    "sha256": "1d7d8b02c75e95f77227be5c08c0dcbf4e67d8db2e9f5e71a90a20c9cf340185",
+                    "bytes": 7899
                 },
                 {
                     "path": "laravel-admin/themes.css",

@@ -79,13 +79,17 @@ bootstrap.Tab.getOrCreateInstance(document.querySelector('#tabs a')).show();
 - `.iCheck()` → 原生 checkbox/radio + `.form-check`；
 - `.datetimepicker()` → Flatpickr 或原生 date/time 输入；
 - `.bootstrapSwitch()` → BS5 `.form-switch`；
-- `.bootstrapDualListbox()` → 普通多选/Select2；
+- `.bootstrapDualListbox()` → 包内 `AdminListbox`，`$form->listbox()` 保留双栏选择；
 - `.colorpicker()` → Pickr；
 - `.slimScroll()` → 原生滚动。
 
 ## 5. 已移除的插件
 
-iCheck、X-Editable、Eonasdan datetimepicker、Moment.js、Bootstrap Switch、Bootstrap Duallistbox、Bootstrap Colorpicker、Bootstrap Slider、slimScroll、Font Awesome Icon Picker、Glyphicons。
+iCheck、X-Editable、Eonasdan datetimepicker、Moment.js、Bootstrap Switch、Bootstrap Duallistbox、Bootstrap Colorpicker、Bootstrap Slider、slimScroll、Glyphicons。
+
+`$form->icon()` 保留图标搜索与弹出选择，Font Awesome Icon Picker 已适配 Bootstrap 5。
+
+`$form->listbox()` 保留双栏选择，不依赖旧的 Bootstrap Duallistbox。`height()` 设置列表像素高度；`settings()` 支持列表标题（`nonSelectedListLabel`、`selectedListLabel`）、搜索（`showFilterInputs`、`filterPlaceHolder`、`filterTextClear`、`filterOnValues`、`nonSelectedFilter`、`selectedFilter`）、计数文案（`infoText`、`infoTextEmpty`、`infoTextFiltered`）、`selectorMinimalHeight`、`moveOnSelect` 和 `moveOnDoubleClick`。旧插件的 jQuery 方法和其他配置不再提供。
 
 `resources/field-assets.php` 已重新生成，不再引用 `AdminLTE/plugins`。
 

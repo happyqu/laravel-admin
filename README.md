@@ -1,25 +1,12 @@
 # Laravel Admin
 
-`happyqu/laravel-admin` 是一个 Laravel 后台 Composer 包，内置 iframe 标签页、通用全局菜单和定制前端。
-
-- 支持 Laravel 10.0–10.50、11、12、13
-- PHP 8.1–8.4
-- 零额外 Composer 包，只依赖 `laravel/framework` 和 PHP 扩展
-- 前端为 AdminLTE 4.9.1 + Bootstrap 5.3.8 + jQuery 3.7.1，无旧版兼容层
-- 不再使用 PJAX；表单、筛选和分页通过 AJAX 更新内容区
-
-Iframe Tabs 已并入核心代码，由 `Encore\Admin\AdminServiceProvider` 注册，使用 `Encore\Admin\IframeTabs` 命名空间。前端、视图和配置均属于本包，无需安装额外扩展。
+`happyqu/laravel-admin` 是一个 Laravel 后台管理包，内置 iframe 标签页、全局菜单和日志查看器。前端基于 AdminLTE 4、Bootstrap 5 和 jQuery，资源随包提供，无需 npm 构建。
 
 ## 环境要求
 
-| 项目 | 要求 |
-|---|---|
-| PHP | 8.1+（Laravel 13 需要 8.3+） |
-| Laravel | `^10.0`、`^11.0`、`^12.0`、`^13.0` |
-| 扩展 | `ext-fileinfo`、`ext-dom` |
-| 浏览器 | 现代 evergreen 浏览器（AdminLTE 4 不支持 IE） |
-
-本包没有额外的 Composer 运行时依赖。图片处理、Orderable Grid、Excel 导出和 Minify 功能分别使用 `intervention/image`、`spatie/eloquent-sortable`、`maatwebsite/excel`、`matthiasmullie/minify`，只在需要时安装。
+- PHP 8.1+，具体版本需满足所用 Laravel 的要求
+- Laravel 10 / 11 / 12 / 13
+- PHP 扩展：`fileinfo`、`dom`
 
 ## 安装
 
@@ -27,38 +14,9 @@ Iframe Tabs 已并入核心代码，由 `Encore\Admin\AdminServiceProvider` 注�
 composer require happyqu/laravel-admin:^3.0
 ```
 
-本包支持 Composer 自动发现。正常情况下无需手工注册 Provider 或 Alias。
+支持 Laravel 自动发现，无需手工注册服务提供者。
 
-如果宿主关闭了自动发现，再按版本手工注册。
-
-Laravel 10 的 `config/app.php`：
-
-```php
-'providers' => [
-    // ...
-    Encore\Admin\AdminServiceProvider::class,
-],
-
-'aliases' => [
-    // ...
-    'Admin' => Encore\Admin\Facades\Admin::class,
-],
-```
-
-Laravel 11/12/13 的 `bootstrap/providers.php`：
-
-```php
-return [
-    App\Providers\AppServiceProvider::class,
-    Encore\Admin\AdminServiceProvider::class,
-];
-```
-
-Alias 可在 `config/app.php` 的 `aliases` 中注册，或由宿主自行注册。
-
-## 初始化
-
-数据库配置完成后执行：
+配置好数据库后执行：
 
 ```bash
 php artisan vendor:publish --tag=laravel-admin-config
@@ -68,168 +26,33 @@ php artisan vendor:publish --tag=laravel-admin-assets
 php artisan admin:install
 ```
 
-`admin:install` 执行迁移、初始化后台目录和基础数据，并自动初始化内置标签页的首页菜单与权限。默认地址 `/admin`，初始账号、密码均为 `admin`，首次登录后请修改密码。
+访问 `/admin`，初始账号和密码均为 `admin`，首次登录后请修改密码。
 
-重复执行不会重复创建标签页权限；已有用户数据时不会重新初始化业务数据。
+## 配置
 
-## 标签页与菜单
+配置文件为 `config/admin.php`。标签页默认开启，可通过 `iframe_tabs.enable` 关闭；全局菜单和主题可在 `.env` 中设置：
 
-标签页默认开启，配置位于 `config/admin.php` 的 `iframe_tabs`：
-
-```php
-'iframe_tabs' => [
-    'enable' => true,
-    'home_action' => App\Admin\Controllers\HomeController::class.'@index',
-    'home_title' => '首页',
-],
+```dotenv
+ADMIN_GLOBAL_NAVIGATION=true
+ADMIN_THEME=blue
+ADMIN_COLOR_MODE=light
 ```
 
-未配置自定义首页时使用包内 dashboard。`/admin` 是标签容器，`/admin/dashboard` 是首页内容。设置 `iframe_tabs.enable=false` 后，安装生成的路由使用标准 `HomeController@index`。`admin.route.file` 可指定后台目录中的路由文件，默认 `routes.php`。
+日志查看器默认位于 `/admin/logs`，读取 `storage/logs`。图片处理、Excel 导出等可选功能的依赖见 [composer.json](composer.json) 中的 `suggest`。
 
-默认使用经典侧栏，在 `.env` 中设置 `ADMIN_GLOBAL_NAVIGATION=true` 可启用全局菜单。它支持搜索、业务分类、收藏、最近访问和导航模式切换，并按管理员隔离状态。
+## 升级
 
-## 3.0 前端变化
+3.0 包含前端不兼容变更，旧项目请先阅读 [升级指南](UPGRADE-3.0.md) 和 [更新记录](CHANGELOG.md)。
 
-3.0 将后台前端从 AdminLTE 2 / Bootstrap 3 升级到 **AdminLTE 4.9.1 / Bootstrap 5.3.8 / jQuery 3.7.1**。这是一次 breaking change，不提供 BS3 jQuery API 桥接或 AdminLTE 2 兼容 CSS。
-
-主要变化：
-
-- `.main-header`、`.main-sidebar`、`.content-wrapper`、`.box` 等类改为 AdminLTE 4 的 `.app-*` / `.card`；
-- `.modal()`、`.popover()`、`.tooltip()`、`.tab()`、`.button()` 等 BS3 jQuery 插件 API 改为 Bootstrap 5 API；
-- `data-toggle` / `data-target` / `data-dismiss` 改为 `data-bs-*`；
-- 移除 iCheck、X-Editable、Eonasdan datetimepicker、Moment、Bootstrap Switch、Duallistbox、Colorpicker、slimScroll、Glyphicons；
-- 日期时间统一使用 Flatpickr，颜色使用 Pickr，文件上传使用 bootstrap-fileinput 5.x；
-- 主题配置改为 `admin.theme`（`blue`/`green`/`purple`/`red`/`yellow`/`black`）和 `admin.color_mode`（`light`/`dark`/`auto`），原 `admin.skin` 的 12 个值不再运行时映射；
-- 布局配置只接受 AdminLTE 4 支持的值：`layout-fixed`、`sidebar-mini`、`sidebar-collapse`、`sidebar-expand-lg`、`fixed-header`、`fixed-footer`。
-
-宿主升级步骤和完整映射表见 [UPGRADE-3.0.md](UPGRADE-3.0.md)。
-
-## 2.0 导航变化
-
-2.0 已彻底移除 PJAX：
-
-- 不再加载 `jquery-pjax`；
-- 不再注册 `admin.pjax` 中间件；
-- 不再支持 `X-PJAX`、`_pjax`、`#pjax-container`；
-- 表单、筛选、分页和删除通过 AJAX 更新 `#admin-content`，地址栏和前进后退同步更新；
-- iframe 标签页保留，顶层 AdminLTE 壳不刷新。
-
-宿主升级时：
-
-1. 将自定义 `$.pjax` / `pjax:*` 代码改用 `$.admin.navigate(url)`、`$.admin.reload()` 或 `$.admin.redirect(url)`；
-2. 将 `#pjax-container` 选择器改为 `#admin-content`；
-3. 删除 `Admin::disablePjax()`、`Widgets\Form::disablePjax()` 调用；
-4. 表单不再需要 `pjax-container` 属性；
-5. 页面需要清理定时器时监听 `admin:before-navigate`，需要在更新后运行时监听 `admin:navigated`。
-
-后台内容区的同源链接与表单默认使用 AJAX；文件上传使用 `FormData`，保留服务器重定向、表单校验和 CSRF 校验。导出下载、外部链接及新窗口链接保持浏览器原有行为。个别链接或表单需要整页请求时，添加 `data-admin-ajax="false"`。
-
-2.0 同时移除了旧版废弃 API：
-
-- `Admin::grid()`、`Admin::form()`、`Admin::show()`、`Admin::content()`、`Admin::registerAuthRoutes()`：直接使用 `new Grid(...)`、`new Form(...)`、`new Show(...)`、`Content` 注入控制器，或 `Admin::routes()`；
-- `_handle_selectable_` / `_handle_renderable_` 只接受实现 `Grid\Selectable` / `Grid\Renderable` 的类，其余返回 404；
-- 表单 `Display` 字段默认转义 HTML，需输出富文本时显式调用 `->unescape()`；
-- 菜单树的拖拽排序通过向 `admin/auth/menu` POST `_order` JSON 完成，不再依赖旧模型保存钩子；
-- `admin:make`、`admin:export` 不再需要 `doctrine/dbal`，表结构读取使用 Laravel 原生 Schema。
-
-## 日志查看器
-
-内置日志查看器，无需额外安装或注册 Provider。默认入口为 `/admin/logs`（跟随后台前缀），支持文件切换、分页、异常详情、实时追加、删除当前文件和删除当前目录内的全部 `.log` 文件。
-
-新安装会自动创建菜单和 `ext.log-viewer` 权限；已有项目执行一次：
-
-```bash
-php artisan admin:import log-viewer
-```
-
-重复执行不会重复添加菜单和权限。为普通角色分配 Logs 权限后即可访问；入口沿用后台认证、路由权限和 CSRF 中间件。操作日志仍在 `auth/logs`，应用文件日志在 `logs`。
-
-默认读取 `storage/logs`。可在宿主 `config/admin.php` 配置多个目录，页面通过目录名切换；路径由服务端配置，不接受请求传入任意路径：
-
-```php
-'log_viewer' => [
-    'enabled' => true,
-    'default' => 'default',
-    'directories' => [
-        'default' => storage_path('logs'),
-        'production' => storage_path('logs/production'),
-        'staging' => storage_path('logs/staging'),
-    ],
-    'max_bytes' => 1024 * 1024,
-],
-```
-
-支持标准 Laravel/Monolog 文本格式 `[时间] channel.LEVEL: 内容`，默认每页 20 条，较新日志在前。单次读取默认最多 1 MiB（配置上限 4 MiB），超大单条日志可能只显示部分内容。实时查看每 2 秒轮询，离开页面时停止，检测到文件缩短时从头读取。
-
-从独立日志查看器扩展升级时，移除旧扩展及手工注册的 `LogViewerServiceProvider`。如果宿主曾手动配置 `Encore\\Admin\\LogViewer\\` 自动加载映射，也需移除，避免覆盖本包中的类；自定义日志目录统一通过上述配置设置。
-
-原路由名 `log-viewer-index`、`log-viewer-file`、`log-viewer-tail` 保留；删除入口 `log-viewer-delete` 和 `log-viewer-deleteall` 改为 **DELETE** 请求，页面表单已包含 CSRF Token 和方法字段。旧的独立 `laravel-admin-ext/log-viewer` 扩展不能与本包同时安装。
-
-## 前端资源
-
-所有资源统一维护在 `resources/assets`，发布到 `public/vendor/laravel-admin`。当前前端栈为 AdminLTE 4.9.1、Bootstrap 5.3.8、jQuery 3.7.1、Select2 4.1.0、Flatpickr 4.6.13、bootstrap-fileinput 5.5.4 和 Pickr 1.10.2；内置标签页资源位于 `iframe-tabs` 子目录。JS、CSS、图片、字体均随包分发，无需 npm 构建。
-
-主题通过 `config/admin.php` 的 `theme` 和 `color_mode` 配置，颜色变量位于 `resources/assets/laravel-admin/themes.css`。`skin-*`、`layout-boxed`、`layout-top-nav` 已移除，升级时按 [UPGRADE-3.0.md](UPGRADE-3.0.md) 调整。
-
-AJAX 请求自动显示进度条，超过 180 毫秒时显示加载提示，并发请求全部结束后关闭。后台轮询等静默请求可在 `$.ajax` 选项中设置 `adminLoading: false`，其他错误处理保持正常。
-
-表单提交立即显示加载提示，并将提交按钮切换为“提交中”，避免重复提交。请求失败或校验未通过时保留表单内容并恢复按钮；普通页面切换采用 AJAX，浏览器前进后退会重新加载对应 URL 的内容并恢复滚动位置。
-
-升级时按需发布资源：
+更新资源：
 
 ```bash
 php artisan vendor:publish --tag=laravel-admin-assets --force
 php artisan optimize:clear
 ```
 
-资源升级会覆盖宿主同路径文件，修改前请保留宿主自身定制。`happy-admin-assets` 是同一资源树的附加标签。配置、语言和迁移仍使用各自发布标签。资源地址统一为 `/vendor/laravel-admin/...`。
+发布资源会覆盖同路径文件，请先备份自定义修改。
 
-### 控制台 unload 违规提示
+## 许可证
 
-Chrome 115+ 默认禁用已废弃的 `unload` 事件，页面（含其加载的第三方脚本、编辑器、统计组件）每注册一次 `unload` 处理器就会输出 `[Violation] Permissions policy violation: unload is not allowed in this document.`。后台响应统一附带 `Permissions-Policy: unload=self`（配置项 `admin.permissions_policy`），标签页 iframe 同时声明 `allow="unload"`，因此控制台不再出现该提示。
-
-该日志由浏览器直接输出，脚本无法捕获；如需保留 Chrome 默认行为，将 `admin.permissions_policy` 设为 `[]`。本包自身不注册 `unload`，若提示仍然出现，在对应 frame 的控制台执行下面的片段并刷新页面，即可从调用栈定位来源（必要时改用 `pagehide` / `visibilitychange`）：
-
-```js
-EventTarget.prototype.addEventListener = (raw => function (type, listener, options) {
-  if (type === 'unload') console.warn('[unload]', new Error().stack);
-  return raw.apply(this, arguments);
-})(EventTarget.prototype.addEventListener);
-```
-
-## 上传安全
-
-内置文件、图片、多文件和多图片字段均执行服务器类型白名单、实际 MIME、文件名及目标路径检查，包含头像接口；保存前再次校验，防止绕过表单 validator。图片允许 JPEG、PNG、GIF、WebP、BMP，普通附件白名单位于 `admin.upload.allowed_extensions`。
-
-PHP、PHTML、PHAR、HTML、SVG 等危险上传类型被禁止，不能通过白名单开启。历史上传文件和业务自建上传接口需要自行检查。
-
-默认 `admin` 磁盘为 `public/uploads`；宿主自定义同名磁盘优先。图片裁切、缩略图等功能按需安装 `intervention/image:^2.7`。
-
-## 开发和分发
-
-图片、字体及其他前端资源均作为普通 Git 文件分发。发布前可使用 `source-manifest.json` 中的 SHA256 校验资源完整性，并可运行旧前端静态检查：
-
-```bash
-composer install
-composer validate --strict
-composer test
-npm ci --ignore-scripts
-npm test
-npm run test:browser
-composer check-frontend
-composer archive --format=zip --dir=build --file=happyqu-laravel-admin-3.0.0
-```
-
-`npm run test:browser` 使用本机 Chrome 运行 AdminLTE 4 壳层、登录页和真实后台布局的浏览器冒烟测试；可通过 `CHROME_PATH` 指定 Chrome 可执行文件，或在 CI 中安装 Playwright Chromium。
-
-Node.js 仅用于运行前端回归测试，安装本包和发布前端资源不需要 Node.js 或 npm 构建。
-
-兼容矩阵建议至少覆盖：
-
-- Laravel 10.0 + PHP 8.1
-- Laravel 10.50 + PHP 8.3
-- Laravel 11 + PHP 8.2
-- Laravel 12 + PHP 8.3
-- Laravel 13 + PHP 8.3/8.4
-
-保留原代码与前端组件的版权和许可证，见 [第三方来源](THIRD_PARTY_NOTICES.md)。
+[MIT](LICENSE)。第三方组件版权见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
