@@ -3,6 +3,10 @@ const { defineConfig } = require('@playwright/test');
 
 const defaultChrome = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const chromePath = process.env.CHROME_PATH || (fs.existsSync(defaultChrome) ? defaultChrome : undefined);
+const useBundled = process.env.PLAYWRIGHT_USE_BUNDLED === '1';
+const phpHost = process.platform === 'win32'
+    ? 'php -d extension=pdo_sqlite -d extension=sqlite3'
+    : 'php';
 
 module.exports = defineConfig({
     testDir: './tests/browser',
@@ -16,9 +20,11 @@ module.exports = defineConfig({
         viewport: { width: 1280, height: 800 },
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
-        ...(chromePath
-            ? { launchOptions: { executablePath: chromePath } }
-            : { channel: 'chrome' }),
+        ...(useBundled
+            ? {}
+            : chromePath
+                ? { launchOptions: { executablePath: chromePath } }
+                : { channel: 'chrome' }),
     },
     webServer: [
         {
@@ -34,7 +40,7 @@ module.exports = defineConfig({
             timeout: 15000,
         },
         {
-            command: 'php -d extension=pdo_sqlite -d extension=sqlite3 -S 127.0.0.1:4175 tests/browser/host-server.php',
+            command: `${phpHost} -S 127.0.0.1:4175 tests/browser/host-server.php`,
             port: 4175,
             reuseExistingServer: true,
             timeout: 15000,

@@ -44,6 +44,9 @@ jobs:
       - name: Run tests
         run: vendor/bin/phpunit --configuration phpunit.xml.dist
 
+      - name: Check frontend assets and manifest
+        run: composer check-frontend
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -52,3 +55,32 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm test
+
+  browser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, fileinfo, mbstring, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Install backend dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend and Playwright
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+
+      - name: Run browser smoke tests
+        env:
+          PLAYWRIGHT_USE_BUNDLED: '1'
+        run: npm run test:browser
