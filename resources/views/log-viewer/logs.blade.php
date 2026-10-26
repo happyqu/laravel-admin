@@ -93,7 +93,7 @@ $(function () {
         $(this).find('i').removeClass('fa-play').addClass('fa-pause');
         interval = setInterval(function () {
             if (pending) { return; }
-            pending = $.getJSON(tailUrl, {offset: pos}).done(function (data) {
+            pending = $.ajax({url: tailUrl, data: {offset: pos}, dataType: 'json', adminLoading: false}).done(function (data) {
                 if (data.logs.length) {
                     var $body = $viewer.find('.log-table > tbody');
                     $body.find('.log-empty').remove();

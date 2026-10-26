@@ -149,6 +149,8 @@ php artisan admin:import log-viewer
 
 所有资源统一维护在 `resources/assets`，发布到 `public/vendor/laravel-admin`。内置标签页资源位于该目录的 `iframe-tabs` 子目录。JS、CSS、图片、字体均随包分发，无需 npm 构建。
 
+AJAX 请求自动显示进度条，超过 180 毫秒时显示加载提示，并发请求全部结束后关闭。后台轮询等静默请求可在 `$.ajax` 选项中设置 `adminLoading: false`，其他错误处理保持正常。
+
 升级时按需发布资源：
 
 ```bash

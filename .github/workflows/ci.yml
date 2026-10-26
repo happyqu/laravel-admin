@@ -49,4 +49,4 @@ jobs:
           node-version: '22'
 
       - name: Run frontend regression tests
-        run: node --test tests/Form/*.test.js tests/IframeTabs/*.test.js
+        run: node --test tests/Form/*.test.js tests/IframeTabs/*.test.js tests/Assets/*.test.js

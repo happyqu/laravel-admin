@@ -6265,14 +6265,14 @@
                 },
                 {
                     "path": "laravel-admin/laravel-admin.css",
-                    "sha256": "81e7a37daac67f43866e73e41deab03cfc7c73c9c36c129f0ad5bacda994271f",
-                    "bytes": 1698,
+                    "sha256": "afe8fc5a8e6b8472ac5d351297257b0866c2ca4783fbd8aa725fd537002fd042",
+                    "bytes": 2165,
                     "source_path": "public/vendor/laravel-admin/laravel-admin/laravel-admin.css"
                 },
                 {
                     "path": "laravel-admin/laravel-admin.js",
-                    "sha256": "58bd788a465b1de9476688038648127a527d7bc1625eb9310e094ee8d8bdde75",
-                    "bytes": 5913,
+                    "sha256": "7b5381a2c97dfe283e89c32e665f919f19ec764b4400f001c368ef1b45741e28",
+                    "bytes": 7775,
                     "source_path": "public/vendor/laravel-admin/laravel-admin/laravel-admin.js"
                 },
                 {

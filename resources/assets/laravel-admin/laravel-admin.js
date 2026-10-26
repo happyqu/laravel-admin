@@ -56,7 +56,69 @@ $(document).ajaxError(function (event, xhr) {
     }, 800);
 });
 
-NProgress.configure({parent: '#app'});
+NProgress.configure({parent: 'body', showSpinner: false});
+
+// Track foreground requests, including requests with global:false or a custom context.
+(function ($) {
+    var pending = 0;
+    var timer = null;
+    var indicator = null;
+
+    function start() {
+        pending++;
+        if (pending !== 1) {
+            return;
+        }
+
+        NProgress.start();
+        // Fast requests only need the progress bar; avoid flashing a central spinner.
+        timer = setTimeout(function () {
+            timer = null;
+            indicator = $('<div class="admin-ajax-loading" role="status" aria-live="polite"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i><span></span></div>');
+            indicator.find('span').text($('meta[name="admin-loading-text"]').attr('content') || 'Loading...');
+            indicator.appendTo('body');
+        }, 180);
+    }
+
+    function finish() {
+        pending--;
+        if (pending !== 0) {
+            return;
+        }
+
+        clearTimeout(timer);
+        timer = null;
+        if (indicator) {
+            indicator.remove();
+            indicator = null;
+        }
+        NProgress.done();
+    }
+
+    $.ajaxPrefilter(function (options, originalOptions, xhr) {
+        if (options.adminLoading === false) {
+            return;
+        }
+
+        var beforeSend = options.beforeSend;
+        var started = false;
+        options.beforeSend = function () {
+            var result = beforeSend && beforeSend.apply(this, arguments);
+            if (result === false || xhr.state() !== 'pending') {
+                return false;
+            }
+            started = true;
+            start();
+            return result;
+        };
+        xhr.always(function () {
+            if (started) {
+                started = false;
+                finish();
+            }
+        });
+    });
+})(jQuery);
 
 $(document).click(function () {
     $('.sidebar-form .dropdown-menu').hide();

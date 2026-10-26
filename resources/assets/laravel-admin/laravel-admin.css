@@ -83,3 +83,28 @@ a.editable-empty {
 .file-input .glyphicon-folder-open {
     display: inline;
 }
+
+#nprogress .bar {
+    z-index: 2147483000;
+}
+
+.admin-ajax-loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2147483000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.admin-ajax-loading .fa {
+    font-size: 22px;
+}
