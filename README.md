@@ -220,7 +220,7 @@ composer check-frontend
 composer archive --format=zip --dir=build --file=happyqu-laravel-admin-3.0.0
 ```
 
-`npm run test:browser` 使用本机 Chrome 运行 AdminLTE 4 壳层冒烟测试；可通过 `CHROME_PATH` 指定 Chrome 可执行文件，或在 CI 中安装 Playwright Chromium。
+`npm run test:browser` 使用本机 Chrome 运行 AdminLTE 4 壳层、登录页和真实后台布局的浏览器冒烟测试；可通过 `CHROME_PATH` 指定 Chrome 可执行文件，或在 CI 中安装 Playwright Chromium。
 
 Node.js 仅用于运行前端回归测试，安装本包和发布前端资源不需要 Node.js 或 npm 构建。
 

@@ -20,10 +20,24 @@ module.exports = defineConfig({
             ? { launchOptions: { executablePath: chromePath } }
             : { channel: 'chrome' }),
     },
-    webServer: {
-        command: 'node tests/browser/server.js',
-        port: 4173,
-        reuseExistingServer: true,
-        timeout: 15000,
-    },
+    webServer: [
+        {
+            command: 'node tests/browser/server.js',
+            port: 4173,
+            reuseExistingServer: true,
+            timeout: 15000,
+        },
+        {
+            command: 'php -S 127.0.0.1:4174 tests/browser/login-server.php',
+            port: 4174,
+            reuseExistingServer: true,
+            timeout: 15000,
+        },
+        {
+            command: 'php -S 127.0.0.1:4175 tests/browser/host-server.php',
+            port: 4175,
+            reuseExistingServer: true,
+            timeout: 15000,
+        },
+    ],
 });
