@@ -148,7 +148,7 @@ if (str_starts_with($path, $prefix)) {
     return;
 }
 
-if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form', '/admin/fields', '/admin/grid', '/admin/show', '/admin/nav', '/admin/iframe', '/admin/dashboard'], true)) {
+if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form', '/admin/fields', '/admin/grid', '/admin/show', '/admin/nav', '/admin/iframe', '/admin/dashboard', '/admin/widgets'], true)) {
     http_response_code(404);
     echo 'Not found';
     return;
@@ -330,6 +330,31 @@ $app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/dashboard', 
 
     return $content;
 })->name('iframes.dashboard');
+
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/widgets', function () {
+    $content = new Encore\Admin\Layout\Content();
+    $content->title('Widgets')->description('Widget smoke test');
+
+    $content->body(new Encore\Admin\Widgets\Box('Box title', 'Box content', 'Box footer'));
+    $content->body(new Encore\Admin\Widgets\InfoBox('Users', 'fa-users', 'blue', '/admin/users', '100'));
+    $content->body(new Encore\Admin\Widgets\Alert('Alert content', 'Alert title', 'danger'));
+
+    $tab = new Encore\Admin\Widgets\Tab();
+    $tab->add('One', 'Pane one', true);
+    $tab->add('Two', 'Pane two');
+    $content->body($tab);
+
+    $collapse = new Encore\Admin\Widgets\Collapse();
+    $collapse->add('Section', 'Collapse content');
+    $content->body($collapse);
+
+    $carousel = new Encore\Admin\Widgets\Carousel([
+        ['image' => '/vendor/laravel-admin/adminlte4/img/user2-160x160.jpg', 'caption' => 'Slide one'],
+    ]);
+    $content->body($carousel);
+
+    return $content;
+});
 
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 $request = Illuminate\Http\Request::capture();
