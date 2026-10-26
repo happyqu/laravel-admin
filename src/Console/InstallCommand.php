@@ -55,6 +55,9 @@ class InstallCommand extends Command
             if (\Encore\Admin\IframeTabs\IframeTabs::boot()) {
                 \Encore\Admin\IframeTabs\IframeTabs::initialize();
             }
+            if (config('admin.log_viewer.enabled', true)) {
+                \Encore\Admin\LogViewer\LogViewer::import();
+            }
         }
     }
 

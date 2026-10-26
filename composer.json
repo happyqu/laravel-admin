@@ -77,6 +77,7 @@
         ]
     },
     "conflict": {
-        "ichynul/iframe-tabs": "*"
+        "ichynul/iframe-tabs": "*",
+        "laravel-admin-ext/log-viewer": "*"
     }
 }

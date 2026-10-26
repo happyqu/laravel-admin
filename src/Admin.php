@@ -247,6 +247,10 @@ class Admin
 
         app('router')->group($attributes, function ($router) {
 
+            if (config('admin.log_viewer.enabled', true)) {
+                require __DIR__.'/../routes/log-viewer.php';
+            }
+
             /* @var \Illuminate\Support\Facades\Route $router */
             $router->namespace('\Encore\Admin\Controllers')->group(function ($router) {
 

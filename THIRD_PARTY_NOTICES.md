@@ -15,6 +15,7 @@
 | [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt) | Font Awesome 字体、Source Sans Pro |
 | [licenses/laravel-admin-LICENSE](licenses/laravel-admin-LICENSE) | 上游 Laravel Admin 的 MIT 原文 |
 | [licenses/iframe-tabs-LICENSE](licenses/iframe-tabs-LICENSE) | Iframe Tabs 的 MIT 原文 |
+| [licenses/log-viewer-LICENSE](licenses/log-viewer-LICENSE) | Log Viewer 随附的 MIT 原文 |
 
 ## 核心来源
 
@@ -24,6 +25,8 @@
 | Iframe Tabs | 1.3.6 | https://github.com/ichynul/iframe-tabs | 75345215d0ac1eed3ffd383720b711c9bf2d04b7 | MIT（`licenses/iframe-tabs-LICENSE`） |
 
 Iframe Tabs 已并入 `src/IframeTabs` 和核心 Provider 启动逻辑，不再作为独立 Composer 依赖或扩展注册。其 Blade 位于 `resources/views/iframe-tabs`，前端位于 `resources/assets/iframe-tabs`，与核心资源一起发布到 `public/vendor/laravel-admin`。
+
+Log Viewer 基于 `laravel-admin-ext/log-viewer` 修改，上游地址为 https://github.com/laravel-admin-extensions/log-viewer。导入的源码快照未声明版本或锁定提交，原文件哈希记录在 `source-manifest.json`。随附许可证为 MIT，版权行是 Copyright (c) 2015 Jens Segers，原文保存在 `licenses/log-viewer-LICENSE`。代码与视图位于 `src/LogViewer`、`resources/views/log-viewer`；本包调整了目录配置、路径校验、分页、输出转义、删除请求和无 PJAX 导航。
 
 ## 前端组件
 

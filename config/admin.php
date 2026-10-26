@@ -444,5 +444,15 @@ return [
         'web_in_cli' => false,
     ],
 
+    'log_viewer' => [
+        'enabled' => true,
+        'default' => 'default',
+        'directories' => [
+            'default' => storage_path('logs'),
+        ],
+        // Maximum bytes read per page or live update (capped at 4 MiB).
+        'max_bytes' => 1024 * 1024,
+    ],
+
     'extensions' => [],
 ];

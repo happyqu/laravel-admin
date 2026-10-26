@@ -4556,6 +4556,50 @@
                     "bytes": 1342
                 }
             ]
+        },
+        {
+            "name": "laravel-admin-ext/log-viewer",
+            "version": null,
+            "reference": null,
+            "source_path": "laravel-admin-ext/log-viewer",
+            "imported_on": "2026-10-26",
+            "files": [
+                {
+                    "path": "LICENSE",
+                    "sha256": "a624921d76d224157f47d2a81e90eb7e0ae00da61b2839ce842a55f5df7060ce",
+                    "bytes": 1098
+                },
+                {
+                    "path": "composer.json",
+                    "sha256": "025228f83aeea77747a0e42f3e4972d36cb8605eb8956b44065bfac2bee0cd48",
+                    "bytes": 825
+                },
+                {
+                    "path": "src/BootExtension.php",
+                    "sha256": "8c147e9ffd987a8a4a007f34799a48d69609d05af89f2d874208dd6f15f4cc69",
+                    "bytes": 1368
+                },
+                {
+                    "path": "src/LogController.php",
+                    "sha256": "5bf2c9eb04debe32bed7b861924f46f88a161cdffab4f0069df61bde5e37e6ae",
+                    "bytes": 3497
+                },
+                {
+                    "path": "src/LogViewer.php",
+                    "sha256": "a572c2dbe31aa1513d91f41f58122e332160ffd55f0329227d5f0b7b589da4b4",
+                    "bytes": 12450
+                },
+                {
+                    "path": "src/LogViewerServiceProvider.php",
+                    "sha256": "f22dfe96f4762d165e7a4c1da47f55bcdc543bab3c87424b572479623abcb9b4",
+                    "bytes": 309
+                },
+                {
+                    "path": "resources/views/logs.blade.php",
+                    "sha256": "37bfd1850cc68467fb7b46f00053d454ffb3737883b4390c3f4a3486176a2980",
+                    "bytes": 7457
+                }
+            ]
         }
     ],
     "assets": [

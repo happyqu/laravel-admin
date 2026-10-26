@@ -1,6 +1,14 @@
 <?php
 
 return [
+    'log_viewer' => [
+        'title' => '日志查看器', 'files' => '日志文件', 'directory' => '日志目录',
+        'level' => '级别', 'environment' => '环境', 'time' => '时间',
+        'message' => '内容', 'trace' => '详情', 'size' => '大小',
+        'delete_file' => '删除此文件', 'delete_all' => '删除所有日志文件',
+        'live' => '实时日志', 'newer' => '较新的日志', 'older' => '较旧的日志',
+        'empty' => '暂无日志记录。',
+    ],
     'upload_invalid' => '上传文件的类型、内容或保存路径不被允许。',
     'online'                => '在线',
     'login'                 => '登录',

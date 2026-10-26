@@ -1,6 +1,14 @@
 <?php
 
 return [
+    'log_viewer' => [
+        'title' => 'Log viewer', 'files' => 'Files', 'directory' => 'Directory',
+        'level' => 'Level', 'environment' => 'Environment', 'time' => 'Time',
+        'message' => 'Message', 'trace' => 'Details', 'size' => 'Size',
+        'delete_file' => 'Delete this file', 'delete_all' => 'Delete all log files',
+        'live' => 'Live', 'newer' => 'Newer entries', 'older' => 'Older entries',
+        'empty' => 'No log entries.',
+    ],
     'upload_invalid' => 'The uploaded file type, contents or storage path is not allowed.',
     'online'                => 'Online',
     'login'                 => 'Login',

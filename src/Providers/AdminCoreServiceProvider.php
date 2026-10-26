@@ -30,6 +30,9 @@ class AdminCoreServiceProvider extends ServiceProvider
         });
 
         $this->mergeAdminConfiguration();
+        if (config('admin.log_viewer.enabled', true)) {
+            \Encore\Admin\Admin::extend('log-viewer', \Encore\Admin\LogViewer\LogViewer::class);
+        }
         $this->registerPublishing();
     }
 
