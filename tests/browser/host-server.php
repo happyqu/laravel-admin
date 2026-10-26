@@ -85,7 +85,30 @@ class BrowserDemoModel extends Illuminate\Database\Eloquent\Model
     public $timestamps = false;
 }
 
+function browserDemoTable(): void
+{
+    if (Illuminate\Support\Facades\Schema::hasTable('browser_demos')) {
+        return;
+    }
+
+    Illuminate\Support\Facades\Schema::create('browser_demos', function ($table) {
+        $table->increments('id');
+        $table->string('name')->nullable();
+        $table->string('email')->nullable();
+        $table->string('status')->nullable();
+        $table->boolean('active')->default(1);
+        $table->date('date')->nullable();
+    });
+
+    BrowserDemoModel::insert([
+        ['id' => 1, 'name' => 'Alice', 'email' => 'alice@example.com', 'status' => 'active', 'active' => 1, 'date' => '2026-10-26'],
+        ['id' => 2, 'name' => 'Bob', 'email' => 'bob@example.com', 'status' => 'disabled', 'active' => 0, 'date' => '2026-10-25'],
+        ['id' => 3, 'name' => 'Carol', 'email' => 'carol@example.com', 'status' => 'active', 'active' => 1, 'date' => '2026-10-24'],
+    ]);
+}
+
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$isNavigation = $path === '/admin/nav';
 
 if ($path === '/favicon.ico') {
     http_response_code(204);
@@ -124,7 +147,7 @@ if (str_starts_with($path, $prefix)) {
     return;
 }
 
-if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form'], true)) {
+if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form', '/admin/grid', '/admin/show', '/admin/nav'], true)) {
     http_response_code(404);
     echo 'Not found';
     return;
@@ -136,6 +159,7 @@ $app['config']->set('app.debug', true);
 $app['config']->set('app.url', 'http://127.0.0.1:4175');
 $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
 $app['config']->set('session.driver', 'array');
+$app['config']->set('database.default', 'testing');
 $app['config']->set('auth.guards.admin', ['driver' => 'session', 'provider' => 'users']);
 $app['config']->set('auth.providers.users.model', BrowserFakeUser::class);
 $app['config']->set('admin.name', 'Laravel Admin');
@@ -144,6 +168,7 @@ $app['config']->set('admin.route.prefix', 'admin');
 $app['config']->set('admin.auth.guard', 'admin');
 $app['config']->set('admin.database.menu_model', BrowserFakeMenu::class);
 $app['config']->set('admin.iframe_tabs.enable', false);
+$app['config']->set('admin.navigation.enabled', $isNavigation);
 
 $app->register(Encore\Admin\AdminServiceProvider::class);
 class_alias(Encore\Admin\Facades\Admin::class, 'Admin');
@@ -171,6 +196,8 @@ $app['router']->middleware('web')->get('/admin/users', function () {
 });
 
 $app['router']->middleware('web')->get('/admin/form', function () {
+    browserDemoTable();
+
     $model = new BrowserDemoModel([
         'name' => 'Alice',
         'email' => 'alice@example.com',
@@ -190,6 +217,54 @@ $app['router']->middleware('web')->get('/admin/form', function () {
     $content = new Encore\Admin\Layout\Content();
     $content->title('Form')->description('Form field smoke test');
     $content->body($form);
+
+    return $content;
+});
+
+$app['router']->middleware('web')->get('/admin/grid', function () {
+    browserDemoTable();
+
+    $grid = new Encore\Admin\Grid(new BrowserDemoModel());
+    $grid->column('id', 'ID')->sortable();
+    $grid->column('name', 'Name');
+    $grid->column('email', 'Email');
+    $grid->column('status', 'Status')->using(['active' => 'Active', 'disabled' => 'Disabled']);
+    $grid->column('active', 'Active')->switch();
+    $grid->column('date', 'Date');
+    $grid->paginate(2);
+    $grid->filter(function ($filter) {
+        $filter->like('name', 'Name');
+    });
+
+    $content = new Encore\Admin\Layout\Content();
+    $content->title('Grid')->description('Grid and filter smoke test');
+    $content->body($grid);
+
+    return $content;
+});
+
+$app['router']->middleware('web')->get('/admin/show', function () {
+    browserDemoTable();
+
+    $model = BrowserDemoModel::find(1);
+    $show = new Encore\Admin\Show($model);
+    $show->field('id', 'ID');
+    $show->field('name', 'Name');
+    $show->field('email', 'Email');
+    $show->field('status', 'Status')->using(['active' => 'Active', 'disabled' => 'Disabled']);
+    $show->field('date', 'Date');
+
+    $content = new Encore\Admin\Layout\Content();
+    $content->title('Show')->description('Show page smoke test');
+    $content->body($show);
+
+    return $content;
+});
+
+$app['router']->middleware('web')->get('/admin/nav', function () {
+    $content = new Encore\Admin\Layout\Content();
+    $content->title('Navigation')->description('Global navigation smoke test');
+    $content->body('<div class="card"><div class="card-body">Navigation page body.</div></div>');
 
     return $content;
 });

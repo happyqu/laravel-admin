@@ -34,7 +34,7 @@ module.exports = defineConfig({
             timeout: 15000,
         },
         {
-            command: 'php -S 127.0.0.1:4175 tests/browser/host-server.php',
+            command: 'php -d extension=pdo_sqlite -d extension=sqlite3 -S 127.0.0.1:4175 tests/browser/host-server.php',
             port: 4175,
             reuseExistingServer: true,
             timeout: 15000,
