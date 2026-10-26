@@ -1,11 +1,10 @@
 <div>
-    <span class="{{ $elementClass }}" data-inserted="0" data-key="{{ $key }}" data-name="{{ $name }}"
-          data-toggle="collapse" data-target="#grid-collapse-{{ $name }}">
-        <a href="javascript:void(0)"><i class="fa fa-angle-double-down"></i>&nbsp;&nbsp;{{ $value }}</a>
+    <span class="{{ $elementClass }}" data-inserted="0" data-key="{{ $key }}" data-name="{{ $name }}" role="button" tabindex="0">
+        <a href="javascript:void(0)"><i class="fa fa-angle-double-down" aria-hidden="true"></i>&nbsp;&nbsp;{{ $value }}</a>
     </span>
     <template class="grid-expand-{{ $name }}">
-        <tr style='background-color: #ecf0f5;'>
-            <td colspan='100%' style='padding:0 !important; border:0;'>
+        <tr style="background-color: var(--bs-tertiary-bg);">
+            <td colspan="100%" style="padding:0 !important; border:0;">
                 <div id="grid-collapse-{{ $name }}" class="collapse">
                     <div style="padding: 10px 10px 0 10px;" class="html">
                         @if($html)
@@ -26,7 +25,6 @@
     var expand = $('.{{ $elementClass }}');
 
     @if($async)
-
     var load = function (url, target) {
         $.get(url, function (data) {
             target.find('.html').html(data);
@@ -36,7 +34,7 @@
     expand.on('click', function (e) {
         var target = $(this);
         if (target.data('inserted') == '0') {
-            var key  = target.data('key');
+            var key = target.data('key');
             var name = $(this).data('name');
             var row = $(this).closest('tr');
 
@@ -47,15 +45,11 @@
             load('{{ $url }}'+'&key='+key, $('#grid-collapse-'+name));
         }
 
-        $("i", this).toggleClass("fa-angle-double-down fa-angle-double-up");
+        $('i', this).toggleClass('fa-angle-double-down fa-angle-double-up');
     });
-
     @else
-
     expand.on('click', function () {
-
         if ($(this).data('inserted') == '0') {
-
             var name = $(this).data('name');
             var row = $(this).closest('tr');
 
@@ -64,20 +58,19 @@
             $(this).data('inserted', 1);
         }
 
-        $("i", this).toggleClass("fa-angle-double-down fa-angle-double-up");
+        $('i', this).toggleClass('fa-angle-double-down fa-angle-double-up');
     });
-
     @endif
 
     @if ($expand)
-        expand.trigger('click');
+    expand.trigger('click');
     @endif
 </script>
 
 @if($loadGrid)
-<style>
-    .collapse .grid-box .box-header:first-child {
-        display: none;
-    }
-</style>
+    <style>
+        .collapse .grid-box .card-header:first-child {
+            display: none;
+        }
+    </style>
 @endif

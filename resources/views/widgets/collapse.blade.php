@@ -1,19 +1,19 @@
 <div {!! $attributes !!}>
     @foreach($items as $key => $item)
-    <div class="panel box box-primary" style="margin-bottom: 0px">
-        <div class="box-header with-border">
-            <h4 class="box-title">
-                <a data-toggle="collapse" data-parent="#{{$id}}" href="#collapse{{ $key }}">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button {{ $key == 0 ? '' : 'collapsed' }}" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapse{{ $key }}"
+                        aria-expanded="{{ $key == 0 ? 'true' : 'false' }}" aria-controls="collapse{{ $key }}">
                     {{ $item['title'] }}
-                </a>
-            </h4>
-        </div>
-        <div id="collapse{{ $key }}" class="panel-collapse collapse {{ $key == 0 ? 'in' : '' }}">
-            <div class="box-body">
-                {!! $item['content'] !!}
+                </button>
+            </h2>
+            <div id="collapse{{ $key }}" class="accordion-collapse collapse {{ $key == 0 ? 'show' : '' }}"
+                 data-bs-parent="#{{ $id }}">
+                <div class="accordion-body">
+                    {!! $item['content'] !!}
+                </div>
             </div>
         </div>
-    </div>
     @endforeach
-
 </div>

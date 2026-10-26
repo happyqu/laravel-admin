@@ -1,38 +1,38 @@
-<div class="box grid-box">
+<div class="card grid-box">
     @if(isset($title))
-    <div class="box-header with-border">
-        <h3 class="box-title"> {{ $title }}</h3>
-    </div>
+        <div class="card-header">
+            <h3 class="card-title mb-0">{{ $title }}</h3>
+        </div>
     @endif
 
-    @if ( $grid->showTools() || $grid->showExportBtn() || $grid->showCreateBtn() )
-    <div class="box-header with-border">
-        <div class="pull-right">
-            {!! $grid->renderColumnSelector() !!}
-            {!! $grid->renderExportButton() !!}
-            {!! $grid->renderCreateButton() !!}
+    @if ($grid->showTools() || $grid->showExportBtn() || $grid->showCreateBtn())
+        <div class="card-header d-flex align-items-center gap-2">
+            @if ($grid->showTools())
+                <div class="d-flex align-items-center gap-2">
+                    {!! $grid->renderHeaderTools() !!}
+                </div>
+            @endif
+
+            <div class="ms-auto d-flex align-items-center gap-2">
+                {!! $grid->renderColumnSelector() !!}
+                {!! $grid->renderExportButton() !!}
+                {!! $grid->renderCreateButton() !!}
+            </div>
         </div>
-        @if ( $grid->showTools() )
-        <div class="pull-left">
-            {!! $grid->renderHeaderTools() !!}
-        </div>
-        @endif
-    </div>
     @endif
 
     {!! $grid->renderFilter() !!}
 
     {!! $grid->renderHeader() !!}
 
-    <!-- /.box-header -->
-    <div class="box-body table-responsive no-padding">
-        <table class="table table-hover grid-table" id="{{ $grid->tableID }}">
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover align-middle grid-table mb-0" id="{{ $grid->tableID }}">
             <thead>
-                <tr>
-                    @foreach($grid->visibleColumns() as $column)
+            <tr>
+                @foreach($grid->visibleColumns() as $column)
                     <th {!! $column->formatHtmlAttributes() !!}>{!! $column->getLabel() !!}{!! $column->renderHeader() !!}</th>
-                    @endforeach
-                </tr>
+                @endforeach
+            </tr>
             </thead>
 
             @if ($grid->hasQuickCreate())
@@ -40,32 +40,28 @@
             @endif
 
             <tbody>
+            @if($grid->rows()->isEmpty() && $grid->showDefineEmptyPage())
+                @include('admin::grid.empty-grid')
+            @endif
 
-                @if($grid->rows()->isEmpty() && $grid->showDefineEmptyPage())
-                    @include('admin::grid.empty-grid')
-                @endif
-
-                @foreach($grid->rows() as $row)
+            @foreach($grid->rows() as $row)
                 <tr {!! $row->getRowAttributes() !!}>
                     @foreach($grid->visibleColumnNames() as $name)
-                    <td {!! $row->getColumnAttributes($name) !!}>
-                        {!! $row->column($name) !!}
-                    </td>
+                        <td {!! $row->getColumnAttributes($name) !!}>
+                            {!! $row->column($name) !!}
+                        </td>
                     @endforeach
                 </tr>
-                @endforeach
+            @endforeach
             </tbody>
 
             {!! $grid->renderTotalRow() !!}
-
         </table>
-
     </div>
 
     {!! $grid->renderFooter() !!}
 
-    <div class="box-footer clearfix">
+    <div class="card-footer clearfix">
         {!! $grid->paginator() !!}
     </div>
-    <!-- /.box-body -->
 </div>

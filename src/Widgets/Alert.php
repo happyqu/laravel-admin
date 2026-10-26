@@ -80,7 +80,7 @@ class Alert extends Widget implements Renderable
      */
     protected function variables()
     {
-        $this->class("alert alert-{$this->style} alert-dismissable");
+        $this->class("alert alert-{$this->style} alert-dismissible fade show");
 
         return [
             'title'      => $this->title,

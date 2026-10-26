@@ -34,7 +34,28 @@ class InfoBox extends Widget implements Renderable
             'info' => $info,
         ];
 
-        $this->class("small-box bg-$color");
+        $themes = [
+            'green'      => 'success',
+            'red'        => 'danger',
+            'yellow'     => 'warning',
+            'aqua'       => 'info',
+            'blue'       => 'info',
+            'light-blue' => 'info',
+            'purple'     => 'primary',
+            'maroon'     => 'danger',
+            'navy'       => 'dark',
+            'teal'       => 'info',
+            'olive'      => 'success',
+            'lime'       => 'success',
+            'orange'     => 'warning',
+            'fuchsia'    => 'danger',
+            'gray'       => 'secondary',
+            'black'      => 'dark',
+        ];
+
+        $theme = $themes[$color] ?? $color;
+
+        $this->class("small-box text-bg-$theme");
     }
 
     /**

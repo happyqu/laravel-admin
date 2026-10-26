@@ -1,22 +1,25 @@
-<div class="{{$viewClass['form-group']}} {!! !$errors->has($errorKey) ? '' : 'has-error' !!}">
+<div class="{{ $viewClass['form-group'] }}">
+    <label for="{{ $id }}" class="{{ $viewClass['label'] }} col-form-label">{{ $label }}</label>
 
-    <label for="{{$id}}" class="{{$viewClass['label']}} control-label">{{$label}}</label>
-
-    <div class="{{$viewClass['field']}}">
-
+    <div class="{{ $viewClass['field'] }}">
         @include('admin::form.error')
 
-        <div class="card-group radio-group-toggle">
-            @foreach($options as $option => $label)
-                <label class="panel panel-default {{ ($option == old($column, $value)) || ($value === null && in_array($label, $checked)) ?'active':'' }}">
-                    <div class="panel-body">
-                    <input type="radio" name="{{$name}}" value="{{$option}}" class="hide minimal {{$class}}" {{ ($option == old($column, $value)) || ($value === null && in_array($label, $checked)) ?'checked':'' }} {!! $attributes !!} />&nbsp;{{$label}}&nbsp;&nbsp;
-                    </div>
-                </label>
+        <div class="row row-cols-1 row-cols-md-3 g-3">
+            @foreach($options as $option => $optionLabel)
+                @php($optionId = $id.'_'.md5((string) $option))
+                @php($isChecked = ($option == old($column, $value)) || ($value === null && in_array($optionLabel, $checked)))
+                <div class="col">
+                    <label class="card h-100 {{ $isChecked ? 'border-primary' : '' }}" for="{{ $optionId }}">
+                        <div class="card-body d-flex align-items-start gap-2">
+                            <input type="radio" class="form-check-input mt-1 {{ $class }}" id="{{ $optionId }}"
+                                   name="{{ $name }}" value="{{ $option }}" {{ $isChecked ? 'checked' : '' }} {!! $attributes !!}>
+                            <span>{{ $optionLabel }}</span>
+                        </div>
+                    </label>
+                </div>
             @endforeach
         </div>
 
         @include('admin::form.help-block')
-
     </div>
 </div>

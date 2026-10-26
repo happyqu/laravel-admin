@@ -30,7 +30,6 @@ class Tab extends Widget implements Renderable
 
     public function __construct()
     {
-        $this->class('nav-tabs-custom');
     }
 
     /**
@@ -144,12 +143,16 @@ class Tab extends Widget implements Renderable
         $script = <<<'SCRIPT'
 var hash = document.location.hash;
 if (hash) {
-    $('.nav-tabs a[href="' + hash + '"]').tab('show');
+    var target = document.querySelector('.nav-tabs a[href="' + hash + '"]');
+    if (target && window.bootstrap) {
+        bootstrap.Tab.getOrCreateInstance(target).show();
+    }
 }
 
-// Change hash for page-reload
-$('.nav-tabs a').on('shown.bs.tab', function (e) {
-    history.pushState(null,null, e.target.hash);
+document.querySelectorAll('.nav-tabs a[data-bs-toggle="tab"]').forEach(function (tab) {
+    tab.addEventListener('shown.bs.tab', function (event) {
+        history.pushState(null, null, event.target.hash);
+    });
 });
 SCRIPT;
         Admin::script($script);

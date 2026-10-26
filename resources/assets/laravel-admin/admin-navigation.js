@@ -112,16 +112,18 @@
         if (!form) { error($.admin.responseMessage(payload)); return; }
         var $form = $(form);
         $form.find('.admin-ajax-error').remove();
-        $form.find('.has-error').removeClass('has-error');
+        $form.find('.is-invalid').removeClass('is-invalid');
+        $form.find('.invalid-feedback.admin-ajax-error').remove();
         var errors = payload.errors || payload.validation || {};
         var messages = [];
         Object.keys(errors).forEach(function (name) {
             var message = [].concat(errors[name]).join(' ');
             messages.push(message);
             var key = name.replace(/\.([^\.]+)/g, '[$1]');
-            $form.find(':input').filter(function () { return this.name === name || this.name === key; }).first()
-                .closest('.form-group').addClass('has-error')
-                .append($('<span class="help-block admin-ajax-error"></span>').text(message));
+            var input = $form.find(':input').filter(function () { return this.name === name || this.name === key; }).first();
+            input.addClass('is-invalid');
+            input.closest('.admin-field')
+                .append($('<span class="invalid-feedback d-block admin-ajax-error"></span>').text(message));
         });
         var alert = $('<div class="alert alert-danger admin-ajax-error" role="alert" tabindex="-1"></div>').text(messages.join(' ') || $.admin.responseMessage(payload) || 'Validation failed.');
         $form.prepend(alert);

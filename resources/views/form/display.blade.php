@@ -1,15 +1,15 @@
 <div class="{{$viewClass['form-group']}}">
-    <label class="{{$viewClass['label']}} control-label">{{$label}}</label>
+    <label class="{{$viewClass['label']}} col-form-label">{{$label}}</label>
     <div class="{{$viewClass['field']}}">
-        <div class="box box-solid box-default no-margin">
-            <!-- /.box-header -->
-            <div class="box-body">
+        <div class="card card-outline card-secondary mb-0">
+            <!-- /.card-header -->
+            <div class="card-body">
                 @if($escape ?? true)
                     {{ $value }}&nbsp;
                 @else
                     {!! $value !!}&nbsp;
                 @endif
-            </div><!-- /.box-body -->
+            </div><!-- /.card-body -->
         </div>
 
         @include('admin::form.help-block')

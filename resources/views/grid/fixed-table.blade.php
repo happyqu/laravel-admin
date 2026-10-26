@@ -1,31 +1,30 @@
-<div class="box">
+<div class="card grid-box">
     @if(isset($title))
-    <div class="box-header with-border">
-        <h3 class="box-title"> {{ $title }}</h3>
-    </div>
+        <div class="card-header">
+            <h3 class="card-title mb-0">{{ $title }}</h3>
+        </div>
     @endif
 
-    @if ( $grid->showTools() || $grid->showExportBtn() || $grid->showCreateBtn() )
-    <div class="box-header with-border">
-        <div class="pull-right">
-            {!! $grid->renderColumnSelector() !!}
-            {!! $grid->renderExportButton() !!}
-            {!! $grid->renderCreateButton() !!}
+    @if ($grid->showTools() || $grid->showExportBtn() || $grid->showCreateBtn())
+        <div class="card-header d-flex align-items-center gap-2">
+            @if ($grid->showTools())
+                <div class="d-flex align-items-center gap-2">
+                    {!! $grid->renderHeaderTools() !!}
+                </div>
+            @endif
+            <div class="ms-auto d-flex align-items-center gap-2">
+                {!! $grid->renderColumnSelector() !!}
+                {!! $grid->renderExportButton() !!}
+                {!! $grid->renderCreateButton() !!}
+            </div>
         </div>
-        @if ( $grid->showTools() )
-        <div class="pull-left">
-            {!! $grid->renderHeaderTools() !!}
-        </div>
-        @endif
-    </div>
     @endif
 
     {!! $grid->renderFilter() !!}
 
     {!! $grid->renderHeader() !!}
 
-    <!-- /.box-header -->
-    <div class="box-body table-responsive no-padding">
+    <div class="card-body table-responsive p-0">
         <div class="tables-container">
             <div class="table-wrap table-main">
                 <table class="table grid-table" id="{{ $grid->tableID }}">
@@ -124,10 +123,9 @@
 
     {!! $grid->renderFooter() !!}
 
-    <div class="box-footer clearfix">
+    <div class="card-footer clearfix">
         {!! $grid->paginator() !!}
     </div>
-    <!-- /.box-body -->
 </div>
 
 
@@ -144,8 +142,8 @@
         white-space:nowrap;
     }
 
-    .table-wrap table tr .active {
-        background: #f5f5f5;
+    .table-wrap table tr.active {
+        background: var(--bs-tertiary-bg);
     }
 
     .table-main {
@@ -156,7 +154,7 @@
     .table-fixed {
         position:absolute;
         top: 0px;
-        background:#ffffff;
+        background: var(--bs-body-bg);
         z-index:10;
     }
 

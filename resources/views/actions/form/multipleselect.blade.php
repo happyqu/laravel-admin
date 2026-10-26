@@ -1,4 +1,4 @@
-<div class="form-group">
+<div class="admin-field mb-3">
     <label>{{ $label }}</label>
     <select class="form-control {{$class}}" style="width: 100%;" name="{{$name}}[]" {!! $attributes !!} multiple data-placeholder="{{ $label }}">
 

@@ -1262,7 +1262,7 @@ class Field implements Renderable
             ];
         }
 
-        return ['label' => $this->getLabelClass(), 'field' => '', 'form-group' => ''];
+        return ['label' => $this->getLabelClass(), 'field' => '', 'form-group' => 'admin-field mb-3'];
     }
 
     /**
@@ -1406,7 +1406,7 @@ class Field implements Renderable
      */
     protected function getGroupClass($default = false): string
     {
-        return ($default ? 'form-group ' : '').implode(' ', array_filter($this->groupClass));
+        return ($default ? 'admin-field mb-3 ' : '').implode(' ', array_filter($this->groupClass));
     }
 
     /**

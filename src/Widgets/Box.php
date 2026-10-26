@@ -56,7 +56,7 @@ class Box extends Widget implements Renderable
             $this->footer($footer);
         }
 
-        $this->class('box');
+        $this->class('card');
     }
 
     /**
@@ -117,7 +117,7 @@ class Box extends Widget implements Renderable
     public function collapsable()
     {
         $this->tools[] =
-            '<button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>';
+            '<button type="button" class="btn btn-tool" data-lte-toggle="card-collapse" aria-label="Collapse"><i class="fa fa-minus" aria-hidden="true"></i></button>';
 
         return $this;
     }
@@ -126,18 +126,16 @@ class Box extends Widget implements Renderable
      *  Set box body scrollable.
      *
      * @param array $options
+     * @param string $nodeSelector
      *
      * @return $this
      */
     public function scrollable($options = [], $nodeSelector = '')
     {
-        $this->id = uniqid('box-slim-scroll-');
-        $scrollOptions = json_encode($options);
-        $nodeSelector = $nodeSelector ?: '.box-body';
+        $height = $options['height'] ?? '300px';
 
-        $this->script = <<<SCRIPT
-$("#{$this->id} {$nodeSelector}").slimScroll({$scrollOptions});
-SCRIPT;
+        $this->class('overflow-auto');
+        $this->offsetSet('style', "max-height: {$height};");
 
         return $this;
     }
@@ -150,7 +148,7 @@ SCRIPT;
     public function removable()
     {
         $this->tools[] =
-            '<button class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>';
+            '<button type="button" class="btn btn-tool" data-lte-toggle="card-remove" aria-label="Remove"><i class="fa fa-times" aria-hidden="true"></i></button>';
 
         return $this;
     }
@@ -169,7 +167,7 @@ SCRIPT;
         }
 
         $styles = array_map(function ($style) {
-            return 'box-'.$style;
+            return $style === 'solid' ? 'card-outline' : 'card-'.$style;
         }, $styles);
 
         $this->class = $this->class.' '.implode(' ', $styles);

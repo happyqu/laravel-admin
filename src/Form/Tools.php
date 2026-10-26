@@ -179,8 +179,8 @@ class Tools implements Renderable
         $text = trans('admin.list');
 
         return <<<EOT
-<div class="btn-group pull-right" style="margin-right: 5px">
-    <a href="{$this->getListPath()}" class="btn btn-sm btn-default" title="$text"><i class="fa fa-list"></i><span class="hidden-xs">&nbsp;$text</span></a>
+<div class="btn-group" style="margin-right: 5px">
+    <a href="{$this->getListPath()}" class="btn btn-sm btn-outline-secondary" title="$text"><i class="fa fa-list"></i><span class="d-none d-sm-inline">&nbsp;$text</span></a>
 </div>
 EOT;
     }
@@ -195,9 +195,9 @@ EOT;
         $view = trans('admin.view');
 
         return <<<HTML
-<div class="btn-group pull-right" style="margin-right: 5px">
+<div class="btn-group" style="margin-right: 5px">
     <a href="{$this->getViewPath()}" class="btn btn-sm btn-primary" title="{$view}">
-        <i class="fa fa-eye"></i><span class="hidden-xs"> {$view}</span>
+        <i class="fa fa-eye"></i><span class="d-none d-sm-inline"> {$view}</span>
     </a>
 </div>
 HTML;
@@ -283,9 +283,9 @@ SCRIPT;
         $deleteLabel = e($trans['delete']);
 
         return <<<HTML
-<div class="btn-group pull-right" style="margin-right: 5px">
+<div class="btn-group" style="margin-right: 5px">
     <a href="javascript:void(0);" class="btn btn-sm btn-danger {$class}-delete" title="{$deleteLabel}">
-        <i class="fa fa-trash"></i><span class="hidden-xs">  {$deleteLabel}</span>
+        <i class="fa fa-trash"></i><span class="d-none d-sm-inline">  {$deleteLabel}</span>
     </a>
 </div>
 HTML;

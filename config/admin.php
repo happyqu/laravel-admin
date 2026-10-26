@@ -470,7 +470,7 @@ return [
         'pass_urls' => ['/auth/logout', '/auth/lock'],
         'tabs_left' => 42,
         'bind_urls' => 'popup',
-        'bind_selecter' => 'a.grid-row-view,a.grid-row-edit,.column-__actions__ ul.dropdown-menu a,.box-header .pull-right .btn-success,.popup',
+        'bind_selecter' => 'a.grid-row-view,a.grid-row-edit,.column-__actions__ ul.dropdown-menu a,.card-header .ms-auto .btn-success,.popup',
         'layer_size' => '1100px,98%',
         'web_in_cli' => false,
     ],

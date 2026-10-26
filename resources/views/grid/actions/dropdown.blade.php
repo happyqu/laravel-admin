@@ -1,17 +1,15 @@
 <div class="grid-dropdown-actions dropdown">
-    <a href="#" style="padding: 0 10px;" class="dropdown-toggle" data-toggle="dropdown">
-        <i class="fa fa-ellipsis-v"></i>
+    <a href="#" style="padding: 0 10px;" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa fa-ellipsis-v" aria-hidden="true"></i>
     </a>
-    <ul class="dropdown-menu" style="min-width: 70px !important;box-shadow: 0 2px 3px 0 rgba(0,0,0,.2);border-radius:0;left: -65px;top: 5px;">
-
+    <ul class="dropdown-menu dropdown-menu-end">
         @foreach($default as $action)
             <li>{!! $action->render() !!}</li>
         @endforeach
 
         @if(!empty($custom))
-
             @if(!empty($default))
-                <li class="divider"></li>
+                <li><hr class="dropdown-divider"></li>
             @endif
 
             @foreach($custom as $action)
@@ -22,7 +20,7 @@
 </div>
 
 <script>
-    $('.table-responsive').on('shown.bs.dropdown', function(e) {
+    $('.table-responsive').on('shown.bs.dropdown', function (e) {
         var t = $(this),
             m = $(e.target).find('.dropdown-menu'),
             tb = t.offset().top + t.height(),
@@ -35,11 +33,8 @@
         } else {
             t.css('overflow', 'visible');
         }
-    }).on('hidden.bs.dropdown', function() {
-        $(this).css({
-            'padding-bottom': '',
-            'overflow': ''
-        });
+    }).on('hidden.bs.dropdown', function () {
+        $(this).css({'padding-bottom': '', 'overflow': ''});
     });
 </script>
 

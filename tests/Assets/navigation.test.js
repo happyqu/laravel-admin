@@ -204,7 +204,7 @@ test('HTML validation redirects preserve the form URL and show server errors', a
 });
 
 test('JSON 422 validation keeps entered values, escapes errors, and unlocks submit', async t => {
-    const app = await page('<form id="edit" method="post" data-admin-form="true"><div class="form-group"><input name="name" value="keep me"></div><button>Save</button></form>');
+    const app = await page('<form id="edit" method="post" data-admin-form="true"><div class="admin-field"><input name="name" value="keep me"></div><button>Save</button></form>');
     t.after(() => app.window.close());
     const form = app.window.document.getElementById('edit');
     const task = app.$.admin.submitForm(form);
@@ -213,7 +213,8 @@ test('JSON 422 validation keeps entered values, escapes errors, and unlocks subm
     await task;
     assert.equal(form.querySelector('input').value, 'keep me');
     assert.equal(form.querySelector('button').disabled, false);
-    assert.ok(form.querySelector('.has-error'));
+    assert.ok(form.querySelector('.is-invalid'));
+    assert.ok(form.querySelector('.invalid-feedback.admin-ajax-error'));
     assert.equal(form.querySelector('.admin-ajax-error script'), null);
     assert.match(form.textContent, /<script>bad<\/script>/);
 });

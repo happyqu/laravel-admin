@@ -1,24 +1,20 @@
-<div class="{{$viewClass['form-group']}} {!! !$errors->has($errorKey) ? '' : 'has-error' !!}">
+<div class="{{ $viewClass['form-group'] }}">
+    <label for="{{ $id }}" class="{{ $viewClass['label'] }} col-form-label">{{ $label }}</label>
 
-    <label for="{{$id}}" class="{{$viewClass['label']}} control-label">{{$label}}</label>
-
-    <div class="{{$viewClass['field']}}">
-
+    <div class="{{ $viewClass['field'] }}">
         @include('admin::form.error')
 
-        @foreach($options as $option => $label)
-
-            {!! $inline ? '<span class="icheck">' : '<div class="radio icheck">'  !!}
-
-                <label @if($inline)class="radio-inline"@endif>
-                    <input type="radio" name="{{$name}}" value="{{$option}}" class="minimal {{$class}}" {{ ($option == old($column, $value)) || ($value === null && in_array($label, $checked)) ?'checked':'' }} {!! $attributes !!} />&nbsp;{{$label}}&nbsp;&nbsp;
-                </label>
-
-            {!! $inline ? '</span>' :  '</div>' !!}
-
+        @foreach($options as $option => $optionLabel)
+            @php($optionId = $id.'_'.md5((string) $option))
+            <div class="form-check {{ $inline ? 'form-check-inline' : '' }}">
+                <input type="radio" id="{{ $optionId }}" name="{{ $name }}" value="{{ $option }}"
+                       class="form-check-input {{ $class }}"
+                       {{ ($option == old($column, $value)) || ($value === null && in_array($optionLabel, $checked)) ? 'checked' : '' }}
+                       {!! $attributes !!}>
+                <label class="form-check-label" for="{{ $optionId }}">{{ $optionLabel }}</label>
+            </div>
         @endforeach
 
         @include('admin::form.help-block')
-
     </div>
 </div>

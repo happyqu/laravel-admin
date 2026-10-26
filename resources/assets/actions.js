@@ -108,15 +108,18 @@
         }
         return shell;
     }
-    function clearErrors() { shell.find('.has-error').removeClass('has-error'); shell.find('[data-admin-action-error]').remove(); }
+    function clearErrors() { shell.find('.is-invalid').removeClass('is-invalid'); shell.find('[data-admin-action-error]').remove(); }
     function showErrors(error) {
         var errors = error.responseJSON && error.responseJSON.errors;
         if (!errors || !shell) return false;
         Object.keys(errors).forEach(function (key) {
             var parts = key.split('.'), name = parts.shift() + parts.map(function (part) { return '[' + part + ']'; }).join('');
             var input = shell.find(':input').filter(function () { return this.name === name || this.name === name + '[]'; }).first();
-            if (input.length) $('<span class="help-block" data-admin-action-error="1"></span>')
-                .text([].concat(errors[key]).join('\n')).appendTo(input.closest('.form-group').addClass('has-error'));
+            if (input.length) {
+                input.addClass('is-invalid');
+                $('<span class="invalid-feedback d-block" data-admin-action-error="1"></span>')
+                    .text([].concat(errors[key]).join('\n')).appendTo(input.closest('.admin-field'));
+            }
         });
         notify(error);
         return true;

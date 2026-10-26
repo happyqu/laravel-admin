@@ -1,31 +1,30 @@
-<div class="btn-group pull-right" style="margin-right: 10px">
-    <a href="" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#{{ $modalID }}"><i class="fa fa-filter"></i>&nbsp;&nbsp;{{ trans('admin.filter') }}</a>
-    <a href="{!! $action !!}" class="btn btn-sm btn-facebook"><i class="fa fa-undo"></i>&nbsp;&nbsp;{{ trans('admin.reset') }}</a>
+<div class="btn-group float-end" style="margin-right: 10px">
+    <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#{{ $modalID }}">
+        <i class="fa fa-filter" aria-hidden="true"></i>&nbsp;&nbsp;{{ trans('admin.filter') }}
+    </a>
+    <a href="{!! $action !!}" class="btn btn-sm btn-outline-secondary">
+        <i class="fa fa-undo" aria-hidden="true"></i>&nbsp;&nbsp;{{ trans('admin.reset') }}
+    </a>
 </div>
 
-<div class="modal fade" id="{{ $modalID }}" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal fade" id="{{ $modalID }}" tabindex="-1" aria-labelledby="{{ $modalID }}-label" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                    <span class="sr-only">Close</span>
-                </button>
-                <h4 class="modal-title" id="myModalLabel">{{ trans('admin.filter') }}</h4>
+                <h5 class="modal-title" id="{{ $modalID }}-label">{{ trans('admin.filter') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{!! $action !!}" method="get">
                 <div class="modal-body">
-                    <div class="form">
-                        @foreach($filters as $filter)
-                            <div class="form-group">
-                                {!! $filter->render() !!}
-                            </div>
-                        @endforeach
-                    </div>
+                    @foreach($filters as $filter)
+                        <div class="admin-field mb-3">
+                            {!! $filter->render() !!}
+                        </div>
+                    @endforeach
                 </div>
                 <div class="modal-footer">
+                    <button type="reset" class="btn btn-outline-warning me-auto">{{ trans('admin.reset') }}</button>
                     <button type="submit" class="btn btn-primary submit">{{ trans('admin.submit') }}</button>
-                    <button type="reset" class="btn btn-warning pull-left">{{ trans('admin.reset') }}</button>
                 </div>
             </form>
         </div>

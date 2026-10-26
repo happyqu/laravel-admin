@@ -146,7 +146,7 @@ SCRIPT;
     {
         $this->setupScript();
 
-        Admin::style('td .form-group {margin-bottom: 0 !important;}');
+        Admin::style('td .admin-field {margin-bottom: 0 !important;}');
 
         return parent::render();
     }

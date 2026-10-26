@@ -397,9 +397,9 @@ $("form select").on("select2:opening", function (e) {
 $(document).ready(function(){
     $('select').each(function(){
         if($(this).is('[readonly]')){
-            $(this).closest('.form-group').find('span.select2-selection__choice__remove').remove();
-            $(this).closest('.form-group').find('li.select2-search').first().remove();
-            $(this).closest('.form-group').find('span.select2-selection__clear').first().remove();
+            $(this).closest('.admin-field').find('span.select2-selection__choice__remove').remove();
+            $(this).closest('.admin-field').find('li.select2-search').first().remove();
+            $(this).closest('.admin-field').find('span.select2-selection__clear').first().remove();
         }
     });
 });

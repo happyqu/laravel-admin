@@ -1,74 +1,104 @@
 <div class="row" id="admin-log-viewer">
     <div class="col-md-10">
-        <div class="box box-primary">
-            <div class="box-header with-border">
-                <button type="button" class="btn btn-primary btn-sm log-refresh"><i class="fa fa-refresh"></i> {{ trans('admin.refresh') }}</button>
+        <div class="card card-primary">
+            <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                <button type="button" class="btn btn-primary btn-sm log-refresh">
+                    <i class="fa fa-refresh" aria-hidden="true"></i> {{ trans('admin.refresh') }}
+                </button>
+
                 @if($file !== '')
-                    <form action="{{ route('log-viewer-delete', ['file' => $file, 'type' => $type]) }}" method="post" class="log-delete-form" style="display: inline-block">
+                    <form action="{{ route('log-viewer-delete', ['file' => $file, 'type' => $type]) }}" method="post" class="log-delete-form d-inline-block">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm">{{ trans('admin.log_viewer.delete_file') }}</button>
                     </form>
                 @endif
+
                 @if(count($logFiles))
-                    <form action="{{ route('log-viewer-deleteall', ['type' => $type]) }}" method="post" class="log-delete-form" style="display: inline-block">
+                    <form action="{{ route('log-viewer-deleteall', ['type' => $type]) }}" method="post" class="log-delete-form d-inline-block">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger btn-sm">{{ trans('admin.log_viewer.delete_all') }}</button>
                     </form>
                 @endif
-                <button type="button" class="btn btn-default btn-sm log-live" @if($tailPath === '') disabled @endif><i class="fa fa-play"></i> <span>{{ trans('admin.log_viewer.live') }}</span></button>
-                <div class="btn-group pull-right">
+
+                <button type="button" class="btn btn-outline-secondary btn-sm log-live" @if($tailPath === '') disabled @endif>
+                    <i class="fa fa-play" aria-hidden="true"></i> <span>{{ trans('admin.log_viewer.live') }}</span>
+                </button>
+
+                <div class="btn-group ms-auto">
                     @if($prevUrl)
-                        <a href="{{ $prevUrl }}" class="btn btn-default btn-sm" title="{{ trans('admin.log_viewer.newer') }}"><i class="fa fa-chevron-left"></i></a>
+                        <a href="{{ $prevUrl }}" class="btn btn-outline-secondary btn-sm" title="{{ trans('admin.log_viewer.newer') }}">
+                            <i class="fa fa-chevron-left" aria-hidden="true"></i>
+                        </a>
                     @endif
                     @if($nextUrl)
-                        <a href="{{ $nextUrl }}" class="btn btn-default btn-sm" title="{{ trans('admin.log_viewer.older') }}"><i class="fa fa-chevron-right"></i></a>
+                        <a href="{{ $nextUrl }}" class="btn btn-outline-secondary btn-sm" title="{{ trans('admin.log_viewer.older') }}">
+                            <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                        </a>
                     @endif
                 </div>
             </div>
-            <div class="box-body no-padding table-responsive">
-                <table class="table table-hover log-table">
-                    <thead><tr>
+
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover align-middle log-table mb-0">
+                    <thead>
+                    <tr>
                         <th>{{ trans('admin.log_viewer.level') }}</th>
                         <th>{{ trans('admin.log_viewer.environment') }}</th>
                         <th>{{ trans('admin.log_viewer.time') }}</th>
                         <th>{{ trans('admin.log_viewer.message') }}</th>
                         <th></th>
-                    </tr></thead>
+                    </tr>
+                    </thead>
                     <tbody>
-                        @forelse($logs as $log)
-                            @include('admin::log-viewer.row', ['log' => $log])
-                        @empty
-                            <tr class="log-empty"><td colspan="5">{{ trans('admin.log_viewer.empty') }}</td></tr>
-                        @endforelse
+                    @forelse($logs as $log)
+                        @include('admin::log-viewer.row', ['log' => $log])
+                    @empty
+                        <tr class="log-empty"><td colspan="5">{{ trans('admin.log_viewer.empty') }}</td></tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+
     <div class="col-md-2">
         @if(count($directories) > 1)
-            <div class="box box-solid">
-                <div class="box-header"><h3 class="box-title">{{ trans('admin.log_viewer.directory') }}</h3></div>
-                <ul class="nav nav-pills nav-stacked">
-                    @foreach($directories as $directory)
-                        <li @if($type === $directory) class="active" @endif><a href="{{ route('log-viewer-index', ['type' => $directory]) }}">{{ $directory }}</a></li>
+            <div class="card card-outline card-secondary">
+                <div class="card-header"><h3 class="card-title mb-0">{{ trans('admin.log_viewer.directory') }}</h3></div>
+                <div class="card-body p-0">
+                    <ul class="nav flex-column nav-pills p-2">
+                        @foreach($directories as $directory)
+                            <li class="nav-item">
+                                <a class="nav-link {{ $type === $directory ? 'active' : '' }}"
+                                   href="{{ route('log-viewer-index', ['type' => $directory]) }}">{{ $directory }}</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <div class="card card-outline card-secondary">
+            <div class="card-header"><h3 class="card-title mb-0">{{ trans('admin.log_viewer.files') }}</h3></div>
+            <div class="card-body p-0">
+                <ul class="nav flex-column nav-pills p-2">
+                    @foreach($logFiles as $logFile)
+                        <li class="nav-item">
+                            <a class="nav-link {{ $file === $logFile ? 'active' : '' }}"
+                               href="{{ route('log-viewer-file', ['file' => $logFile, 'type' => $type]) }}">
+                                <i class="fa fa-file-text-o" aria-hidden="true"></i> {{ $logFile }}
+                            </a>
+                        </li>
                     @endforeach
                 </ul>
             </div>
-        @endif
-        <div class="box box-solid">
-            <div class="box-header"><h3 class="box-title">{{ trans('admin.log_viewer.files') }}</h3></div>
-            <ul class="nav nav-pills nav-stacked">
-                @foreach($logFiles as $logFile)
-                    <li @if($file === $logFile) class="active" @endif><a href="{{ route('log-viewer-file', ['file' => $logFile, 'type' => $type]) }}"><i class="fa fa-file-text-o"></i> {{ $logFile }}</a></li>
-                @endforeach
-            </ul>
-            <div class="box-footer">{{ trans('admin.log_viewer.size') }}: {{ $size }}</div>
+            <div class="card-footer">{{ trans('admin.log_viewer.size') }}: {{ $size }}</div>
         </div>
     </div>
 </div>
+
 <script>
 $(function () {
     var $viewer = $('#admin-log-viewer');
@@ -85,6 +115,7 @@ $(function () {
     }
 
     $viewer.find('.log-refresh').on('click', function () { $.admin.reload(); });
+
     $viewer.find('.log-delete-form').on('submit', function (event) {
         event.preventDefault();
         if (confirming) { return; }
@@ -111,6 +142,7 @@ $(function () {
             }
         }).catch(function () {}).finally(function () { confirming = false; });
     });
+
     $viewer.find('.log-live').on('click', function () {
         if (interval !== null) { stop(); return; }
         if (!tailUrl) { return; }
@@ -133,6 +165,7 @@ $(function () {
             }).always(function () { pending = null; });
         }, 2000);
     });
+
     $(window).on('pagehide.adminLogViewer admin:before-navigate.adminLogViewer', function () {
         stop();
         if (pending) { pending.abort(); }

@@ -1,21 +1,21 @@
 <div {!! $attributes !!}>
     @if($title || $tools)
-        <div class="box-header with-border">
-            <h3 class="box-title">{{ $title }}</h3>
-            <div class="box-tools pull-right">
+        <div class="card-header d-flex align-items-center">
+            <h3 class="card-title mb-0">{{ $title }}</h3>
+            <div class="card-tools ms-auto d-flex align-items-center gap-2">
                 @foreach($tools as $tool)
                     {!! $tool !!}
                 @endforeach
-            </div><!-- /.box-tools -->
-        </div><!-- /.box-header -->
+            </div>
+        </div>
     @endif
-    <div class="box-body" style="display: block;">
+    <div class="card-body">
         {!! $content !!}
-    </div><!-- /.box-body -->
+    </div>
     @if($footer)
-        <div class="box-footer">
+        <div class="card-footer">
             {!! $footer !!}
-        </div><!-- /.box-footer-->
+        </div>
     @endif
 </div>
 {{-- 由于widget box 有可能会用于expand，加载完页面后还没有对应的html，导致script失败，故只能和html写在一起。 --}}

@@ -1,31 +1,27 @@
-<div class="box-footer">
-
+<div class="card-footer">
     {{ csrf_field() }}
 
-    <div class="col-md-{{$width['label']}}">
-    </div>
+    <div class="row align-items-center g-2">
+        <div class="col-md-{{ $width['label'] }}"></div>
 
-    <div class="col-md-{{$width['field']}}">
-
-        @if(in_array('submit', $buttons))
-        <div class="btn-group pull-right">
-            <button type="submit" class="btn btn-primary">{{ trans('admin.submit') }}</button>
-        </div>
-
-        @foreach($submit_redirects as $value => $redirect)
-            @if(in_array($redirect, $checkboxes))
-            <label class="pull-right" style="margin: 5px 10px 0 0;">
-                <input type="checkbox" class="after-submit" name="after-save" value="{{ $value }}" {{ ($default_check == $redirect) ? 'checked' : '' }}> {{ trans("admin.{$redirect}") }}
-            </label>
+        <div class="col-md-{{ $width['field'] }} d-flex flex-wrap align-items-center gap-3">
+            @if(in_array('reset', $buttons))
+                <button type="reset" class="btn btn-outline-warning">{{ trans('admin.reset') }}</button>
             @endif
-        @endforeach
 
-        @endif
+            @if(in_array('submit', $buttons))
+                @foreach($submit_redirects as $value => $redirect)
+                    @if(in_array($redirect, $checkboxes))
+                        <div class="form-check form-check-inline mb-0">
+                            <input type="checkbox" class="form-check-input after-submit" id="after-submit-{{ $value }}"
+                                   name="after-save" value="{{ $value }}" {{ ($default_check == $redirect) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="after-submit-{{ $value }}">{{ trans("admin.{$redirect}") }}</label>
+                        </div>
+                    @endif
+                @endforeach
 
-        @if(in_array('reset', $buttons))
-        <div class="btn-group pull-left">
-            <button type="reset" class="btn btn-warning">{{ trans('admin.reset') }}</button>
+                <button type="submit" class="btn btn-primary ms-auto">{{ trans('admin.submit') }}</button>
+            @endif
         </div>
-        @endif
     </div>
 </div>

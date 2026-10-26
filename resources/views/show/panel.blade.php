@@ -1,25 +1,13 @@
-<div class="box box-{{ $style }}">
-    <div class="box-header with-border">
-        <h3 class="box-title">{{ $title }}</h3>
-
-        <div class="box-tools">
-            {!! $tools !!}
-        </div>
+<div class="card card-{{ $style }}">
+    <div class="card-header d-flex align-items-center">
+        <h3 class="card-title mb-0">{{ $title }}</h3>
+        <div class="card-tools ms-auto">{!! $tools !!}</div>
     </div>
-    <!-- /.box-header -->
-    <!-- form start -->
-    <div class="form-horizontal">
-
-        <div class="box-body">
-
-            <div class="fields-group">
-
-                @foreach($fields as $field)
-                    {!! $field->render() !!}
-                @endforeach
-            </div>
-
+    <div class="card-body">
+        <div class="fields-group">
+            @foreach($fields as $field)
+                {!! $field->render() !!}
+            @endforeach
         </div>
-        <!-- /.box-body -->
     </div>
 </div>
