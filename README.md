@@ -164,6 +164,19 @@ php artisan optimize:clear
 
 资源升级会覆盖宿主同路径文件，修改前请保留宿主自身定制。`happy-admin-assets` 是同一资源树的附加标签。配置、语言和迁移仍使用各自发布标签。资源地址统一为 `/vendor/laravel-admin/...`。
 
+### 控制台 unload 违规提示
+
+Chrome 115+ 默认禁用已废弃的 `unload` 事件，页面（含其加载的第三方脚本、编辑器、统计组件）每注册一次 `unload` 处理器就会输出 `[Violation] Permissions policy violation: unload is not allowed in this document.`。后台响应统一附带 `Permissions-Policy: unload=self`（配置项 `admin.permissions_policy`），标签页 iframe 同时声明 `allow="unload"`，因此控制台不再出现该提示。
+
+该日志由浏览器直接输出，脚本无法捕获；如需保留 Chrome 默认行为，将 `admin.permissions_policy` 设为 `[]`。本包自身不注册 `unload`，若提示仍然出现，在对应 frame 的控制台执行下面的片段并刷新页面，即可从调用栈定位来源（必要时改用 `pagehide` / `visibilitychange`）：
+
+```js
+EventTarget.prototype.addEventListener = (raw => function (type, listener, options) {
+  if (type === 'unload') console.warn('[unload]', new Error().stack);
+  return raw.apply(this, arguments);
+})(EventTarget.prototype.addEventListener);
+```
+
 ## 上传安全
 
 内置文件、图片、多文件和多图片字段均执行服务器类型白名单、实际 MIME、文件名及目标路径检查，包含头像接口；保存前再次校验，防止绕过表单 validator。图片允许 JPEG、PNG、GIF、WebP、BMP，普通附件白名单位于 `admin.upload.allowed_extensions`。

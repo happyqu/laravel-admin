@@ -117,7 +117,10 @@ var addTabs = function (options) {
             var $iframe = $("<iframe></iframe>").attr("src", options.url).css({
                 "width": "100%",
                 "height": "100%"
-            }).attr("frameborder", "no").attr("id", "iframe_" + pageId).addClass("tab_iframe").attr(pageIdField, pageId);
+            }).attr("frameborder", "no").attr("id", "iframe_" + pageId).attr("allow", "unload").addClass("tab_iframe").attr(pageIdField, pageId);
+            // allow="unload" delegates the Permissions-Policy directive into the tab,
+            // otherwise Chrome reports "unload is not allowed in this document" for
+            // handlers registered by pages loaded inside the tab.
             //frameborder="no" border="0" marginwidth="0" marginheight="0" scrolling="yes"  allowtransparency="yes"
 
             //iframe 加载完成事件

@@ -101,6 +101,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Permissions-Policy
+    |--------------------------------------------------------------------------
+    |
+    | Directives merged into the `Permissions-Policy` header of every admin
+    | response. Chrome 115+ blocks the deprecated `unload` event by default and
+    | prints "[Violation] Permissions policy violation: unload is not allowed in
+    | this document." once per registered handler, including handlers added by
+    | third-party scripts or widgets used by your own pages.
+    |
+    | Allowing `unload` here restores those handlers and removes the console
+    | violation. The trade-off is documented by the browser: a page that has an
+    | unload handler no longer qualifies for the back/forward cache. Remove the
+    | `unload` entry (or set this array to []) to keep Chrome's default and let
+    | the deprecated handlers be ignored.
+    |
+    | @see https://developer.chrome.com/blog/deprecating-unload
+    |
+    */
+    'permissions_policy' => [
+        'unload' => 'self',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Laravel-admin auth setting
     |--------------------------------------------------------------------------
     |

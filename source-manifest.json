@@ -6343,8 +6343,8 @@
                 },
                 {
                     "path": "iframe-tabs/bootstrap-tab.js",
-                    "sha256": "2aa4888c69c4ca6b751150c0c552ddba87e26247cb39a93609490e395f740ea1",
-                    "bytes": 25544,
+                    "sha256": "8ed6a7de9c4d40763b4cda173f9c20fd0f1864a187b9ea2f9f42c2fcd2fd099b",
+                    "bytes": 25810,
                     "source_path": "public/vendor/laravel-admin-ext/iframe-tabs/bootstrap-tab.js"
                 },
                 {

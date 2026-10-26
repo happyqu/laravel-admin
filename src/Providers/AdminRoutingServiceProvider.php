@@ -16,10 +16,12 @@ class AdminRoutingServiceProvider extends ServiceProvider
         'admin.log'        => Middleware\LogOperation::class,
         'admin.permission' => Middleware\Permission::class,
         'admin.bootstrap'  => Middleware\Bootstrap::class,
+        'admin.policy'     => Middleware\PermissionsPolicy::class,
     ];
 
     protected $middlewareGroups = [
         'admin' => [
+            'admin.policy',
             'admin.auth',
             'admin.log',
             'admin.bootstrap',
