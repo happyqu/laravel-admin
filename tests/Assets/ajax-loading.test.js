@@ -13,11 +13,24 @@ function page() {
     const timers = new Map();
     const visible = new Set();
     const progress = { starts: 0, finishes: 0 };
+    const document = {};
+    const window = {};
+    const events = {};
+    const admin = function () {};
     const chain = new Proxy({}, { get: () => () => chain });
     const $ = target => {
+        if (target === document || target === window) {
+            return {
+                ajaxError() { return this; }, click() { return this; }, scroll() { return this; },
+                on(name, selector, handler) { events[name] = handler || selector; return this; },
+            };
+        }
+        if (target && target.buttons) {
+            return { find() { return { each(callback) { target.buttons.forEach(button => callback.call(button)); } }; } };
+        }
         if (typeof target !== 'string') return chain;
         if (target === 'meta[name="admin-loading-text"]') {
-            return { attr: () => '加载中...' };
+            return { attr: name => name === 'data-submitting' ? '提交中...' : '加载中...' };
         }
         if (target.startsWith('<div class="admin-ajax-loading"')) {
             const indicator = {
@@ -33,7 +46,7 @@ function page() {
     $.fn = { editable: { defaults: {} } };
     $.ajaxPrefilter = callback => { prefilter = callback; };
     vm.runInNewContext(source, {
-        $, jQuery: $, LA: function () {}, document: {}, window: {}, toastr: {}, swal() {},
+        $, jQuery: $, LA: admin, document, window, toastr: {}, swal() {},
         NProgress: {
             configure(options) { progress.parent = options.parent; },
             start() { progress.starts++; },
@@ -76,7 +89,28 @@ function page() {
         }
     }
 
-    return { request, advance, visible, progress };
+    function submit(form, cancelled = false) {
+        const event = {
+            isDefaultPrevented: () => cancelled,
+            preventDefault() { cancelled = true; },
+        };
+        events['submit.adminLoading'].call(form, event);
+        return event;
+    }
+
+    return { request, advance, visible, progress, submit,
+        restore: () => events['pageshow.adminLoading'](),
+        directSubmit: form => admin.startFormLoading(form) };
+}
+
+function form() {
+    let content = '<strong>Save</strong>';
+    return { buttons: [{
+        tagName: 'BUTTON', disabled: false,
+        get innerHTML() { return content; }, set innerHTML(value) { content = value; },
+        get textContent() { return content; }, set textContent(value) { content = value; },
+    }, { tagName: 'INPUT', disabled: false, value: 'Save and close' },
+    { tagName: 'BUTTON', disabled: true, innerHTML: 'Unavailable' }] };
 }
 
 test('slow requests display a localized indicator and finish after success', () => {
@@ -165,4 +199,85 @@ test('custom contexts and global:false preserve beforeSend and display loading',
     assert.equal(app.visible.size, 1);
     xhr.complete();
     assert.equal(app.visible.size, 0);
+});
+
+test('native submits show loading immediately and preserve submitter values until serialization', () => {
+    const app = page();
+    const model = form();
+    const event = app.submit(model);
+    assert.equal(event.isDefaultPrevented(), false);
+    assert.equal(app.visible.size, 1);
+    assert.equal(model.buttons[0].disabled, false);
+    assert.equal(model.buttons[1].value, 'Save and close');
+    app.advance(0);
+    assert.equal(model.buttons[0].disabled, true);
+    assert.equal(model.buttons[0].textContent, '提交中...');
+    assert.equal(model.buttons[1].disabled, true);
+    assert.equal(model.buttons[1].value, '提交中...');
+    assert.equal(model.buttons[2].innerHTML, 'Unavailable');
+});
+
+test('duplicate native submissions are blocked without adding another loading counter', () => {
+    const app = page();
+    const model = form();
+    app.submit(model);
+    assert.equal(app.submit(model).isDefaultPrevented(), true);
+    assert.equal(app.progress.starts, 1);
+    app.restore();
+    assert.equal(app.visible.size, 0);
+    assert.equal(app.progress.finishes, 1);
+});
+
+test('cancelled confirmation or validation leaves the form usable', () => {
+    const app = page();
+    const model = form();
+    app.submit(model, true);
+    assert.equal(app.progress.starts, 0);
+    assert.equal(model.buttons[0].disabled, false);
+    // A validator registered later may cancel the same submit event.
+    const event = app.submit(model);
+    event.preventDefault();
+    app.advance(0);
+    assert.equal(app.visible.size, 0);
+    assert.equal(model.buttons[0].disabled, false);
+    assert.equal(app.submit(model).isDefaultPrevented(), false);
+});
+
+test('back/forward restoration resets labels and controls while preserving active AJAX loading', () => {
+    const app = page();
+    const model = form();
+    app.submit(model);
+    const xhr = app.request();
+    app.advance(0);
+    app.restore();
+    assert.equal(model.buttons[0].disabled, false);
+    assert.equal(model.buttons[0].innerHTML, '<strong>Save</strong>');
+    assert.equal(model.buttons[1].value, 'Save and close');
+    assert.equal(model.buttons[2].disabled, true);
+    assert.equal(app.visible.size, 1);
+    xhr.complete();
+    assert.equal(app.visible.size, 0);
+});
+
+test('confirmed widgets can start loading for native form.submit()', () => {
+    const app = page();
+    const widget = form();
+    assert.equal(app.directSubmit(widget), true);
+    assert.equal(app.visible.size, 1);
+    assert.equal(app.directSubmit(widget), false);
+    app.advance(0);
+    assert.equal(widget.buttons[0].disabled, true);
+    app.restore();
+    assert.equal(widget.buttons[0].disabled, false);
+});
+
+test('submitting to a different window does not leave the current page locked', () => {
+    const app = page();
+    const model = { ...form(), target: '_blank' };
+    app.submit(model);
+    assert.equal(app.directSubmit(model), true);
+    app.advance(180);
+    assert.equal(app.visible.size, 0);
+    assert.equal(app.progress.starts, 0);
+    assert.equal(model.buttons[0].disabled, false);
 });

@@ -131,7 +131,7 @@ class Select extends Field
 
         $script = <<<EOT
 $(document).off('change', "{$this->getElementClassSelector()}");
-$(document).on('change', "{$this->getElementClassSelector()}", function () {
+$(document).on('change.adminPage', "{$this->getElementClassSelector()}", function () {
     var target = $(this).closest('.fields-group').find(".$class");
     $.get("$sourceUrl",{q : this.value}, function (data) {
         target.find("option").remove();
@@ -199,7 +199,7 @@ var refreshOptions = function(url, target) {
 };
 
 $(document).off('change', "{$this->getElementClassSelector()}");
-$(document).on('change', "{$this->getElementClassSelector()}", function () {
+$(document).on('change.adminPage', "{$this->getElementClassSelector()}", function () {
     var _this = this;
     var promises = [];
 

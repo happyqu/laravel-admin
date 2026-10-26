@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="renderer" content="webkit">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="admin-loading-text" content="{{ trans('admin.loading') }}">
+    <meta name="admin-loading-text" content="{{ trans('admin.loading') }}" data-submitting="{{ trans('admin.submitting') }}" data-failed="{{ trans('admin.request_failed') }}">
     <title>{{ Admin::title() }} @if($header) | {{ $header }}@endif</title>
     <!-- Tell the browser to be responsive to screen width -->
     <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">

@@ -16,12 +16,24 @@ new class extends Encore\\Admin\\Form\\Builder {
 echo implode("\\n", Encore\\Admin\\Admin::$script);
 `], { cwd: path.join(__dirname, '../..'), encoding: 'utf8' });
 
-function submitForm(fields) {
+const widgetScript = execFileSync('php', ['-r', `
+require 'vendor/autoload.php';
+Encore\\Admin\\Facades\\Admin::swap(new Encore\\Admin\\Admin());
+new class extends Encore\\Admin\\Widgets\\Form {
+    public function __construct() {
+        $this->attributes = ['id' => 'widget-form-test'];
+        $this->addCascadeScript();
+    }
+};
+echo implode("\\n", Encore\\Admin\\Admin::$script);
+`], { cwd: path.join(__dirname, '../..'), encoding: 'utf8' });
+
+function submitForm(fields, emittedScript = script, selector = 'form.model-form-test') {
     const form = {};
     let handler;
     let prevented = false;
     const $ = target => {
-        if (target === 'form.model-form-test') {
+        if (target === selector) {
             return { submit(callback) { handler = callback; } };
         }
         assert.equal(target, form);
@@ -39,7 +51,7 @@ function submitForm(fields) {
             },
         };
     };
-    vm.runInNewContext(script, { $ });
+    vm.runInNewContext(emittedScript, { $ });
     assert.equal(typeof handler, 'function');
     const result = handler.call(form, { preventDefault() { prevented = true; } });
     return { submitted: !prevented && result !== false, fields };
@@ -56,6 +68,15 @@ test('cascade forms exclude hidden inputs without cancelling submission', () => 
         { name: 'visible', hiddenCascade: false, disabled: false },
         { name: 'hidden', hiddenCascade: true, disabled: false },
     ]);
+    assert.equal(result.submitted, true);
+    assert.deepEqual(result.fields.map(field => field.disabled), [false, true]);
+});
+
+test('widget cascade preparation allows native submission too', () => {
+    const result = submitForm([
+        { name: 'visible', hiddenCascade: false, disabled: false },
+        { name: 'hidden', hiddenCascade: true, disabled: false },
+    ], widgetScript, 'form#widget-form-test');
     assert.equal(result.submitted, true);
     assert.deepEqual(result.fields.map(field => field.disabled), [false, true]);
 });

@@ -63,21 +63,33 @@ NProgress.configure({parent: 'body', showSpinner: false});
     var pending = 0;
     var timer = null;
     var indicator = null;
+    var forms = [];
 
-    function start() {
-        pending++;
-        if (pending !== 1) {
+    function showIndicator() {
+        if (indicator) {
             return;
         }
+        indicator = $('<div class="admin-ajax-loading" role="status" aria-live="polite"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i><span></span></div>');
+        indicator.find('span').text($('meta[name="admin-loading-text"]').attr('content') || 'Loading...');
+        indicator.appendTo('body');
+    }
 
-        NProgress.start();
-        // Fast requests only need the progress bar; avoid flashing a central spinner.
-        timer = setTimeout(function () {
+    function start(immediate) {
+        pending++;
+        if (pending === 1) {
+            NProgress.start();
+            // Fast AJAX requests only need the progress bar.
+            timer = setTimeout(function () {
+                timer = null;
+                showIndicator();
+            }, 180);
+        }
+
+        if (immediate) {
+            clearTimeout(timer);
             timer = null;
-            indicator = $('<div class="admin-ajax-loading" role="status" aria-live="polite"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i><span></span></div>');
-            indicator.find('span').text($('meta[name="admin-loading-text"]').attr('content') || 'Loading...');
-            indicator.appendTo('body');
-        }, 180);
+            showIndicator();
+        }
     }
 
     function finish() {
@@ -94,6 +106,95 @@ NProgress.configure({parent: 'body', showSpinner: false});
         }
         NProgress.done();
     }
+
+    function restoreForm(record) {
+        var index = forms.indexOf(record);
+        if (index === -1) {
+            return;
+        }
+        forms.splice(index, 1);
+        record.buttons.forEach(function (button) {
+            button.element.disabled = button.disabled;
+            if (button.input) {
+                button.element.value = button.content;
+            } else {
+                button.element.innerHTML = button.content;
+            }
+        });
+        finish();
+    }
+
+    function startFormLoading(form, event) {
+        if (form.target && form.target !== '_self') {
+            return true;
+        }
+        if (forms.some(function (record) { return record.form === form; })) {
+            return false;
+        }
+        var record = {form: form, buttons: []};
+        forms.push(record);
+        start(true);
+        // Let the browser collect the submitter's name/value before disabling it.
+        setTimeout(function () {
+            if (forms.indexOf(record) === -1) {
+                return;
+            }
+            if (event && event.isDefaultPrevented()) {
+                restoreForm(record);
+                return;
+            }
+            var label = $('meta[name="admin-loading-text"]').attr('data-submitting') || 'Submitting...';
+            $(form).find(':submit, input[type=image]').each(function () {
+                if (this.disabled) {
+                    return;
+                }
+                var input = this.tagName === 'INPUT';
+                record.buttons.push({element: this, input: input, disabled: this.disabled, content: input ? this.value : this.innerHTML});
+                this.disabled = true;
+                if (input) {
+                    this.value = label;
+                } else {
+                    this.textContent = label;
+                }
+            });
+        }, 0);
+        return true;
+    }
+
+    // Native form.submit() does not dispatch a submit event (used after widget confirmation).
+    LA.startFormLoading = startFormLoading;
+    LA.stopFormLoading = function (form) {
+        forms.slice().forEach(function (record) {
+            if (record.form === form) {
+                restoreForm(record);
+            }
+        });
+    };
+    LA.startLoading = function () {
+        var active = true;
+        start();
+        return function () {
+            if (active) {
+                active = false;
+                finish();
+            }
+        };
+    };
+    $(document).on('submit.adminLoading', 'form[data-admin-form]', function (event) {
+        if (event.isDefaultPrevented() || (this.target && this.target !== '_self')) {
+            return;
+        }
+        if (LA.canSubmitForm && LA.canSubmitForm(this)) {
+            return;
+        }
+        if (!startFormLoading(this, event)) {
+            event.preventDefault();
+        }
+    });
+    // Restore controls when the browser returns to a page from its back/forward cache.
+    $(window).on('pageshow.adminLoading', function () {
+        forms.slice().forEach(restoreForm);
+    });
 
     $.ajaxPrefilter(function (options, originalOptions, xhr) {
         if (options.adminLoading === false) {
@@ -213,10 +314,16 @@ $('#totop').on('click', function (e) {
     $.admin.grid = new Grid();
 
     $.admin.reload = function () {
+        if ($.admin.navigate) {
+            return $.admin.navigate(window.location.href, {replace: true});
+        }
         window.location.reload();
     };
 
     $.admin.redirect = function (url) {
+        if ($.admin.navigate) {
+            return $.admin.navigate(url);
+        }
         window.location.href = url;
     };
 
@@ -236,9 +343,9 @@ $('#totop').on('click', function (e) {
 
         setTimeout(function () {
             if (navigate && navigate !== 'reload') {
-                window.location.href = navigate;
+                $.admin.redirect(navigate);
             } else {
-                window.location.reload();
+                $.admin.reload();
             }
         }, delay);
     };

@@ -80,7 +80,7 @@ $('.column-select-submit').on('click', function () {
         url.searchParams.set('_columns_', selected.join());
     }
 
-    window.location.href = url.toString();
+    $.admin.redirect(url.toString());
 });
 
 $('.column-select-all').on('click', function () {

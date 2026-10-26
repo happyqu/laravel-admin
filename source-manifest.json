@@ -6264,6 +6264,12 @@
                     "source_path": "public/vendor/laravel-admin/iframe.css"
                 },
                 {
+                    "path": "laravel-admin/admin-navigation.js",
+                    "sha256": "2355df36d11abac0fca8f293732e8730e7e4a05145a6e8bf2f286376d3f1de0e",
+                    "bytes": 12044,
+                    "source_path": "resources/assets/laravel-admin/admin-navigation.js"
+                },
+                {
                     "path": "laravel-admin/laravel-admin.css",
                     "sha256": "afe8fc5a8e6b8472ac5d351297257b0866c2ca4783fbd8aa725fd537002fd042",
                     "bytes": 2165,
@@ -6271,8 +6277,8 @@
                 },
                 {
                     "path": "laravel-admin/laravel-admin.js",
-                    "sha256": "7b5381a2c97dfe283e89c32e665f919f19ec764b4400f001c368ef1b45741e28",
-                    "bytes": 7775,
+                    "sha256": "75b8ac24fcb189e416ced2bea1cbae96c6e3f5a5b365d9daf0ec1f93790f4687",
+                    "bytes": 11341,
                     "source_path": "public/vendor/laravel-admin/laravel-admin/laravel-admin.js"
                 },
                 {

@@ -254,6 +254,7 @@ class Form implements Renderable
             'action'         => '',
             'class'          => 'form-horizontal',
             'accept-charset' => 'UTF-8',
+            'data-admin-form' => 'true',
         ];
     }
 
@@ -554,7 +555,14 @@ $('form#{$id}').off('submit').on('submit', function (e) {
     var form = this;
     $.admin.swal($settings).then(function (result) {
         if (result.value == true) {
-            form.submit();
+            if (form.reportValidity && !form.reportValidity()) {
+                return;
+            }
+            if ($.admin.submitForm && $.admin.canSubmitForm(form)) {
+                $.admin.submitForm(form);
+            } else if ($.admin.startFormLoading(form)) {
+                form.submit();
+            }
         }
     });
     return false;
@@ -570,8 +578,7 @@ SCRIPT;
 
         $script = <<<SCRIPT
 ;(function () {
-    $('form#{$id}').submit(function (e) {
-        e.preventDefault();
+    $('form#{$id}').submit(function () {
         $(this).find('div.cascade-group.hide :input').attr('disabled', true);
     });
 })();

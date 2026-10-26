@@ -66,11 +66,11 @@
 </style>
 
 <script>
-    $(document).on('click', '.ie-action .ie-cancel', function () {
+    $(document).on('click.adminPage', '.ie-action .ie-cancel', function () {
         $('[data-toggle="popover"]').popover('hide');
     });
 
-    $('body').on('click', function (e) {
+    $('body').on('click.adminPage', function (e) {
         if ($(e.target).data('toggle') !== 'popover'
             && $(e.target).parents('[data-toggle="popover"]').length === 0
             && $(e.target).parents('.popover.in').length === 0) {

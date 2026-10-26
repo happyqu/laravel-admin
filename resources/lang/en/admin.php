@@ -2,6 +2,7 @@
 
 return [
     'loading' => 'Loading...',
+    'submitting' => 'Submitting...',
     'log_viewer' => [
         'title' => 'Log viewer', 'files' => 'Files', 'directory' => 'Directory',
         'level' => 'Level', 'environment' => 'Environment', 'time' => 'Time',

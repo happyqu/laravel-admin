@@ -83,7 +83,7 @@ $(function () {
         $viewer.find('.log-live i').removeClass('fa-pause').addClass('fa-play');
     }
 
-    $viewer.find('.log-refresh').on('click', function () { window.location.reload(); });
+    $viewer.find('.log-refresh').on('click', function () { $.admin.reload(); });
     $viewer.find('.log-delete-form').on('submit', function () {
         return window.confirm(@json(trans('admin.delete_confirm')));
     });
@@ -109,6 +109,10 @@ $(function () {
             }).always(function () { pending = null; });
         }, 2000);
     });
-    $(window).on('pagehide', function () { stop(); if (pending) { pending.abort(); } });
+    $(window).on('pagehide.adminLogViewer admin:before-navigate.adminLogViewer', function () {
+        stop();
+        if (pending) { pending.abort(); }
+        $(window).off('.adminLogViewer');
+    });
 });
 </script>

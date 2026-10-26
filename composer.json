@@ -60,6 +60,9 @@
     "archive": {
         "exclude": [
             "/vendor",
+            "/node_modules",
+            "/package.json",
+            "/package-lock.json",
             "/build",
             "/examples",
             "/docs",

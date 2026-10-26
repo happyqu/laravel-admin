@@ -204,7 +204,11 @@ trait RegistersIframeTabs
 
         var frame = doc.getElementById(id);
         if (frame && frame.contentWindow) {
-            frame.contentWindow.location.reload();
+            if (frame.contentWindow.$ && frame.contentWindow.$.admin && frame.contentWindow.$.admin.reload) {
+                frame.contentWindow.$.admin.reload();
+            } else {
+                frame.contentWindow.location.reload();
+            }
         }
     }
 
@@ -262,7 +266,7 @@ trait RegistersIframeTabs
         });
     }
 
-    $('body').addClass('iframe-content');
+    $('body').off('.adminIframeContent').addClass('iframe-content');
 
     if ($('#terminal-box').length) {
         $(window).on('load', function () {
@@ -271,7 +275,7 @@ trait RegistersIframeTabs
         });
     }
 
-    $('body').on('click', '.breadcrumb li a', function () {
+    $('body').on('click.adminIframeContent', '.breadcrumb li a', function () {
         var url = $(this).attr('href');
         if (url !== data.homeUri) {
             return;
@@ -350,7 +354,7 @@ trait RegistersIframeTabs
         return;
     }
 
-    $('body').on('click', data.bindSelecter, function () {
+    $('body').on('click.adminIframeContent', data.bindSelecter, function () {
         var url = $(this).attr('href');
         if (!url || url === '#' || /^javascript|\(|\)/i.test(url)) {
             return;

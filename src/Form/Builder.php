@@ -502,6 +502,7 @@ class Builder
         $attributes['method'] = Arr::get($options, 'method', 'post');
         $attributes['class'] = implode(' ', ['form-horizontal', $this->formClass]);
         $attributes['accept-charset'] = 'UTF-8';
+        $attributes['data-admin-form'] = 'true';
 
         if ($this->hasFile()) {
             $attributes['enctype'] = 'multipart/form-data';

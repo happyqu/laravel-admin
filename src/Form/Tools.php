@@ -255,7 +255,7 @@ $('.{$class}-delete').unbind('click').click(function() {
                             return;
                         }
                         resolve(data);
-                        window.location.href = '{$this->getListPath()}';
+                        $.admin.redirect('{$this->getListPath()}');
                     },
                     error: function (xhr) {
                         deleting = false;

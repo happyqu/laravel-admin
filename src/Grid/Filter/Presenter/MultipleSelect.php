@@ -22,7 +22,7 @@ class MultipleSelect extends Select
 
         $script = <<<EOT
 
-$(document).on('change', ".{$this->getClass($column)}", function () {
+$(document).on('change.adminPage', ".{$this->getClass($column)}", function () {
     var target = $(this).closest('form').find(".{$this->getClass($target)}");
      var ids = $(this).find("option:selected").map(function(index,elem) {
             return $(elem).val();

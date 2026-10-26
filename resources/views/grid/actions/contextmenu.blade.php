@@ -2,7 +2,7 @@
 
 @section('child')
 <script>
-    $("body").on("contextmenu", "table.grid-table>tbody>tr", function (e) {
+    $("body").on("contextmenu.adminPage", "table.grid-table>tbody>tr", function (e) {
         $('#grid-context-menu .dropdown-menu').hide();
 
         var menu = $(this).find('td.column-__actions__ .dropdown-menu');
@@ -25,7 +25,7 @@
         return false;
     });
 
-    $(document).on('click', function () {
+    $(document).on('click.adminPage', function () {
         $('#grid-context-menu .dropdown-menu').hide();
     });
 

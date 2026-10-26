@@ -103,7 +103,7 @@ EOT;
         return <<<EOT
 
 $('.{$this->grid->getPerPageName()}').on("change", function(e) {
-    window.location.href = this.value;
+    $.admin.redirect(this.value);
 });
 
 EOT;

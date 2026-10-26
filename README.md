@@ -5,7 +5,7 @@
 - 支持 Laravel 10.0–10.50、11、12、13
 - PHP 8.1–8.4
 - 零额外 Composer 包，只依赖 `laravel/framework` 和 PHP 扩展
-- 不再使用 PJAX；iframe 内部使用整页导航
+- 不再使用 PJAX；表单、筛选和分页通过 AJAX 更新内容区
 
 Iframe Tabs 已并入核心代码，由 `Encore\Admin\AdminServiceProvider` 注册，使用 `Encore\Admin\IframeTabs` 命名空间。前端、视图和配置均属于本包，无需安装额外扩展。
 
@@ -93,16 +93,18 @@ php artisan admin:install
 - 不再加载 `jquery-pjax`；
 - 不再注册 `admin.pjax` 中间件；
 - 不再支持 `X-PJAX`、`_pjax`、`#pjax-container`；
-- 表单、筛选、分页和删除使用普通整页导航；
+- 表单、筛选、分页和删除通过 AJAX 更新 `#admin-content`，地址栏和前进后退同步更新；
 - iframe 标签页保留，顶层 AdminLTE 壳不刷新。
 
 宿主升级时：
 
-1. 删除自定义 `$.pjax` / `pjax:*` 代码；
+1. 将自定义 `$.pjax` / `pjax:*` 代码改用 `$.admin.navigate(url)`、`$.admin.reload()` 或 `$.admin.redirect(url)`；
 2. 将 `#pjax-container` 选择器改为 `#admin-content`；
 3. 删除 `Admin::disablePjax()`、`Widgets\Form::disablePjax()` 调用；
 4. 表单不再需要 `pjax-container` 属性；
-5. iframe 保存后的刷新使用 `postMessage` 通知父级，不要直接操作父级 DOM。
+5. 页面需要清理定时器时监听 `admin:before-navigate`，需要在更新后运行时监听 `admin:navigated`。
+
+后台内容区的同源链接与表单默认使用 AJAX；文件上传使用 `FormData`，保留服务器重定向、表单校验和 CSRF 校验。导出下载、外部链接及新窗口链接保持浏览器原有行为。个别链接或表单需要整页请求时，添加 `data-admin-ajax="false"`。
 
 2.0 同时移除了旧版废弃 API：
 
@@ -151,6 +153,8 @@ php artisan admin:import log-viewer
 
 AJAX 请求自动显示进度条，超过 180 毫秒时显示加载提示，并发请求全部结束后关闭。后台轮询等静默请求可在 `$.ajax` 选项中设置 `adminLoading: false`，其他错误处理保持正常。
 
+表单提交立即显示加载提示，并将提交按钮切换为“提交中”，避免重复提交。请求失败或校验未通过时保留表单内容并恢复按钮；普通页面切换采用 AJAX，浏览器前进后退会重新加载对应 URL 的内容并恢复滚动位置。
+
 升级时按需发布资源：
 
 ```bash
@@ -176,8 +180,12 @@ PHP、PHTML、PHAR、HTML、SVG 等危险上传类型被禁止，不能通过白
 composer install
 composer validate --strict
 composer test
+npm ci --ignore-scripts
+npm test
 composer archive --format=zip --dir=build --file=happyqu-laravel-admin-2.0.0
 ```
+
+Node.js 仅用于运行前端回归测试，安装本包和发布前端资源不需要 Node.js 或 npm 构建。
 
 兼容矩阵建议至少覆盖：
 

@@ -2,6 +2,7 @@
 
 return [
     'loading' => '加载中...',
+    'submitting' => '提交中...',
     'log_viewer' => [
         'title' => '日志查看器', 'files' => '日志文件', 'directory' => '日志目录',
         'level' => '级别', 'environment' => '环境', 'time' => '时间',
