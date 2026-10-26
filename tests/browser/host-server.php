@@ -147,7 +147,7 @@ if (str_starts_with($path, $prefix)) {
     return;
 }
 
-if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form', '/admin/grid', '/admin/show', '/admin/nav'], true)) {
+if (!in_array($path, ['/login', '/admin', '/admin/users', '/admin/form', '/admin/fields', '/admin/grid', '/admin/show', '/admin/nav'], true)) {
     http_response_code(404);
     echo 'Not found';
     return;
@@ -175,11 +175,11 @@ class_alias(Encore\Admin\Facades\Admin::class, 'Admin');
 
 Illuminate\Support\Facades\Auth::guard('admin')->setUser(new BrowserFakeUser());
 
-$app['router']->middleware('web')->get('/login', function () {
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/login', function () {
     return view('admin::login');
 });
 
-$app['router']->middleware('web')->get('/admin', function () {
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin', function () {
     $content = new Encore\Admin\Layout\Content();
     $content->title('Dashboard')->description('AdminLTE 4 host smoke test');
     $content->body('<div class="card"><div class="card-header"><h3 class="card-title">Card</h3></div><div class="card-body">Rendered by the real admin layout.</div></div>');
@@ -187,7 +187,7 @@ $app['router']->middleware('web')->get('/admin', function () {
     return $content;
 });
 
-$app['router']->middleware('web')->get('/admin/users', function () {
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/users', function () {
     $content = new Encore\Admin\Layout\Content();
     $content->title('Users')->description('Users page');
     $content->body('<div class="card"><div class="card-body">Users page body.</div></div>');
@@ -195,7 +195,7 @@ $app['router']->middleware('web')->get('/admin/users', function () {
     return $content;
 });
 
-$app['router']->middleware('web')->get('/admin/form', function () {
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/form', function () {
     browserDemoTable();
 
     $model = new BrowserDemoModel([
@@ -221,7 +221,40 @@ $app['router']->middleware('web')->get('/admin/form', function () {
     return $content;
 });
 
-$app['router']->middleware('web')->get('/admin/grid', function () {
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/fields', function () {
+    browserDemoTable();
+
+    $model = new BrowserDemoModel();
+
+    $form = new Encore\Admin\Form($model);
+    $form->text('name');
+    $form->textarea('bio');
+    $form->select('status')->options(['active' => 'Active', 'disabled' => 'Disabled']);
+    $form->multipleSelect('roles')->options(['admin' => 'Admin', 'editor' => 'Editor']);
+    $form->checkbox('permissions')->options(['read' => 'Read', 'write' => 'Write']);
+    $form->radio('gender')->options(['m' => 'Male', 'f' => 'Female']);
+    $form->switch('active');
+    $form->date('date');
+    $form->datetime('published_at');
+    $form->time('time');
+    $form->color('color');
+    $form->number('number');
+    $form->email('email');
+    $form->url('url');
+    $form->password('password');
+    $form->tags('tags');
+    $form->listbox('listbox')->options(['a' => 'A', 'b' => 'B', 'c' => 'C']);
+    $form->slider('slider');
+    $form->setAction('/admin/fields');
+
+    $content = new Encore\Admin\Layout\Content();
+    $content->title('Fields')->description('Field matrix smoke test');
+    $content->body($form);
+
+    return $content;
+});
+
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/grid', function () {
     browserDemoTable();
 
     $grid = new Encore\Admin\Grid(new BrowserDemoModel());
@@ -243,7 +276,7 @@ $app['router']->middleware('web')->get('/admin/grid', function () {
     return $content;
 });
 
-$app['router']->middleware('web')->get('/admin/show', function () {
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/show', function () {
     browserDemoTable();
 
     $model = BrowserDemoModel::find(1);
@@ -261,7 +294,7 @@ $app['router']->middleware('web')->get('/admin/show', function () {
     return $content;
 });
 
-$app['router']->middleware('web')->get('/admin/nav', function () {
+$app['router']->middleware(['web', 'admin.bootstrap'])->get('/admin/nav', function () {
     $content = new Encore\Admin\Layout\Content();
     $content->title('Navigation')->description('Global navigation smoke test');
     $content->body('<div class="card"><div class="card-body">Navigation page body.</div></div>');

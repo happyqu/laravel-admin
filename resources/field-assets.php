@@ -11,7 +11,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\BelongsToMany' => 
@@ -23,7 +23,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Button' => 
@@ -53,7 +53,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\CheckboxButton' => 
@@ -65,7 +65,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\CheckboxCard' => 
@@ -77,7 +77,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Color' => 
@@ -315,7 +315,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Mobile' => 
@@ -375,7 +375,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Number' => 
@@ -441,7 +441,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Slider' => 
@@ -483,7 +483,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Text' => 
@@ -537,7 +537,7 @@ return array (
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/select2/select2.full.min.js',
+      0 => '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Url' => 

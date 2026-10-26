@@ -25,7 +25,7 @@ class Select extends Field
      * @var array
      */
     protected static $js = [
-        '/vendor/laravel-admin/select2/select2.full.min.js',
+        '/vendor/laravel-admin/select2/js/select2.full.min.js',
     ];
 
     /**
