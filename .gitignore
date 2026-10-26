@@ -17,6 +17,7 @@ Thumbs.db
 desktop.ini
 
 /examples/
+/test-results/
 *.zip
 
 # 内部工作记录与基准数据，单独存放并忽略

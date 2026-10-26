@@ -47,7 +47,7 @@ class FormSubmission
         try {
             $route = app('router')->getRoutes()->match($request);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
-            abort(403);
+            $route = static::matchDynamicSource($request);
         }
         $request->setRouteResolver(static fn () => $route);
         $user = Admin::user();
@@ -72,6 +72,32 @@ class FormSubmission
         }
         if (config('admin.check_route_permission') !== false) {
             abort_unless($user->allPermissions()->contains(static fn ($permission) => $permission->shouldPassThrough($request)), 403);
+        }
+    }
+
+    /** Resolve request-dependent admin routes using the server-recorded source. */
+    private static function matchDynamicSource(Request $source)
+    {
+        $router = app('router');
+        $routes = $router->getRoutes();
+        $file = admin_path(config('admin.route.file', 'routes.php'));
+        abort_unless($routes instanceof \Illuminate\Routing\RouteCollection && is_file($file), 403);
+        $original = app('request');
+        try {
+            app()->instance('request', $source);
+            \Illuminate\Support\Facades\Facade::clearResolvedInstance('request');
+            $router->setRoutes(new \Illuminate\Routing\RouteCollection());
+            // Isolate local variables from the host's configured route file.
+            (static function ($file) { require $file; })($file);
+            try {
+                return $router->getRoutes()->match($source);
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+                abort(403);
+            }
+        } finally {
+            $router->setRoutes($routes);
+            app()->instance('request', $original);
+            \Illuminate\Support\Facades\Facade::clearResolvedInstance('request');
         }
     }
 }

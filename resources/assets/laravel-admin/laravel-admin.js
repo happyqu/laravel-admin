@@ -321,9 +321,9 @@ $('#totop').on('click', function (e) {
         return (data && (data.message || data.msg)) || fallback;
     };
 
-    $.admin.reload = function () {
+    $.admin.reload = function (options) {
         if ($.admin.navigate) {
-            return $.admin.navigate(window.location.href, {replace: true});
+            return $.admin.navigate(window.location.href, $.extend({}, options, {replace: true}));
         }
         window.location.reload();
     };

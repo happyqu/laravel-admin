@@ -122,15 +122,19 @@
         return true;
     }
     function runThen(command) {
-        if (command.action === 'refresh') { $.admin.reload(); }
+        if (command.action === 'refresh') { $.admin.reload({adminLoading: false}); }
         if (command.action === 'redirect') { $.admin.redirect(command.value); }
         if (command.action === 'location') { root.location.assign(command.value); }
         if (['open', 'download'].indexOf(command.action) !== -1) { root.open(command.value, '_blank', 'noopener'); }
     }
     function response(data, target) {
         if (data.html !== undefined) target.html(data.html);
-        if (data.swal) $.admin.swal(data.swal);
         var command = $.admin.isResponseError(data) ? null : (data.then || null);
+        if (data.swal) {
+            return Promise.resolve($.admin.swal(data.swal)).then(function () {
+                if (command) runThen(command);
+            });
+        }
         if (data.toastr && data.toastr.type) {
             $.admin.toastr[data.toastr.type](data.toastr.content, '', data.toastr.options);
             // Let the toast stay visible briefly before the page goes away.
@@ -139,11 +143,13 @@
         }
         if (command) { runThen(command); }
     }
-    function send(current, data, multipart) {
+    function send(current, data, multipart, deferDialogResponse) {
         return Promise.resolve($.ajax({ url: current.url, method: 'POST', data: multipart ? data : JSON.stringify(data),
             processData: false, contentType: multipart ? false : 'application/json', dataType: 'json' }))
             .then(function (result) {
-                response(result, current.target);
+                if (!(deferDialogResponse && result.swal && !$.admin.isResponseError(result))) {
+                    response(result, current.target);
+                }
                 if ($.admin.isResponseError(result)) {
                     throw { responseJSON: result, adminActionReported: !!(result.toastr || result.swal) };
                 }
@@ -187,13 +193,18 @@
                 var data = new root.FormData();
                 append(data, '_input', value);
                 data.set('_action_token', current.ticket); data.set('_token', $.admin.token);
-                return send(current, data, true);
+                return send(current, data, true, true);
             }
             return (current.prepare ? ready.then(execute) : execute()).finally(function () { state.unlock(); });
         };
         settings.allowOutsideClick = function () { return !state.saving; };
         settings.allowEscapeKey = function () { return !state.saving; };
-        Promise.resolve($.admin.swal(settings)).catch(function () {});
+        Promise.resolve($.admin.swal(settings)).then(function (result) {
+            // preConfirm must finish closing the confirmation before opening its result.
+            if (result && result.value && result.value.swal && !$.admin.isResponseError(result.value)) {
+                response(result.value, current.target);
+            }
+        }).catch(function () {});
     }
     function open(button) {
         if (closing) { queued = button; return; }

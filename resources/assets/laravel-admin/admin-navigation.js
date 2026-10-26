@@ -129,11 +129,12 @@
         var id = ++sequence;
         if (currentRead) { currentRead.abort(); currentRead = null; }
         rememberScroll();
-        var finish = $.admin.startLoading();
+        var finish = options.adminLoading === false ? function () {} : $.admin.startLoading();
         var transport;
         var xhr = $.ajax($.extend({}, settings, {
             url: url,
             dataType: 'html',
+            adminLoading: options.adminLoading,
             headers: {'Accept': 'text/html', 'X-Admin-Navigation': 'true'},
             xhr: function () { transport = $.ajaxSettings.xhr(); return transport; }
         }));

@@ -138,6 +138,38 @@ test('continue editing in a popup follows the destination and leaves the opener 
     assert.equal(app.window.location.pathname, '/admin/users/1/edit');
 });
 
+test('silent action refresh updates content without either loading tracker', async t => {
+    const app = await page('<p>Before</p>');
+    t.after(() => app.window.close());
+    let loadingStarts = 0;
+    app.$.admin.startLoading = () => { loadingStarts++; return () => {}; };
+    const task = app.$.admin.reload({adminLoading: false});
+    assert.equal(loadingStarts, 0);
+    assert.equal(app.requests[0].options.adminLoading, false);
+    app.requests[0].resolve(html('<p id="updated">After</p>'));
+    await task;
+    assert.ok(app.$('#updated').length);
+    assert.equal(app.window.location.pathname, '/admin/users');
+});
+
+test('normal reload retains loading and refresh failures still show an error', async t => {
+    const app = await page('<p id="original">Before</p>');
+    t.after(() => app.window.close());
+    let starts = 0, finishes = 0;
+    app.$.admin.startLoading = () => { starts++; return () => { finishes++; }; };
+    const task = app.$.admin.reload();
+    assert.equal(starts, 1);
+    app.requests[0].resolve(html('<p id="original">Updated</p>'));
+    await task;
+    assert.equal(finishes, 1);
+    const silent = app.$.admin.reload({adminLoading: false});
+    app.requests[1].reject(500, {message: 'Refresh failed'});
+    await silent;
+    assert.equal(starts, 1);
+    assert.ok(app.$('#original').length);
+    assert.ok(app.errors.includes('Refresh failed'));
+});
+
 test('pagination replaces content, executes new page scripts and keeps the shell', async t => {
     const app = await page('<div class="pagination"><a href="?page=2">Next</a></div>');
     t.after(() => app.dom.window.close());
