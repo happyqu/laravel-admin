@@ -93,7 +93,7 @@ class MinifyCommand extends Command
 
     protected function minifyCSS()
     {
-        $css = collect(array_merge(Admin::$css, Admin::baseCss()))
+        $css = collect(array_merge(Admin::baseCss(), Admin::$css))
             ->unique()->map(function ($css) {
                 if (url()->isValidUrl($css)) {
                     $this->assets['css'][] = $css;
@@ -123,7 +123,7 @@ class MinifyCommand extends Command
 
     protected function minifyJS()
     {
-        $js = collect(array_merge(Admin::$js, Admin::baseJs()))
+        $js = collect(array_merge(Admin::baseJs(), Admin::$js))
             ->unique()->map(function ($js) {
                 if (url()->isValidUrl($js)) {
                     $this->assets['js'][] = $js;

@@ -52,7 +52,12 @@
     },
     "scripts": {
         "test": "phpunit",
-        "build-field-assets": "@php tools/build-field-assets.php"
+        "build-field-assets": "@php tools/build-field-assets.php",
+        "check-frontend": [
+            "@php tools/check-frontend-assets.php",
+            "@php tools/check-legacy-frontend.php"
+        ],
+        "check-legacy": "@php tools/check-legacy-frontend.php --fail"
     },
     "config": {
         "sort-packages": true

@@ -6,7 +6,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 
 const root = path.join(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
-const jquery = read('resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js');
+const jquery = read('resources/assets/jquery/jquery-3.7.1.min.js');
 const core = read('resources/assets/laravel-admin/laravel-admin.js');
 const navigation = read('resources/assets/laravel-admin/admin-navigation.js');
 
@@ -29,6 +29,10 @@ async function page(content) {
     const $ = window.jQuery;
     $.fn.editable = { defaults: {} };
     $.fn.popover = function () { return this; };
+    window.AdminUI = {
+        popover() {}, disposePopover() {}, modal() {}, tooltip() {}, tab() {},
+        setButtonLoading() {},
+    };
     window.LA = function () {};
     window.toastr = { error: message => errors.push(message), success() {} };
     window.swal = function () {};

@@ -6,7 +6,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 
 const root = path.join(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
-const jquery = read('resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js');
+const jquery = read('resources/assets/jquery/jquery-3.7.1.min.js');
 const tabs = read('resources/assets/iframe-tabs/bootstrap-tab.js');
 
 function page() {

@@ -1,20 +1,3 @@
-$.fn.editable.defaults.params = function (params) {
-    params._token = LA.token;
-    params._editable = 1;
-    params._method = 'PUT';
-    return params;
-};
-
-$.fn.editable.defaults.error = function (data) {
-    var msg = '';
-    if (data.responseJSON.errors) {
-        $.each(data.responseJSON.errors, function (k, v) {
-            msg += v + "\n";
-        });
-    }
-    return msg
-};
-
 toastr.options = {
     closeButton: true,
     progressBar: true,
@@ -226,16 +209,13 @@ $(document).click(function () {
 });
 
 $(function () {
-    $('.sidebar-menu li:not(.treeview) > a').on('click', function () {
-        var $parent = $(this).parent().addClass('active');
-        $parent.siblings('.treeview.active').find('> a').trigger('click');
-        $parent.siblings().removeClass('active').find('li').removeClass('active');
-    });
-    var menu = $('.sidebar-menu li > a[href$="' + (location.pathname + location.search + location.hash) + '"]').parent().addClass('active');
-    menu.parents('ul.treeview-menu').addClass('menu-open');
-    menu.parents('li.treeview').addClass('active');
+    var current = location.pathname + location.search + location.hash;
+    var $menu = $('.sidebar-menu .nav-link[href$="' + current + '"]').first().addClass('active');
+    $menu.parents('.nav-item').addClass('menu-open').children('.nav-link').addClass('active');
 
-    $('[data-toggle="popover"]').popover();
+    $('[data-toggle="popover"]').each(function () {
+        AdminUI.popover(this);
+    });
 
     // Sidebar form autocomplete
     $('.sidebar-form .autocomplete').on('keyup focus', function () {

@@ -77,12 +77,12 @@ trait RegistersIframeTabs
 
                 Admin::css(IframeTabs::config('tabs_css', 'vendor/laravel-admin/iframe-tabs/dashboard.css'));
 
-                $layout = config('admin.layout', ['fixed']);
+                $layout = config('admin.layout', ['layout-fixed']);
                 if (count($layout) == 1) {
                     $layout = explode(' ', $layout[0]);
                 }
-                if (count($layout) && !in_array('layout-boxed', $layout) && !in_array('fixed', $layout)) {
-                    $layout[] = 'fixed';
+                if (count($layout) && !in_array('layout-fixed', $layout)) {
+                    $layout[] = 'layout-fixed';
                     config(['admin.layout' => $layout]);
                 }
             } else {
@@ -92,7 +92,7 @@ trait RegistersIframeTabs
 
                 Admin::css('vendor/laravel-admin/iframe-tabs/content.css');
 
-                config(['admin.layout' => ['fixed']]);
+                config(['admin.layout' => ['layout-fixed']]);
             }
 
             config(['admin.minify_assets.enabled' => false]);

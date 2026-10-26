@@ -78,7 +78,9 @@
             $(document).off('.adminPage');
             $('body').off('.adminPage');
             $(window).off('.adminPage');
-            $('#admin-content [data-toggle="popover"]').popover('destroy');
+            $('#admin-content [data-toggle="popover"]').each(function () {
+                AdminUI.disposePopover(this);
+            });
             $('#admin-content').replaceWith(document.importNode(content, true));
             var token = parsed.querySelector('meta[name="csrf-token"]');
             if (token) {
@@ -96,8 +98,10 @@
                 }
             }
             renderedUrl = window.location.href;
-            inline.forEach(function (code) { $.globalEval(code); });
-            $('#admin-content [data-toggle="popover"]').popover();
+            inline.forEach(function (code) { window.eval(code); });
+            $('#admin-content [data-toggle="popover"]').each(function () {
+                AdminUI.popover(this);
+            });
             window.scrollTo(0, options.scroll || 0);
             $(document).trigger('admin:navigated', [url]);
             return true;

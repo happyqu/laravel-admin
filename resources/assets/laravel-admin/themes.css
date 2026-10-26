@@ -1,0 +1,122 @@
+/*
+ * AdminLTE 4 theme presets for laravel-admin.
+ *
+ * These variables are our own layer. AdminLTE/Bootstrap variables remain
+ * untouched so dark mode and Bootstrap utilities keep working.
+ */
+:root,
+[data-admin-theme="blue"] {
+    --admin-header-bg: #0d6efd;
+    --admin-header-color: #ffffff;
+    --admin-sidebar-bg: #f8f9fa;
+    --admin-sidebar-color: #343a40;
+    --admin-sidebar-hover-bg: rgba(13, 110, 253, 0.08);
+    --admin-sidebar-active-bg: #0d6efd;
+    --admin-sidebar-active-color: #ffffff;
+    --admin-brand-bg: #0b5ed7;
+    --admin-brand-color: #ffffff;
+}
+
+[data-admin-theme="green"] {
+    --admin-header-bg: #198754;
+    --admin-header-color: #ffffff;
+    --admin-sidebar-bg: #f8f9fa;
+    --admin-sidebar-color: #343a40;
+    --admin-sidebar-hover-bg: rgba(25, 135, 84, 0.08);
+    --admin-sidebar-active-bg: #198754;
+    --admin-sidebar-active-color: #ffffff;
+    --admin-brand-bg: #146c43;
+    --admin-brand-color: #ffffff;
+}
+
+[data-admin-theme="purple"] {
+    --admin-header-bg: #6f42c1;
+    --admin-header-color: #ffffff;
+    --admin-sidebar-bg: #f8f9fa;
+    --admin-sidebar-color: #343a40;
+    --admin-sidebar-hover-bg: rgba(111, 66, 193, 0.08);
+    --admin-sidebar-active-bg: #6f42c1;
+    --admin-sidebar-active-color: #ffffff;
+    --admin-brand-bg: #59359a;
+    --admin-brand-color: #ffffff;
+}
+
+[data-admin-theme="red"] {
+    --admin-header-bg: #dc3545;
+    --admin-header-color: #ffffff;
+    --admin-sidebar-bg: #f8f9fa;
+    --admin-sidebar-color: #343a40;
+    --admin-sidebar-hover-bg: rgba(220, 53, 69, 0.08);
+    --admin-sidebar-active-bg: #dc3545;
+    --admin-sidebar-active-color: #ffffff;
+    --admin-brand-bg: #b02a37;
+    --admin-brand-color: #ffffff;
+}
+
+[data-admin-theme="yellow"] {
+    --admin-header-bg: #ffc107;
+    --admin-header-color: #000000;
+    --admin-sidebar-bg: #f8f9fa;
+    --admin-sidebar-color: #343a40;
+    --admin-sidebar-hover-bg: rgba(255, 193, 7, 0.12);
+    --admin-sidebar-active-bg: #ffc107;
+    --admin-sidebar-active-color: #000000;
+    --admin-brand-bg: #d39e00;
+    --admin-brand-color: #000000;
+}
+
+[data-admin-theme="black"] {
+    --admin-header-bg: #212529;
+    --admin-header-color: #ffffff;
+    --admin-sidebar-bg: #212529;
+    --admin-sidebar-color: #adb5bd;
+    --admin-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+    --admin-sidebar-active-bg: #0d6efd;
+    --admin-sidebar-active-color: #ffffff;
+    --admin-brand-bg: #16181b;
+    --admin-brand-color: #ffffff;
+}
+
+[data-bs-theme="dark"] {
+    --admin-sidebar-bg: #212529;
+    --admin-sidebar-color: #dee2e6;
+    --admin-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+    --admin-brand-bg: #16181b;
+    --admin-brand-color: #ffffff;
+}
+
+.app-header {
+    background-color: var(--admin-header-bg);
+    color: var(--admin-header-color);
+}
+
+.app-sidebar {
+    background-color: var(--admin-sidebar-bg);
+    color: var(--admin-sidebar-color);
+}
+
+.sidebar-brand {
+    background-color: var(--admin-brand-bg);
+    color: var(--admin-brand-color);
+}
+
+.sidebar-brand .brand-link,
+.sidebar-brand .brand-link:hover,
+.sidebar-brand .brand-link:focus {
+    color: var(--admin-brand-color);
+}
+
+.app-sidebar .nav-link {
+    color: var(--admin-sidebar-color);
+}
+
+.app-sidebar .nav-link:hover,
+.app-sidebar .nav-link:focus {
+    background-color: var(--admin-sidebar-hover-bg);
+    color: var(--admin-sidebar-color);
+}
+
+.app-sidebar .nav-link.active {
+    background-color: var(--admin-sidebar-active-bg);
+    color: var(--admin-sidebar-active-color);
+}

@@ -1,21 +1,22 @@
-.main-header,
-.main-sidebar {
-    display: none;
+/* The iframe content pages already render the full admin shell. Hide the
+ * chrome and let the page body fill the iframe instead. */
+.app-header,
+.app-sidebar,
+.app-footer {
+    display: none !important;
 }
 
-.wrapper .content-wrapper,
-.wrapper .main-footer {
-    margin-left: 0;
+.app-wrapper {
+    display: block;
+    min-height: 100%;
 }
 
-.sidebar-mini.sidebar-collapse .wrapper .content-wrapper,
-.sidebar-mini.sidebar-collapse .wrapper .right-side,
-.sidebar-mini.sidebar-collapse .wrapper .main-footer {
-    margin-left: 0 !important;
-}
-
+.app-main,
 #admin-content {
-    padding-top: 0;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
 }
 
 #back-to-top {

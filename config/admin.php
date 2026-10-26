@@ -279,7 +279,7 @@ return [
     | Set a default avatar for newly created users.
     |
     */
-    'default_avatar' => '/vendor/laravel-admin/AdminLTE/dist/img/user2-160x160.jpg',
+    'default_avatar' => '/vendor/laravel-admin/adminlte4/img/user2-160x160.jpg',
 
     /*
     |--------------------------------------------------------------------------
@@ -293,19 +293,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Application Skin
+    | Application theme
     |--------------------------------------------------------------------------
     |
-    | This value is the skin of admin pages.
-    | @see https://adminlte.io/docs/2.4/layout
+    | This value selects the AdminLTE 4 color preset.
+    | @see https://adminlte.io/themes/v4/docs/
     |
-    | Supported:
-    |    "skin-blue", "skin-blue-light", "skin-yellow", "skin-yellow-light",
-    |    "skin-green", "skin-green-light", "skin-purple", "skin-purple-light",
-    |    "skin-red", "skin-red-light", "skin-black", "skin-black-light".
+    | Supported: "blue", "green", "purple", "red", "yellow", "black".
     |
     */
-    'skin' => env('ADMIN_SKIN', 'skin-blue-light'),
+    'theme' => env('ADMIN_THEME', 'blue'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Color mode
+    |--------------------------------------------------------------------------
+    |
+    | Supported: "light", "dark", "auto".
+    |
+    */
+    'color_mode' => env('ADMIN_COLOR_MODE', 'light'),
 
     /*
     |--------------------------------------------------------------------------
@@ -313,13 +320,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | This value is the layout of admin pages.
-    | @see https://adminlte.io/docs/2.4/layout
+    | @see https://adminlte.io/themes/v4/docs/layout.html
     |
-    | Supported: "fixed", "layout-boxed", "layout-top-nav", "sidebar-collapse",
-    | "sidebar-mini".
+    | Supported: "layout-fixed", "sidebar-mini", "sidebar-collapse",
+    | "sidebar-expand-lg", "fixed-header", "fixed-footer".
     |
     */
-    'layout' => ['sidebar-mini', 'sidebar-collapse'],
+    'layout' => ['layout-fixed', 'sidebar-mini', 'sidebar-collapse', 'sidebar-expand-lg'],
 
     /*
     |--------------------------------------------------------------------------

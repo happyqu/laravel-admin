@@ -48,7 +48,7 @@ function getActivePageId() {
 }
 
 function canRemoveTab(pageId) {
-    return findTabTitle(pageId).find('.page_tab_close').size() > 0;
+    return findTabTitle(pageId).find('.page_tab_close').length > 0;
 }
 
 //添加tab
@@ -125,7 +125,7 @@ var addTabs = function (options) {
 
             //iframe 加载完成事件
 
-            $iframe.load(function () {
+            $iframe.on('load', function () {
                 layer.close(load_index);
                 load_index = 0;
             });
@@ -175,7 +175,7 @@ function closeTabByPageId(pageId) {
         //优先传递给后面的tab,没有的话就传递给前一个
         var $nextTitle = $title.next();
         var activePageId;
-        if ($nextTitle.size() > 0) {
+        if ($nextTitle.length > 0) {
             activePageId = getPageId($nextTitle);
         } else {
             activePageId = getPageId($title.prev());

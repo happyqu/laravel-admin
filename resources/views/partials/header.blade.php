@@ -1,64 +1,46 @@
-<!-- Main Header -->
-<header class="main-header">
+<nav class="app-header navbar navbar-expand">
+    <div class="container-fluid">
 
-    <!-- Logo -->
-    <a href="{{ admin_url('/') }}" class="logo">
-        <!-- mini logo for sidebar mini 50x50 pixels -->
-        <span class="logo-mini">{!! config('admin.logo-mini', config('admin.name')) !!}</span>
-        <!-- logo for regular state and mobile devices -->
-        <span class="logo-lg">{!! config('admin.logo', config('admin.name')) !!}</span>
-    </a>
+        <!-- Left navbar links -->
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Toggle navigation">
+                    <i class="fa fa-bars" aria-hidden="true"></i>
+                </a>
+            </li>
 
-    <!-- Header Navbar -->
-    <nav class="navbar navbar-static-top" role="navigation">
-        <!-- Sidebar toggle button-->
-        <a href="#" class="sidebar-toggle" data-toggle="offcanvas" role="button">
-            <span class="sr-only">Toggle navigation</span>
-        </a>
-        <ul class="nav navbar-nav hidden-sm visible-lg-block">
-        {!! Admin::getNavbar()->render('left') !!}
+            {!! Admin::getNavbar()->render('left') !!}
         </ul>
 
-        <!-- Navbar Right Menu -->
-        <div class="navbar-custom-menu">
-            <ul class="nav navbar-nav">
+        <!-- Right navbar links -->
+        <ul class="navbar-nav ms-auto navbar-custom-menu">
+            {!! Admin::getNavbar()->render() !!}
 
-                {!! Admin::getNavbar()->render() !!}
+            <li class="nav-item dropdown user-menu">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img src="{{ Admin::user()->avatar }}" class="user-image rounded-circle shadow" alt="{{ Admin::user()->name }}" width="32" height="32">
+                    <span class="d-none d-md-inline ms-1">{{ Admin::user()->name }}</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li class="px-3 py-3 text-center border-bottom">
+                        <img src="{{ Admin::user()->avatar }}" class="rounded-circle shadow mb-2" alt="{{ Admin::user()->name }}" width="64" height="64">
+                        <div class="fw-semibold">{{ Admin::user()->name }}</div>
+                        <div class="small text-body-secondary">Member since {{ Admin::user()->created_at }}</div>
+                    </li>
+                    <li>
+                        <a href="{{ admin_url('auth/setting') }}" class="dropdown-item">
+                            <i class="fa fa-gear me-2" aria-hidden="true"></i>{{ trans('admin.setting') }}
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a href="{{ admin_url('auth/logout') }}" class="dropdown-item">
+                            <i class="fa fa-sign-out me-2" aria-hidden="true"></i>{{ trans('admin.logout') }}
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
 
-                <!-- User Account Menu -->
-                <li class="dropdown user user-menu">
-                    <!-- Menu Toggle Button -->
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                        <!-- The user image in the navbar-->
-                        <img src="{{ Admin::user()->avatar }}" class="user-image" alt="User Image">
-                        <!-- hidden-xs hides the username on small devices so only the image appears. -->
-                        <span class="hidden-xs">{{ Admin::user()->name }}</span>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <!-- The user image in the menu -->
-                        <li class="user-header">
-                            <img src="{{ Admin::user()->avatar }}" class="img-circle" alt="User Image">
-
-                            <p>
-                                {{ Admin::user()->name }}
-                                <small>Member since admin {{ Admin::user()->created_at }}</small>
-                            </p>
-                        </li>
-                        <li class="user-footer">
-                            <div class="pull-left">
-                                <a href="{{ admin_url('auth/setting') }}" class="btn btn-default btn-flat">{{ trans('admin.setting') }}</a>
-                            </div>
-                            <div class="pull-right">
-                                <a href="{{ admin_url('auth/logout') }}" class="btn btn-default btn-flat">{{ trans('admin.logout') }}</a>
-                            </div>
-                        </li>
-                    </ul>
-                </li>
-                <!-- Control Sidebar Toggle Button -->
-                {{--<li>--}}
-                    {{--<a href="#" data-toggle="control-sidebar"><i class="fa fa-gears"></i></a>--}}
-                {{--</li>--}}
-            </ul>
-        </div>
-    </nav>
-</header>
+    </div>
+</nav>
