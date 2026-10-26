@@ -308,8 +308,8 @@
                 },
                 {
                     "path": "iframe-tabs/content.css",
-                    "sha256": "4cd34970b483cdd202b7ea575bbc8d626ab4867ed65f3096bee71b172df9e2ea",
-                    "bytes": 523
+                    "sha256": "3c2df39261d6a389f9e80c952ddebf41f472747aaf0316ae644581d1d647c45f",
+                    "bytes": 567
                 },
                 {
                     "path": "iframe-tabs/dashboard.css",

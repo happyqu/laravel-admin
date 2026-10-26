@@ -2,7 +2,9 @@
  * chrome and let the page body fill the iframe instead. */
 .app-header,
 .app-sidebar,
-.app-footer {
+.app-footer,
+.dc-admin-nav-panel,
+.dc-admin-nav-overlay {
     display: none !important;
 }
 
