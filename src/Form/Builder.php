@@ -659,8 +659,7 @@ SCRIPT;
     {
         $script = <<<SCRIPT
 ;(function () {
-    $('form.{$this->formClass}').submit(function (e) {
-        e.preventDefault();
+    $('form.{$this->formClass}').submit(function () {
         $(this).find('div.cascade-group.hide :input').attr('disabled', true);
     });
 })();
