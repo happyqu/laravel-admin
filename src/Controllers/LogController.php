@@ -4,6 +4,7 @@ namespace Encore\Admin\Controllers;
 
 use Encore\Admin\Auth\Database\OperationLog;
 use Encore\Admin\Grid;
+use Encore\Admin\Widgets\OperationLogInput;
 use Illuminate\Support\Arr;
 
 class LogController extends AdminController
@@ -23,29 +24,26 @@ class LogController extends AdminController
     {
         $grid = new Grid(new OperationLog());
 
-        $grid->model()->orderBy('id', 'DESC');
+        $grid->model()->with('user')->orderBy('id', 'DESC');
+        $grid->paginate(20);
+        $grid->perPages([20, 50, 100]);
 
         $grid->column('id', 'ID')->sortable();
-        $grid->column('user.name', 'User');
-        $grid->column('method')->display(function ($method) {
+        $grid->column('user.name', trans('admin.operation_log_user'));
+        $grid->column('method', trans('admin.http.method'))->display(function ($method) {
             $color = Arr::get(OperationLog::$methodColors, $method, 'grey');
 
             return '<span class="badge bg-'.e($color).'">'.e($method).'</span>';
         });
-        $grid->column('path')->label('info');
-        $grid->column('ip')->label('primary');
-        $grid->column('input')->display(function ($input) {
-            $input = is_string($input) ? json_decode($input, true) : $input;
-            $input = is_array($input) ? $input : [];
-            $input = Arr::except($input, ['_token', '_method', '_previous_']);
-            if (empty($input)) {
-                return '<code>{}</code>';
-            }
-
-            return '<pre>'.json_encode($input, JSON_PRETTY_PRINT | JSON_HEX_TAG).'</pre>';
+        $grid->column('path', trans('admin.http.path'))->display(function ($path) {
+            return '<span title="'.e($path).'" style="display:block;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'.e($path).'</span>';
         });
+        $grid->column('ip')->label('primary');
+        $grid->column('input', trans('admin.operation_log_input'))->display(function ($input) {
+            return OperationLogInput::preview($input);
+        })->modal(trans('admin.operation_log_input'), OperationLogInput::class)->width(300);
 
-        $grid->column('created_at', trans('admin.created_at'));
+        $grid->column('created_at', trans('admin.created_at'))->sortable()->style('white-space:nowrap');
 
         $grid->actions(function (Grid\Displayers\Actions $actions) {
             $actions->disableEdit();
@@ -57,10 +55,11 @@ class LogController extends AdminController
         $grid->filter(function (Grid\Filter $filter) {
             $userModel = config('admin.database.users_model');
 
-            $filter->equal('user_id', 'User')->select($userModel::all()->pluck('name', 'id'));
-            $filter->equal('method')->select(array_combine(OperationLog::$methods, OperationLog::$methods));
-            $filter->like('path');
+            $filter->equal('user_id', trans('admin.operation_log_user'))->select($userModel::query()->orderBy('name')->pluck('name', 'id'));
+            $filter->equal('method', trans('admin.http.method'))->select(array_combine(OperationLog::$methods, OperationLog::$methods));
+            $filter->like('path', trans('admin.http.path'));
             $filter->equal('ip');
+            $filter->between('created_at', trans('admin.created_at'))->datetime();
         });
 
         return $grid;

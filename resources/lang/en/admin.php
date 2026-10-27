@@ -120,6 +120,8 @@ return [
     'reset_password'         => 'Reset password',
     'password_rule'          => 'The password must be :min to :max characters long and contain at least 1 lowercase letter, 1 uppercase letter, 1 digit and 1 special character (:symbols).',
 
+    'operation_log_user'     => 'Operator',
+    'operation_log_input'    => 'Request parameters',
     'menu_titles'            => [],
     'prev'                   => 'Prev',
     'next'                   => 'Next',

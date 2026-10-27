@@ -93,6 +93,60 @@ class WidgetBehaviorTest extends TestCase
         $this->assertSame(['quoted' => 'A&B'], json_decode($node->getAttribute('data-config'), true));
     }
 
+    public function test_operation_log_parameters_have_a_bounded_preview_and_escaped_full_detail(): void
+    {
+        $input = json_encode(['message' => str_repeat('Long message ', 1000),
+            'html' => '</pre><script>alert(1)</script>', 'name' => '中文',
+            '_token' => 'csrf-secret', '_action_token' => str_repeat('ticket', 1000), '_method' => 'PUT']);
+        $formatter = \Encore\Admin\Widgets\OperationLogInput::class;
+        $preview = $formatter::preview($input);
+        $this->assertLessThanOrEqual(103, strlen($preview));
+        $this->assertStringNotContainsString("\n", $preview);
+        $full = $formatter::format($input);
+        $this->assertStringContainsString('中文', $full);
+        $this->assertStringContainsString(str_repeat('Long message ', 1000), $full);
+        $this->assertStringNotContainsString('csrf-secret', $full);
+        $this->assertStringNotContainsString('ticket', $full);
+        $html = view('admin::widgets.operation-log-input', ['input' => $full])->render();
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+        $this->assertSame(0, $this->dom($html)->query('//script')->length);
+    }
+
+    public function test_operation_log_detail_preserves_truncated_json_and_empty_parameters(): void
+    {
+        $formatter = \Encore\Admin\Widgets\OperationLogInput::class;
+        $truncated = '{"message":"incomplete';
+        $this->assertSame($truncated, $formatter::format($truncated));
+        $this->assertSame('{}', $formatter::format(['_token' => 'csrf', '_previous_' => '/admin']));
+        $this->assertSame('{}', $formatter::format(null));
+        $this->assertSame('0', $formatter::format('0'));
+        $this->assertSame('false', $formatter::format('false'));
+    }
+
+    public function test_operation_log_list_embeds_only_a_preview_and_loads_detail_asynchronously(): void
+    {
+        app()['router']->get('admin/_handle_renderable_', fn () => null)->name('admin.handle-renderable');
+        app()['router']->getRoutes()->refreshNameLookups();
+        config(['admin.database.operation_log_table' => 'admin_operation_log']);
+        $row = new \Encore\Admin\Auth\Database\OperationLog();
+        $row->setRawAttributes(['id' => 7, 'input' => json_encode(['message' => str_repeat('payload ', 1000).'END_OF_PAYLOAD'])]);
+        $grid = new \Encore\Admin\Grid($row);
+        \Encore\Admin\Grid\Column::setOriginalGridModels(new \Illuminate\Database\Eloquent\Collection([$row]));
+        $column = $grid->column('input')->display(function ($input) {
+            return \Encore\Admin\Widgets\OperationLogInput::preview($input);
+        })->modal('Request parameters', \Encore\Admin\Widgets\OperationLogInput::class);
+        $html = $column->fill([$row->toArray()])[0]['input'];
+        $this->assertStringContainsString('payload', $html);
+        $this->assertStringNotContainsString('END_OF_PAYLOAD', $html);
+        $this->assertLessThan(3000, strlen($html));
+        $tickets = session('admin.component_submissions');
+        $this->assertCount(1, $tickets);
+        $ticket = reset($tickets);
+        $this->assertSame(\Encore\Admin\Widgets\OperationLogInput::class, $ticket['class']);
+        $this->assertSame([7], $ticket['payload']);
+    }
+
     public function test_boxes_keep_zero_and_defer_renderable_content(): void
     {
         $child = new class implements \Illuminate\Contracts\Support\Renderable {
