@@ -37,7 +37,19 @@ class Date extends Text
         $this->options['locale'] = array_key_exists('locale', $this->options) ? $this->options['locale'] : config('app.locale');
         $this->options['allowInputToggle'] = true;
 
-        $this->script = "$('{$this->getElementClassSelector()}').parent().datetimepicker(".json_encode($this->options).');';
+        $selector = $this->getElementClassSelector();
+        $selector = is_array($selector) ? implode(',', $selector) : $selector;
+
+        // Standard fields need the input group for the calendar button; action
+        // templates without that group can initialize the input itself.
+        $options = json_encode($this->options);
+        $this->script = <<<JS
+$('{$selector}').filter('input').each(function () {
+    var input = $(this);
+    var group = input.parent('.input-group');
+    (group.length ? group : input).datetimepicker({$options});
+});
+JS;
 
         $this->prepend('<i class="fa fa-calendar fa-fw"></i>')
             ->defaultAttribute('style', 'width: 110px');

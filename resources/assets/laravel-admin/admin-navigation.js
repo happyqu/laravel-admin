@@ -96,7 +96,15 @@
                 }
             }
             renderedUrl = window.location.href;
-            inline.forEach(function (code) { $.globalEval(code); });
+            inline.forEach(function (code) {
+                // One failing widget must not abort the rest of the page
+                // scripts or fail the whole navigation.
+                try {
+                    $.globalEval(code);
+                } catch (e) {
+                    window.console && window.console.error('Admin page script failed:', e);
+                }
+            });
             $('#admin-content [data-toggle="popover"]').popover();
             window.scrollTo(0, options.scroll || 0);
             $(document).trigger('admin:navigated', [url]);

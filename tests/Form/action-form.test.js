@@ -9,6 +9,38 @@ const root = path.join(__dirname, '../..');
 const payloads = JSON.parse(execFileSync('php', ['tests/Form/fixtures/action-form.php'], { cwd: root, encoding: 'utf8' }));
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 
+test('date fields open from the calendar icon and from an action input without a group', () => {
+    const dom = new JSDOM(payloads[0].html, { runScripts: 'outside-only', url: 'http://localhost/admin/items' });
+    const w = dom.window;
+    w.eval(read('resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'));
+    w.eval(read('resources/assets/moment/min/moment-with-locales.min.js'));
+    w.eval(read('resources/assets/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js'));
+    const $ = w.jQuery;
+    const input = $('[name="start"]');
+    $('.modal-body').css('position', 'relative');
+    const group = $('<div class="input-group" style="position:relative"><span class="input-group-addon"><i class="fa fa-calendar"></i></span><input></div>').appendTo(w.document.body);
+    group.find('input').attr('class', input.attr('class'));
+    $('<span>').attr('class', input.attr('class')).appendTo(w.document.body);
+    let iconOpened = 0;
+    let inputOpened = 0;
+    group.on('dp.show', () => iconOpened++);
+    input.on('dp.show', () => inputOpened++);
+    try {
+        w.eval(payloads[0].scripts.find(script => script.includes('.datetimepicker(')));
+        assert.ok(group.data('DateTimePicker'));
+        assert.ok(input.data('DateTimePicker'));
+        group.find('.input-group-addon').trigger('click');
+        assert.equal(iconOpened, 1);
+        group.data('DateTimePicker').hide();
+        input.trigger('focus');
+        assert.equal(inputOpened, 1);
+    } finally {
+        if (group.data('DateTimePicker')) group.data('DateTimePicker').destroy();
+        if (input.data('DateTimePicker')) input.data('DateTimePicker').destroy();
+        w.close();
+    }
+});
+
 test('action widgets isolate their controls, nested rows and cascading options from other forms', () => {
     const dom = new JSDOM('<form id="page"><input class="title"><select class="source"><option>Page</option></select>' +
         '<div id="has-many-rows"><div class="has-many-rows-forms"><input class="rows title" value="Page"></div><button type="button" class="add">Add</button></div></form>' +
@@ -33,7 +65,7 @@ test('action widgets isolate their controls, nested rows and cascading options f
         assert.equal(calls.fileinput.length, 8);
         assert.ok(calls.fileinput.every(input => input.type === 'file'));
         assert.equal(new Set(calls.datetimepicker).size, 4);
-        assert.ok(calls.datetimepicker.every(group => $(group).find('input').length === 1));
+        assert.ok(calls.datetimepicker.every(node => $(node).is('input') || $(node).find('input').length === 1));
         assert.ok(calls.inputmask.every(input => input.name.endsWith('quantity]') || input.name === 'quantity'));
         assert.ok(calls.iCheck.every(input => ['checkbox', 'radio'].includes(input.type)));
         const ids = $('[id]').map(function () { return this.id; }).get();

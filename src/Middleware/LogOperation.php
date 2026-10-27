@@ -86,8 +86,26 @@ class LogOperation
     {
         return config('admin.operation_log.enable')
             && !$this->inExceptArray($request)
+            && !$this->isInternalEndpoint($request)
             && $this->inAllowedMethods($request->method())
             && Admin::user();
+    }
+
+    /**
+     * Read-only component loaders are plumbing. Action execution remains logged
+     * because it can perform business writes, including deletes.
+     *
+     * @param Request $request
+     *
+     * @return bool
+     */
+    protected function isInternalEndpoint(Request $request)
+    {
+        return $request->is(
+            '*_load_action_',
+            '*_handle_selectable_',
+            '*_handle_renderable_'
+        );
     }
 
     /**

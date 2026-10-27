@@ -254,6 +254,11 @@ return [
          */
         'except' => [
             env('ADMIN_ROUTE_PREFIX', 'admin').'/auth/logs*',
+            // Read-only action/picker loaders are skipped in code too; listing
+            // them here documents the behaviour for hosts that override config.
+            env('ADMIN_ROUTE_PREFIX', 'admin').'/_load_action_',
+            env('ADMIN_ROUTE_PREFIX', 'admin').'/_handle_selectable_',
+            env('ADMIN_ROUTE_PREFIX', 'admin').'/_handle_renderable_',
         ],
     ],
 

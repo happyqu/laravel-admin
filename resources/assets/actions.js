@@ -247,7 +247,15 @@
                     shell.children('[data-admin-action-extra]').remove();
                     $('<div data-admin-action-extra="1"></div>').append(markup.contents().not(content)).appendTo(shell);
                     (payload.styles || []).forEach(function (style) { $('<style>').text(style).appendTo(shell); });
-                    (payload.scripts || []).forEach(function (script) { Function('jQuery', '$', script).call(root, $, $); });
+                    (payload.scripts || []).forEach(function (script) {
+                        // A failing widget initializer must not turn the
+                        // successfully loaded form into an error toast.
+                        try {
+                            Function('jQuery', '$', script).call(root, $, $);
+                        } catch (e) {
+                            window.console && window.console.error('Admin action form script failed:', e);
+                        }
+                    });
                     shell.modal('show');
                 } else if (payload.mode === 'dialog') {
                     showDialog(current, payload.settings, sequence);
