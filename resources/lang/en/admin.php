@@ -114,6 +114,8 @@ return [
     'action_failed'          => 'The action could not be completed.',
     'authentication_expired' => 'Your session has expired, please sign in again.',
     'request_failed'         => 'Request failed, please try again.',
+    'reset_password'         => 'Reset password',
+    'password_rule'          => 'The password must be :min to :max characters long and contain at least 1 lowercase letter, 1 uppercase letter, 1 digit and 1 special character (:symbols).',
 
     'menu_titles'            => [],
     'prev'                   => 'Prev',

@@ -114,6 +114,8 @@ return [
     'action_failed'          => '操作未能完成。',
     'authentication_expired' => '登录已过期，请重新登录。',
     'request_failed'         => '请求失败，请重试。',
+    'reset_password'         => '修改密码',
+    'password_rule'          => '密码必须是 :min 至 :max 位字符，至少包含 1 个大写字母、1 个小写字母、1 个数字和 1 个特殊字符（:symbols）。',
     'menu_titles'            => [],
     'prev'                   => '上一步',
     'next'                   => '下一步',

@@ -41,6 +41,7 @@ class AdminCoreServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        \Encore\Admin\Rules\Password::register();
         $this->registerTranslations();
     }
 

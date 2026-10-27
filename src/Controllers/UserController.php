@@ -4,6 +4,7 @@ namespace Encore\Admin\Controllers;
 
 use Encore\Admin\Form;
 use Encore\Admin\Grid;
+use Encore\Admin\Rules;
 use Encore\Admin\Show;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -40,6 +41,10 @@ class UserController extends AdminController
             if ($actions->getKey() == 1) {
                 $actions->disableDelete();
             }
+
+            // Editing a user no longer asks for the password; this is the
+            // dedicated entry for changing it.
+            $actions->add(new Grid\Actions\ResetPassword());
         });
 
         $grid->tools(function (Grid\Tools $tools) {
@@ -99,10 +104,20 @@ class UserController extends AdminController
 
         $form->text('name', trans('admin.name'))->rules('required');
         $form->image('avatar', trans('admin.avatar'));
-        $form->password('password', trans('admin.password'))->creationRules('required|string|confirmed')
-            ->updateRules('nullable|string|confirmed')->customFormat(static fn () => '');
-        $form->password('password_confirmation', trans('admin.password_confirmation'))
-            ->rules('nullable|string|required_with:password');
+
+        // Editing a user does not ask for the password; use the row-level
+        // "reset password" action instead.
+        if (! $form->isEditing()) {
+            $rule = new Rules\Password();
+            $form->password('password', trans('admin.password'))
+                ->customFormat(static fn () => '')
+                ->attribute($rule->htmlConstraints())
+                ->rules(['required', 'string', $rule->rule(), 'confirmed'])
+                ->help($rule->message());
+            $form->password('password_confirmation', trans('admin.password_confirmation'))
+                ->customFormat(static fn () => '')
+                ->rules('required');
+        }
 
         $form->ignore(['password_confirmation']);
 

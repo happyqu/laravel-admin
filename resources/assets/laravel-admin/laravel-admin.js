@@ -68,7 +68,7 @@ $(document).ajaxError(function (event, xhr) {
         if (indicator) {
             return;
         }
-        indicator = $('<div class="admin-ajax-loading" role="status" aria-live="polite"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i><span></span></div>');
+        indicator = $('<div class="admin-ajax-loading" role="status" aria-live="polite"><div class="admin-ajax-loading-message"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i><span></span></div></div>');
         indicator.find('span').text($('meta[name="admin-loading-text"]').attr('content') || 'Loading...');
         indicator.appendTo('body');
     }
@@ -176,6 +176,18 @@ $(document).ajaxError(function (event, xhr) {
             }
         };
     };
+
+    // Capture events before page/button handlers, including the indicator's delay.
+    ['click', 'dblclick', 'auxclick', 'mousedown', 'pointerdown', 'touchstart', 'keydown', 'submit'].forEach(function (type) {
+        document.addEventListener(type, function (event) {
+            if (!pending || $(event.target).closest('.swal2-container').length) {
+                return;
+            }
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }, {capture: true, passive: false});
+    });
+
     $(document).on('submit.adminLoading', 'form[data-admin-form]', function (event) {
         if (event.isDefaultPrevented() || (this.target && this.target !== '_self')) {
             return;

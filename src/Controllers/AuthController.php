@@ -5,6 +5,7 @@ namespace Encore\Admin\Controllers;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Form;
 use Encore\Admin\Layout\Content;
+use Encore\Admin\Rules;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
@@ -149,8 +150,11 @@ class AuthController extends Controller
         $form->display('username', trans('admin.username'));
         $form->text('name', trans('admin.name'))->rules('required');
         $form->image('avatar', trans('admin.avatar'));
-        $form->password('password', trans('admin.password'))->rules('nullable|string|confirmed')
-            ->customFormat(static fn () => '');
+        $rule = new Rules\Password();
+        $form->password('password', trans('admin.password'))->rules(['nullable', 'string', $rule->rule(), 'confirmed'])
+            ->customFormat(static fn () => '')
+            ->attribute($rule->htmlConstraints())
+            ->help($rule->message());
         $form->password('password_confirmation', trans('admin.password_confirmation'))
             ->rules('nullable|string|required_with:password');
 

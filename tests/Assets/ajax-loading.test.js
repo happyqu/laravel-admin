@@ -13,7 +13,7 @@ function page() {
     const timers = new Map();
     const visible = new Set();
     const progress = { starts: 0, finishes: 0 };
-    const document = {};
+    const document = { addEventListener() {} };
     const window = {};
     const events = {};
     const admin = function () {};
