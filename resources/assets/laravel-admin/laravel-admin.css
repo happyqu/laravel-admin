@@ -99,7 +99,6 @@ a.editable-empty {
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.08);
-    cursor: wait;
     pointer-events: auto;
 }
 
