@@ -11,6 +11,9 @@ class NotEqual extends AbstractFilter
      */
     public function condition($inputs)
     {
+        if ($this->ignore) {
+            return;
+        }
         $value = Arr::get($inputs, $this->column);
 
         if (!isset($value)) {

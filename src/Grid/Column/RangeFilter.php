@@ -34,7 +34,8 @@ class RangeFilter extends Filter
      */
     public function addBinding($value, Model $model)
     {
-        $value = array_filter((array) $value);
+        $value = array_filter(\Illuminate\Support\Arr::only((array) $value, ['start', 'end']),
+            static fn ($bound) => is_scalar($bound) && $bound !== '');
 
         if (empty($value)) {
             return;

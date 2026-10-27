@@ -304,16 +304,12 @@ class Model
                 $collection = call_user_func($this->collectionCallback, $collection);
             }
 
-            if ($toArray) {
-                $this->data = $collection->toArray();
-            } else {
-                $this->data = $collection;
-            }
+            $this->data = $collection;
 
             $this->dataLoaded = true;
         }
 
-        return $this->data;
+        return $toArray ? $this->data->toArray() : $this->data;
     }
 
     /**
@@ -328,15 +324,7 @@ class Model
             return $this->buildData(false)->chunk($count)->each($callback);
         }
 
-        $this->setSort();
-
-        $this->queries->reject(function ($query) {
-            return $query['method'] == 'paginate';
-        })->each(function ($query) {
-            $this->model = $this->model->{$query['method']}(...$query['arguments']);
-        });
-
-        return $this->model->chunk($count, $callback);
+        return $this->getQueryBuilder()->chunk($count, $callback);
     }
 
     /**
@@ -405,13 +393,11 @@ class Model
      */
     public function getQueryBuilder()
     {
-        if ($this->relation) {
-            return $this->relation->getQuery();
-        }
-
         $this->setSort();
 
-        $queryBuilder = $this->originalModel;
+        $queryBuilder = $this->relation
+            ? clone $this->relation->getQuery()
+            : $this->originalModel->newQuery();
 
         $this->queries->reject(function ($query) {
             return in_array($query['method'], ['get', 'paginate']);
@@ -496,7 +482,7 @@ class Model
             return $paginate['arguments'];
         }
 
-        if ($name = $this->grid->getName()) {
+        if ($name = $this->grid?->getName()) {
             return [$this->perPage, ['*'], "{$name}_page"];
         }
 
@@ -534,7 +520,11 @@ class Model
         }
 
         $columnName = $sort['column'] ?? null;
-        $type = strtolower((string) ($sort['type'] ?? ''));
+        $type = $sort['type'] ?? '';
+        if (!is_string($type)) {
+            return;
+        }
+        $type = strtolower($type);
 
         if (!is_string($columnName) || $columnName === '' || !in_array($type, ['asc', 'desc'], true)) {
             return;
@@ -554,15 +544,14 @@ class Model
             return;
         }
 
-        $this->sort = ['column' => $columnName, 'type' => $type, 'cast' => $cast];
+        $sort = ['column' => $columnName, 'type' => $type, 'cast' => $cast];
+        if ($this->sort === $sort) {
+            return;
+        }
+        $this->sort = $sort;
 
         $columnNameContainsDots = Str::contains($columnName, '.');
-        $isRelation = $this->queries->contains(function ($query) use ($columnName) {
-            // relationship should be camel case
-            $columnName = Str::camel(Str::before($columnName, '.'));
-
-            return $query['method'] === 'with' && in_array($columnName, $query['arguments'], true);
-        });
+        $isRelation = $this->hasEagerLoadedRelation(Str::camel(Str::before($columnName, '.')));
 
         if ($columnNameContainsDots === true && $isRelation) {
             $this->setRelationSort($columnName);
@@ -626,18 +615,16 @@ class Model
         // relationship should be camel case
         $relationName = Str::camel($relationName);
 
-        if ($this->queries->contains(function ($query) use ($relationName) {
-            return $query['method'] == 'with' && in_array($relationName, $query['arguments']);
-        })) {
-            $relation = $this->model->$relationName();
+        if ($this->hasEagerLoadedRelation($relationName)) {
+            $relation = $this->originalModel->$relationName();
 
             $this->queries->push([
                 'method'    => 'select',
-                'arguments' => [$this->model->getTable().'.*'],
+                'arguments' => [$this->originalModel->getTable().'.*'],
             ]);
 
             $this->queries->push([
-                'method'    => 'join',
+                'method'    => 'leftJoin',
                 'arguments' => $this->joinParameters($relation),
             ]);
 
@@ -661,8 +648,27 @@ class Model
     public function resetOrderBy()
     {
         $this->queries = $this->queries->reject(function ($query) {
-            return $query['method'] == 'orderBy' || $query['method'] == 'orderByDesc';
+            return in_array($query['method'], ['orderBy', 'orderByDesc', 'orderByRaw'], true);
         });
+    }
+
+    protected function hasEagerLoadedRelation(string $name): bool
+    {
+        foreach ($this->queries as $query) {
+            if ($query['method'] !== 'with') {
+                continue;
+            }
+            foreach ($query['arguments'] as $argument) {
+                foreach (is_array($argument) ? $argument : [$argument] as $key => $relation) {
+                    $relation = is_string($key) ? $key : $relation;
+                    if (is_string($relation) && Str::before(Str::before($relation, ':'), '.') === $name) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -683,9 +689,9 @@ class Model
         if ($relation instanceof BelongsTo) {
             return [
                 $relatedTable,
-                $relation->getForeignKeyName(),
+                $relation->getQualifiedForeignKeyName(),
                 '=',
-                $relatedTable.'.'.$relation->getRelated()->getKeyName(),
+                $relation->getQualifiedOwnerKeyName(),
             ];
         }
 

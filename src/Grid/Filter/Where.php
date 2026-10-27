@@ -62,6 +62,9 @@ class Where extends AbstractFilter
      */
     public function condition($inputs)
     {
+        if ($this->ignore) {
+            return;
+        }
         $value = Arr::get($inputs, $this->column ?: static::getQueryHash($this->where, $this->label));
 
         if (is_null($value)) {

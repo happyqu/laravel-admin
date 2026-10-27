@@ -25,13 +25,12 @@ class Like extends AbstractFilter
      */
     public function condition($inputs)
     {
+        if ($this->ignore) {
+            return;
+        }
         $value = Arr::get($inputs, $this->column);
 
-        if (is_array($value)) {
-            $value = array_filter($value);
-        }
-
-        if (is_null($value) || empty($value)) {
+        if (!is_scalar($value) || $value === '') {
             return;
         }
 

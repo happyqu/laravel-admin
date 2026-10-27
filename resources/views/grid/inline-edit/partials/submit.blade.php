@@ -1,4 +1,7 @@
-$(document).off('click', '.ie-content .ie-submit').on('click', '.ie-content .ie-submit', function () {
+$(document).off('click.adminPage', '.{{ $trigger }}-content .ie-submit').on('click.adminPage', '.{{ $trigger }}-content .ie-submit', function () {
+
+    var $button = $(this);
+    if ($button.prop('disabled')) return;
 
     var $popover = $(this).closest('.ie-content');
     var $trigger = $popover.data('trigger');
@@ -21,14 +24,20 @@ $(document).off('click', '.ie-content .ie-submit').on('click', '.ie-content .ie-
         _method: 'PUT',
         _edit_inline: true,
     };
-    data[$trigger.data('name')] = val;
+    // jQuery omits empty arrays; retain the field so an inline clear is saved.
+    data[$trigger.data('name')] = Array.isArray(val) && val.length === 0 ? [''] : val;
+    $button.prop('disabled', true);
 
     $.ajax({
-        url: "{{ $resource }}/" + $trigger.data('key'),
+        url: @json($resource) + '/' + encodeURIComponent($trigger.data('key')),
         type: "POST",
         data: data,
         success: function (data) {
-            toastr.success(data.message);
+            if ($.admin.isResponseError(data)) {
+                toastr.error($.admin.responseMessage(data));
+                return;
+            }
+            toastr.success($.admin.responseMessage(data));
 
             {{ $slot }}
 
@@ -37,17 +46,21 @@ $(document).off('click', '.ie-content .ie-submit').on('click', '.ie-content .ie-
 
             $('[data-toggle="popover"]').popover('hide');
         },
-        statusCode: {
-            422: function(xhr) {
+        error: function (xhr) {
+            if (xhr.status === 422) {
                 $popover.find('.error').empty();
-                var errors = xhr.responseJSON.errors;
+                var errors = (xhr.responseJSON && (xhr.responseJSON.errors || xhr.responseJSON.validation)) || {};
                 for (var key in errors) {
-                    $popover.find('.error').append('<div><i class="fa fa-times-circle-o"></i> '+errors[key]+'</div>')
+                    $popover.find('.error').append($('<div>').text(errors[key]));
                 }
-            },
-            401: function() {
+            } else if (xhr.status === 401) {
                 $('[data-toggle="popover"]').popover('hide');
+            } else {
+                toastr.error($.admin.responseMessage(xhr.responseJSON) || @json(trans('admin.request_failed')));
             }
+        },
+        complete: function () {
+            $button.prop('disabled', false);
         }
     });
 });

@@ -35,14 +35,14 @@
     </script>
 
     <script>
-    @component('admin::grid.inline-edit.partials.submit', compact('resource', 'name'))
+    @component('admin::grid.inline-edit.partials.submit', compact('resource', 'name', 'trigger'))
 
         @slot('val')
             var val = $popover.find('.ie-input:checked').val();
             var label = $popover.find('.ie-input:checked').data('label');
         @endslot
 
-        $popover.data('display').html(label);
+        $popover.data('display').text(label);
 
     @endcomponent
     </script>

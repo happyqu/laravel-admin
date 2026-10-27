@@ -54,7 +54,8 @@ trait HasQuickSearch
      */
     protected function applyQuickSearch()
     {
-        if (!$query = request()->get(static::$searchKey)) {
+        $query = request()->get(static::$searchKey);
+        if (!is_string($query) || trim($query) === '') {
             return;
         }
 
@@ -154,6 +155,9 @@ trait HasQuickSearch
                 $column = substr($column, 1);
             }
 
+            if (!$columnMap->has($column)) {
+                return;
+            }
             $column = $columnMap[$column];
 
             return [$column, $condition, $or];

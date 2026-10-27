@@ -32,6 +32,9 @@ class Hidden extends AbstractFilter
      */
     public function condition($inputs)
     {
+        if ($this->ignore) {
+            return;
+        }
     }
 
     /**

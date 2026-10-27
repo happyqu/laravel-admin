@@ -123,11 +123,14 @@ abstract class AbstractExporter implements ExporterInterface
             return $this;
         }
 
-        list($scope, $args) = explode(':', $scope);
+        abort_unless(is_string($scope), 400, 'Invalid export scope.');
+        [$scope, $args] = array_pad(explode(':', $scope, 2), 2, '');
+        abort_unless(in_array($scope, [Grid\Exporter::SCOPE_CURRENT_PAGE, Grid\Exporter::SCOPE_SELECTED_ROWS], true), 400, 'Invalid export scope.');
 
         if ($scope == Grid\Exporter::SCOPE_CURRENT_PAGE) {
             $this->grid->model()->usePaginate(true);
-            $this->page = $args ?: 1;
+            abort_unless(filter_var($args, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false, 400, 'Invalid export page.');
+            $this->page = (int) $args;
         }
 
         if ($scope == Grid\Exporter::SCOPE_SELECTED_ROWS) {

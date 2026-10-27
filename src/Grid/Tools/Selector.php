@@ -93,25 +93,19 @@ class Selector implements Renderable
      */
     public static function parseSelected()
     {
-        if (!is_null(static::$selected)) {
-            return static::$selected;
-        }
-
         $selected = request('_selector', []);
 
         if (!is_array($selected)) {
             return [];
         }
 
-        $selected = array_filter($selected, function ($value) {
-            return !is_null($value);
-        });
+        $selected = array_filter($selected, static fn ($value) => is_string($value) || is_numeric($value));
 
         foreach ($selected as &$value) {
             $value = explode(',', $value);
         }
 
-        return static::$selected = $selected;
+        return $selected;
     }
 
     /**
@@ -131,7 +125,7 @@ class Selector implements Renderable
         if (is_null($value)) {
             Arr::forget($query, "_selector.{$column}");
 
-            return request()->fullUrlWithQuery($query);
+            return request()->url().($query ? '?'.http_build_query($query) : '');
         }
 
         if (in_array($value, $options)) {
@@ -150,7 +144,7 @@ class Selector implements Renderable
             Arr::forget($query, "_selector.{$column}");
         }
 
-        return request()->fullUrlWithQuery($query);
+        return request()->url().($query ? '?'.http_build_query($query) : '');
     }
 
     /**

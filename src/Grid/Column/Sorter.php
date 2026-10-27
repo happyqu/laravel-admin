@@ -69,7 +69,7 @@ class Sorter implements Renderable
         $type = 'desc';
 
         if ($this->isSorted()) {
-            $sortType = (string) ($this->sort['type'] ?? '');
+            $sortType = $this->sort['type'] ?? '';
 
             if (!in_array($sortType, ['asc', 'desc'], true)) {
                 $sortType = 'desc';

@@ -161,9 +161,9 @@ class CsvExporter extends AbstractExporter
 
         $response = function () {
             $handle = fopen('php://output', 'w');
-            $headerWritten = false;
             fwrite($handle, chr(0xEF).chr(0xBB).chr(0xBF)); //导出的CSV文件是无BOM编码UTF-8，而我们通常使用UTF-8编码格式都是有BOM的。所以添加BOM于CSV中
-            $this->chunk(function ($collection) use ($handle, &$headerWritten) {
+            fputcsv($handle, array_map([$this, 'sanitizeCell'], $this->getVisiableTitles()));
+            $this->chunk(function ($collection) use ($handle) {
                 Column::setOriginalGridModels($collection);
 
                 $original = $current = $collection->toArray();
@@ -172,12 +172,6 @@ class CsvExporter extends AbstractExporter
                 foreach ($this->grid->getColumns() as $column) {
                     $current = $column->fill($current);
                     $this->grid->columnNames[] = $column->getName();
-                }
-
-                // Write title
-                if (!$headerWritten) {
-                    fputcsv($handle, array_map([$this, 'sanitizeCell'], $this->getVisiableTitles()));
-                    $headerWritten = true;
                 }
 
                 // Write rows

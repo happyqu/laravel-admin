@@ -20,6 +20,9 @@ class Lt extends AbstractFilter
      */
     public function condition($inputs)
     {
+        if ($this->ignore) {
+            return;
+        }
         $value = Arr::get($inputs, $this->column);
 
         if (is_null($value)) {

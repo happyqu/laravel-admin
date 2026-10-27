@@ -35,7 +35,7 @@
     </script>
 
     <script>
-    @component('admin::grid.inline-edit.partials.submit', compact('resource', 'name'))
+    @component('admin::grid.inline-edit.partials.submit', compact('resource', 'name', 'trigger'))
 
         @slot('val')
             var val = [];
@@ -46,7 +46,7 @@
             });
         @endslot
 
-        $popover.data('display').html(label.join(';'));
+        $popover.data('display').text(label.join(';'));
 
     @endcomponent
     </script>

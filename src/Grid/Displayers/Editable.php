@@ -206,7 +206,7 @@ STR;
             'data-type'  => $this->type,
             'data-pk'    => (string) $this->getKey(),
             'data-url'   => "{$this->getResource()}/{$this->getKey()}",
-            'data-value' => $value,
+            'data-value' => $this->value ?? '',
         ];
 
         if (!empty($this->attributes)) {

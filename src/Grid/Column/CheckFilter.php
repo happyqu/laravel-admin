@@ -39,7 +39,10 @@ class CheckFilter extends Filter
             return;
         }
 
-        $model->whereIn($this->getColumnName(), $value);
+        $value = array_values(array_filter((array) $value, 'is_scalar'));
+        if ($value) {
+            $model->whereIn($this->getColumnName(), $value);
+        }
     }
 
     /**
@@ -74,10 +77,12 @@ SCRIPT;
      */
     public function render()
     {
-        $value = $this->getFilterValue([]);
+        $value = array_values(array_filter((array) $this->getFilterValue([]), 'is_scalar'));
 
         $lists = collect($this->options)->map(function ($label, $key) use ($value) {
             $checked = in_array($key, $value) ? 'checked' : '';
+            $label = e($label);
+            $key = e($key);
 
             return <<<HTML
 <li class="checkbox icheck" style="margin: 0;">

@@ -31,7 +31,7 @@ class InputFilter extends Filter
      */
     public function addBinding($value, Model $model)
     {
-        if (empty($value)) {
+        if (!is_scalar($value) || $value === '') {
             return;
         }
 
