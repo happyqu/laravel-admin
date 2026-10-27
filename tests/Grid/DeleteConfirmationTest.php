@@ -92,14 +92,16 @@ class DeleteConfirmationTest extends TestCase
         $ticket = $this->session->get('admin.action_contexts.'.$token);
         $this->assertSame('definition', $ticket['phase']);
         $this->assertArrayHasKey('2', $ticket['keys']);
-        // Confirming loads a fresh single-use execution ticket bound to the
-        // record rendered with the button.
-        [$action, $model, $execution] = $this->app[Context::class]->resolve(
+        // Confirming loads the definition and issues a fresh execution ticket
+        // bound to the record rendered with the button (HandleController::loadAction).
+        $context = $this->app[Context::class];
+        [$action, $model] = $context->resolve(
             Request::create('/admin/_load_action_', 'GET', ['_action_token' => $token, '_key' => [2]]),
             true
         );
         $this->assertInstanceOf(ConfirmationDelete::class, $action);
         $this->assertSame(2, $model->getKey());
+        $execution = $context->executionTicket($token, [2], $model);
         $executeTicket = $this->session->get('admin.action_contexts.'.$execution);
         $this->assertSame('execute', $executeTicket['phase']);
         $this->assertSame([2], $executeTicket['selected']);
@@ -114,14 +116,16 @@ class DeleteConfirmationTest extends TestCase
     public function test_record_changes_after_confirmation_reject_the_execution(): void
     {
         [$html, $token] = $this->render();
-        [, , $execution] = $this->app[Context::class]->resolve(
+        $context = $this->app[Context::class];
+        [, $model] = $context->resolve(
             Request::create('/admin/_load_action_', 'GET', ['_action_token' => $token, '_key' => [2]]),
             true
         );
+        $execution = $context->executionTicket($token, [2], $model);
         $this->row->setRawAttributes(['id' => 2, 'updated_at' => '2026-01-01 12:01:00'], true);
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         $this->expectExceptionMessage('The record changed. Reopen the action.');
-        $this->app[Context::class]->resolve(Request::create('/admin/_handle_action_', 'POST', ['_action_token' => $execution]));
+        $context->resolve(Request::create('/admin/_handle_action_', 'POST', ['_action_token' => $execution]));
     }
 
     public function test_custom_row_dialogs_also_defer_their_execution_ticket(): void
