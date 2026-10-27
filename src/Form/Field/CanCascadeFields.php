@@ -162,7 +162,12 @@ trait CanCascadeFields
      */
     protected function getValueByJs()
     {
-        return json_encode(old($this->column(), $this->value()),
+        // Match the string values returned by select, radio and checkbox inputs.
+        $normalize = static fn ($value) => is_scalar($value) ? (string) $value : $value;
+        $value = old($this->column(), $this->value());
+        $value = is_array($value) ? array_map($normalize, $value) : $normalize($value);
+
+        return json_encode($value,
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 

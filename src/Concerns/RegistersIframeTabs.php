@@ -183,6 +183,7 @@ trait RegistersIframeTabs
 
     var data = __ADMIN_IFRAME_PAYLOAD__;
     var topWindow = window.top;
+    var standaloneOpenerId = '__admin_standalone__';
 
     function topDocument() {
         try {
@@ -192,22 +193,30 @@ trait RegistersIframeTabs
         }
     }
 
-    function reloadFrame(id) {
+    function openerWindow(id) {
         if (!id) {
-            return;
+            return null;
         }
 
         var doc = topDocument();
         if (!doc) {
-            return;
+            return null;
+        }
+        if (id === standaloneOpenerId) {
+            return topWindow;
         }
 
         var frame = doc.getElementById(id);
-        if (frame && frame.contentWindow) {
-            if (frame.contentWindow.$ && frame.contentWindow.$.admin && frame.contentWindow.$.admin.reload) {
-                frame.contentWindow.$.admin.reload();
+        return frame && frame.contentWindow ? frame.contentWindow : null;
+    }
+
+    function reloadFrame(id) {
+        var opener = openerWindow(id);
+        if (opener) {
+            if (opener.$ && opener.$.admin && opener.$.admin.reload) {
+                opener.$.admin.reload();
             } else {
-                frame.contentWindow.location.reload();
+                opener.location.reload();
             }
         }
     }
@@ -242,6 +251,9 @@ trait RegistersIframeTabs
     }
 
     function isCurrentFrame(id) {
+        if (id === standaloneOpenerId) {
+            return window === topWindow;
+        }
         var frame = window.frameElement;
         return !!frame && frame.id === id;
     }
@@ -267,8 +279,7 @@ trait RegistersIframeTabs
             || (data.bindUrls !== 'popup' && data.bindUrls !== 'new_tab')) {
             return false;
         }
-        var doc = topDocument();
-        if (!doc || !doc.getElementById(id)) {
+        if (!openerWindow(id)) {
             return false;
         }
         reloadFrame(id);
@@ -393,6 +404,9 @@ trait RegistersIframeTabs
         var icon = $(this).find('i.fa').length ? $(this).find('i.fa').prop('outerHTML') : '<i class="fa fa-file-text"></i>';
         var title = ($(this).text() || $(this).attr('title') || '').trim();
         var tabId = window.getCurrentId();
+        if (!tabId && window === topWindow && data.bindUrls === 'popup') {
+            tabId = standaloneOpenerId;
+        }
 
         if (tabId) {
             url += (url.indexOf('?') > -1 ? '&' : '?') + '_iframe_id_=' + encodeURIComponent(tabId);

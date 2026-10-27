@@ -145,6 +145,25 @@ test('array cascade initial values and clearing a multiSelect do not throw', () 
     } finally { close(w); }
 });
 
+for (const operator of ['in', 'notIn', 'has', 'oneIn', 'oneNotIn']) {
+    test('numeric cascade values match DOM string values for ' + operator, () => {
+        for (const value of [0, 1, 3]) {
+            const multiple = !['in', 'notIn'].includes(operator);
+            const groupClass = operator === 'has' ? 'cascade-status-31' : 'cascade-status-302d31';
+            const w = page(`<select class="status" ${multiple ? 'multiple' : ''}><option value="${value}" selected>Value</option></select>
+                <div class="cascade-group ${groupClass}"><input name="dependent" value="kept"></div>`);
+            try {
+                w.eval(scripts['cascade-' + operator + '-' + value]);
+                const matches = operator === 'has' ? value === 1 : [0, 1].includes(value);
+                const hidden = ['notIn', 'oneNotIn'].includes(operator) ? matches : !matches;
+                assert.equal(w.$('.cascade-group').hasClass('hide'), hidden, 'initial value ' + value);
+                w.$('.status').trigger('change');
+                assert.equal(w.$('.cascade-group').hasClass('hide'), hidden, 'change must preserve initial visibility');
+            } finally { close(w); }
+        }
+    });
+}
+
 test('multiple select loads keep their own endpoints and target fields', () => {
     const w = page('<div class="fields-group"><select class="first"><option value="1">1</option></select><select class="second"><option value="2">2</option></select><select class="firstChild"></select><select class="secondChild"></select></div>');
     try {

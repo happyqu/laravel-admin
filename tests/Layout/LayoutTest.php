@@ -10,6 +10,23 @@ use PHPUnit\Framework\TestCase;
 
 class LayoutTest extends TestCase
 {
+    public function test_grid_subclasses_render_in_rows_columns_and_content(): void
+    {
+        $grid = new class extends \Encore\Admin\Grid {
+            public int $renders = 0;
+            public function __construct() {}
+            public function render() { $this->renders++; return '<div>custom grid</div>'; }
+        };
+
+        $this->assertNotInstanceOf(Renderable::class, $grid);
+        $this->assertStringContainsString('<div>custom grid</div>', (new Row($grid))->render());
+        $this->assertStringContainsString('<div>custom grid</div>', (new Content())->body($grid)->build());
+        $column = new Column('');
+        $column->row($grid);
+        $this->assertStringContainsString('<div>custom grid</div>', (new Content())->body($column)->build());
+        $this->assertSame(3, $grid->renders);
+    }
+
     public function test_zero_content_is_rendered(): void
     {
         $this->assertStringContainsString('>0</div>', (new Row(0))->render());

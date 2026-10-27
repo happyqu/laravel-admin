@@ -50,6 +50,21 @@ $field = new class('choices', ['Choices']) extends \Encore\Admin\Form\Field\Mult
 $field->emit();
 $scripts['cascade'] = implode("\n", \Encore\Admin\Admin::$script);
 
+foreach (['in', 'notIn', 'has', 'oneIn', 'oneNotIn'] as $operator) {
+    foreach ([0, 1, 3] as $value) {
+        $field = new class('status', ['Status']) extends \Encore\Admin\Form\Field\Select {
+            public function emit($operator, $value) {
+                $this->conditions = [['operator' => $operator, 'value' => $operator === 'has' ? '1' : ['0', '1']]];
+                $this->value = in_array($operator, ['in', 'notIn']) ? $value : [$value];
+                $this->addCascadeScript();
+            }
+        };
+        \Encore\Admin\Admin::$script = [];
+        $field->emit($operator, $value);
+        $scripts['cascade-'.$operator.'-'.$value] = implode("\n", \Encore\Admin\Admin::$script);
+    }
+}
+
 \Encore\Admin\Admin::$script = [];
 (new \Encore\Admin\Form\Field\Select('first', ['First']))->loads(['firstChild'], ['/api/first']);
 (new \Encore\Admin\Form\Field\Select('second', ['Second']))->loads(['secondChild'], ['/api/second']);
