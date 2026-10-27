@@ -180,6 +180,7 @@ EOT;
         $strAllowClear = var_export($allowClear, true);
 
         $script = <<<EOT
+;(function () {
 var fields = '$fieldsStr'.split('.');
 var urls = '$urlsStr'.split('^');
 
@@ -208,6 +209,7 @@ $(document).on('change.adminPage', "{$this->getElementClassSelector()}", functio
         promises.push(refreshOptions(urls[index] + "?q="+ _this.value, target));
     });
 });
+})();
 EOT;
 
         Admin::script($script);
@@ -353,10 +355,7 @@ $("{$this->getElementClassSelector()}").select2({
     },
     cache: true
   },
-  $configs,
-  escapeMarkup: function (markup) {
-      return markup;
-  }
+    $configs
 });
 
 EOT;

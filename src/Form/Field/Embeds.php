@@ -72,79 +72,15 @@ class Embeds extends Field
 
         $input = Arr::only($input, $this->column);
 
-        $rules = $attributes = [];
-
-        /** @var Field $field */
-        foreach ($this->buildEmbeddedForm()->fields() as $field) {
-            if (!$field->isWritable()) {
-                continue;
-            }
-            if (!$fieldRules = $field->getRules()) {
-                continue;
-            }
-
-            $column = $field->column();
-
-            /*
-             *
-             * For single column field format rules to:
-             * [
-             *     'extra.name' => 'required'
-             *     'extra.email' => 'required'
-             * ]
-             *
-             * For multiple column field with rules like 'required':
-             * 'extra' => [
-             *     'start' => 'start_at'
-             *     'end'   => 'end_at',
-             * ]
-             *
-             * format rules to:
-             * [
-             *     'extra.start_atstart' => 'required'
-             *     'extra.end_atend' => 'required'
-             * ]
-             */
-            if (is_array($column)) {
-                foreach ($column as $key => $name) {
-                    $rules["{$this->column}.$name$key"] = $fieldRules;
-                }
-
-                $this->resetInputKey($input, $column);
-            } else {
-                $rules["{$this->column}.$column"] = $fieldRules;
-            }
-
-            /**
-             * For single column field format attributes to:
-             * [
-             *     'extra.name' => $label
-             *     'extra.email' => $label
-             * ].
-             *
-             * For multiple column field with rules like 'required':
-             * 'extra' => [
-             *     'start' => 'start_at'
-             *     'end'   => 'end_at',
-             * ]
-             *
-             * format rules to:
-             * [
-             *     'extra.start_atstart' => "$label[start_at]"
-             *     'extra.end_atend' => "$label[end_at]"
-             * ]
-             */
-            $attributes = array_merge(
-                $attributes,
-                $this->formatValidationAttribute($input, $field->label(), $column)
-            );
+        $validator = \validator([], []);
+        $original = $this->original ?: [];
+        if (is_string($original)) {
+            $original = json_decode($original, true) ?: [];
         }
+        \Encore\Admin\Form\NestedValidation::append($validator,
+            $this->buildEmbeddedForm()->fields(), $input[$this->column], $this->column, $original);
 
-        if (empty($rules)) {
-            return false;
-        }
-
-        return \validator($input, $rules, $this->getValidationMessages(), $attributes);
+        return $validator;
     }
 
     /**

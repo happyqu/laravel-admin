@@ -142,65 +142,23 @@ class HasMany extends Field
             }
         }
 
-        $form = $this->buildNestedForm($this->column, $this->builder);
-
-        $rules = $attributes = [];
-
-        /* @var Field $field */
-        foreach ($form->fields() as $field) {
-            if (!$field->isWritable()) {
-                continue;
-            }
-            if (!$fieldRules = $field->getRules()) {
-                continue;
-            }
-
-            $column = $field->column();
-
-            if (is_array($column)) {
-                foreach ($column as $key => $name) {
-                    $rules[$name.$key] = $fieldRules;
-                }
-
-                $this->resetInputKey($input, $column);
-            } else {
-                $rules[$column] = $fieldRules;
-            }
-
-            $attributes = array_merge(
-                $attributes,
-                $this->formatValidationAttribute($input, $field->label(), $column)
-            );
+        $rules = [];
+        $this->appendDistinctRules($rules);
+        $validator = \validator($input, $rules, $this->getValidationMessages());
+        $keyName = $this->getKeyName();
+        $originals = $this->original ?: [];
+        if ($keyName && !$this instanceof Table) {
+            $originals = array_column($originals, null, $keyName);
         }
 
-        Arr::forget($rules, NestedForm::REMOVE_FLAG_NAME);
-
-        if (empty($rules)) {
-            return false;
+        foreach ($input[$this->column] as $key => $record) {
+            $originalKey = $this instanceof Table ? $key : ($record[$keyName] ?? '__new__');
+            $form = $this->buildNestedForm($this->column, $this->builder);
+            Form\NestedValidation::append($validator, $form->fields(), $record,
+                $this->column.'.'.$key, $originals[$originalKey] ?? []);
         }
 
-        $newRules = [];
-        $newInput = [];
-
-        foreach ($rules as $column => $rule) {
-            foreach (array_keys($input[$this->column]) as $key) {
-                $newRules["{$this->column}.$key.$column"] = $rule;
-                if (isset($input[$this->column][$key][$column]) &&
-                    is_array($input[$this->column][$key][$column])) {
-                    foreach ($input[$this->column][$key][$column] as $vkey => $value) {
-                        $newInput["{$this->column}.$key.{$column}$vkey"] = $value;
-                    }
-                }
-            }
-        }
-
-        if (empty($newInput)) {
-            $newInput = $input;
-        }
-
-        $this->appendDistinctRules($newRules);
-
-        return \validator($newInput, $newRules, $this->getValidationMessages(), $attributes);
+        return $validator;
     }
 
     /**
@@ -527,13 +485,17 @@ class HasMany extends Field
          * {count} is increment number of current sub form count.
          */
         $script = <<<EOT
-// var index = 0;
+;(function () {
 var index = $('.has-many-{$this->column}-form').size();
 $('#has-many-{$this->column}').off('click', '.add').on('click', '.add', function () {
 
     var tpl = $('template.{$this->column}-tpl');
 
-    index++;
+    do {
+        index++;
+    } while ($('#has-many-{$this->column}').find(':input[name]').filter(function () {
+        return this.name.indexOf('{$this->column}[new_' + index + ']') === 0;
+    }).length);
 
     var template = tpl.html().replace(/{$defaultKey}/g, index);
     $('.has-many-{$this->column}-forms').append(template);
@@ -542,12 +504,13 @@ $('#has-many-{$this->column}').off('click', '.add').on('click', '.add', function
 });
 
 $('#has-many-{$this->column}').off('click', '.remove').on('click', '.remove', function () {
-    $(this).closest('.has-many-{$this->column}-form').find('input').removeAttr('required');
+    $(this).closest('.has-many-{$this->column}-form').find(':input').removeAttr('required');
     $(this).closest('.has-many-{$this->column}-form').hide();
     $(this).closest('.has-many-{$this->column}-form').find('.$removeClass').val(1);
     return false;
 });
 
+})();
 EOT;
 
         Admin::script($script);
@@ -566,6 +529,7 @@ EOT;
         $defaultKey = NestedForm::DEFAULT_KEY_NAME;
 
         $script = <<<EOT
+;(function () {
 
 $('#has-many-{$this->column} > .nav').off('click', 'i.close-tab').on('click', 'i.close-tab', function(){
     var \$navTab = $(this).siblings('a');
@@ -573,6 +537,7 @@ $('#has-many-{$this->column} > .nav').off('click', 'i.close-tab').on('click', 'i
     if( \$pane.hasClass('new') ){
         \$pane.remove();
     }else{
+        \$pane.find(':input').removeAttr('required');
         \$pane.removeClass('active').find('.$removeClass').val(1);
     }
     if(\$navTab.closest('li').hasClass('active')){
@@ -585,7 +550,11 @@ $('#has-many-{$this->column} > .nav').off('click', 'i.close-tab').on('click', 'i
 
 var index = 0;
 $('#has-many-{$this->column} > .header').off('click', '.add').on('click', '.add', function(){
-    index++;
+    do {
+        index++;
+    } while ($('#has-many-{$this->column}').find(':input[name]').filter(function () {
+        return this.name.indexOf('{$this->column}[new_' + index + ']') === 0;
+    }).length);
     var navTabHtml = $('#has-many-{$this->column} > template.nav-tab-tpl').html().replace(/{$defaultKey}/g, index);
     var paneHtml = $('#has-many-{$this->column} > template.pane-tpl').html().replace(/{$defaultKey}/g, index);
     $('#has-many-{$this->column} > .nav').append(navTabHtml);
@@ -603,6 +572,7 @@ if ($('.has-error').length) {
     var first = $('.has-error:first').parent().attr('id');
     $('li a[href="#'+first+'"]').tab('show');
 }
+})();
 EOT;
 
         Admin::script($script);
@@ -628,12 +598,17 @@ EOT;
          * {count} is increment number of current sub form count.
          */
         $script = <<<EOT
+;(function () {
 var index = 0;
-$('#has-many-{$this->column}').on('click', '.add', function () {
+$('#has-many-{$this->column}').off('click', '.add').on('click', '.add', function () {
 
     var tpl = $('template.{$this->column}-tpl');
 
-    index++;
+    do {
+        index++;
+    } while ($('#has-many-{$this->column}').find(':input[name]').filter(function () {
+        return this.name.indexOf('{$this->column}[new_' + index + ']') === 0;
+    }).length);
 
     var template = tpl.html().replace(/{$defaultKey}/g, index);
     $('.has-many-{$this->column}-forms').append(template);
@@ -641,18 +616,19 @@ $('#has-many-{$this->column}').on('click', '.add', function () {
     return false;
 });
 
-$('#has-many-{$this->column}').on('click', '.remove', function () {
+$('#has-many-{$this->column}').off('click', '.remove').on('click', '.remove', function () {
     var first_input_name = $(this).closest('.has-many-{$this->column}-form').find('input[name]:first').attr('name');
     if (first_input_name.match('{$this->column}\\\[new_')) {
         $(this).closest('.has-many-{$this->column}-form').remove();
     } else {
         $(this).closest('.has-many-{$this->column}-form').hide();
         $(this).closest('.has-many-{$this->column}-form').find('.$removeClass').val(1);
-        $(this).closest('.has-many-{$this->column}-form').find('input').removeAttr('required');
+        $(this).closest('.has-many-{$this->column}-form').find(':input').removeAttr('required');
     }
     return false;
 });
 
+})();
 EOT;
 
         Admin::script($script);

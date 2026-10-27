@@ -14,7 +14,8 @@ class RadioButton extends Radio
     protected function addScript()
     {
         $script = <<<'SCRIPT'
-$('.radio-group-toggle label').click(function() {
+$(document).off('click.adminPage.adminRadioButton', '.radio-group-toggle label').on('click.adminPage.adminRadioButton', '.radio-group-toggle label', function() {
+    if ($(this).find('input').is(':disabled')) return;
     $(this).parent().children().removeClass('active');
     $(this).addClass('active');
 });

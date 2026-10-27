@@ -92,7 +92,9 @@ trait CanCascadeFields
             $value = implode('-', $value);
         }
 
-        return sprintf('cascade-%s-%s', $this->getElementClassString(), bin2hex($value));
+        $class = preg_replace('/\s+/', '-', $this->getElementClassString());
+
+        return sprintf('cascade-%s-%s', $class, bin2hex($value));
     }
 
     /**
@@ -145,11 +147,11 @@ trait CanCascadeFields
             case 'notIn':
                 return !in_array($old, $value);
             case 'has':
-                return in_array($value, $old);
+                return in_array($value, Arr::wrap($old));
             case 'oneIn':
-                return count(array_intersect($value, $old)) >= 1;
+                return count(array_intersect(Arr::wrap($value), Arr::wrap($old))) >= 1;
             case 'oneNotIn':
-                return count(array_intersect($value, $old)) == 0;
+                return count(array_intersect(Arr::wrap($value), Arr::wrap($old))) == 0;
             default:
                 throw new \Exception("Operator [$operator] not support.");
         }
@@ -160,7 +162,8 @@ trait CanCascadeFields
      */
     protected function getValueByJs()
     {
-        return addslashes(old($this->column(), $this->value()));
+        return json_encode(old($this->column(), $this->value()),
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
     /**
@@ -206,17 +209,14 @@ trait CanCascadeFields
         'in': function(a, b) { return $.inArray(a, b) != -1; },
         'notIn': function(a, b) { return $.inArray(a, b) == -1; },
         'has': function(a, b) { return $.inArray(b, a) != -1; },
-        'oneIn': function(a, b) { return a.filter(v => b.includes(v)).length >= 1; },
-        'oneNotIn': function(a, b) { return a.filter(v => b.includes(v)).length == 0; },
+        'oneIn': function(a, b) { return ($.isArray(a) ? a : []).filter(v => b.includes(v)).length >= 1; },
+        'oneNotIn': function(a, b) { return ($.isArray(a) ? a : []).filter(v => b.includes(v)).length == 0; },
     };
     var cascade_groups = {$cascadeGroups};
         
+    var default_value = {$this->getValueByJs()};
     cascade_groups.forEach(function (event) {
-        var default_value = '{$this->getValueByJs()}' + '';
-        var class_name = event.class;
-        if(default_value == event.value) {
-            $('.'+class_name+'').removeClass('hide');
-        }
+        $('div.cascade-group.' + event.class).toggleClass('hide', !operator_table[event.operator](default_value, event.value));
     });
     
     $('{$this->getElementClassSelector()}').on('{$this->cascadeEvent}', function (e) {
@@ -243,25 +243,18 @@ SCRIPT;
      */
     protected function getFormFrontValue()
     {
-        switch (get_class($this)) {
-            case Radio::class:
-            case RadioButton::class:
-            case RadioCard::class:
-            case Select::class:
-            case BelongsTo::class:
-            case BelongsToMany::class:
-            case MultipleSelect::class:
-                return 'var checked = $(this).val();';
-            case Checkbox::class:
-            case CheckboxButton::class:
-            case CheckboxCard::class:
-                return <<<SCRIPT
+        if ($this instanceof Checkbox) {
+            return <<<SCRIPT
 var checked = $('{$this->getElementClassSelector()}:checked').map(function(){
   return $(this).val();
 }).get();
 SCRIPT;
-            default:
-                throw new \InvalidArgumentException('Invalid form field type');
         }
+
+        if ($this instanceof Select || $this instanceof Radio) {
+            return 'var checked = $(this).val();';
+        }
+
+        throw new \InvalidArgumentException('Invalid form field type');
     }
 }

@@ -455,7 +455,9 @@ class Builder
     public function hasFile(): bool
     {
         foreach ($this->fields() as $field) {
-            if ($field instanceof Field\File || $field instanceof Field\MultipleFile) {
+            // Nested builders can contain uploads even when the parent has none.
+            if ($field instanceof Field\File || $field instanceof Field\MultipleFile
+                || $field instanceof Field\HasMany || $field instanceof Field\Embeds) {
                 return true;
             }
         }

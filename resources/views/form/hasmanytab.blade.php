@@ -16,7 +16,9 @@
     <div class="row header">
         <div class="col-md-2 {{$viewClass['label']}}"><h4 class="pull-right">{{ $label }}</h4></div>
         <div class="col-md-8 {{$viewClass['field']}}">
-            <button type="button" class="btn btn-default btn-sm add"><i class="fa fa-plus-circle" style="font-size: large;"></i></button>
+            @if($options['allowCreate'])
+                <button type="button" class="btn btn-default btn-sm add"><i class="fa fa-plus-circle" style="font-size: large;"></i></button>
+            @endif
         </div>
     </div>
 
@@ -28,7 +30,9 @@
                 <a href="#{{ $relationName . '_' . $pk }}" data-toggle="tab">
                     {{ $pk }} <i class="fa fa-exclamation-circle text-red hide"></i>
                 </a>
-                <i class="close-tab fa fa-times" ></i>
+                @if($options['allowDelete'])
+                    <i class="close-tab fa fa-times" ></i>
+                @endif
             </li>
         @endforeach
 
@@ -50,7 +54,9 @@
             <a href="#{{ $relationName . '_new_' . \Encore\Admin\Form\NestedForm::DEFAULT_KEY_NAME }}" data-toggle="tab">
                 &nbsp;New {{ \Encore\Admin\Form\NestedForm::DEFAULT_KEY_NAME }} <i class="fa fa-exclamation-circle text-red hide"></i>
             </a>
-            <i class="close-tab fa fa-times" ></i>
+            @if($options['allowDelete'])
+                <i class="close-tab fa fa-times" ></i>
+            @endif
         </li>
     </template>
     <template class="pane-tpl">

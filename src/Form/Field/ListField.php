@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 
 class ListField extends Field
 {
+    use HasCollectionEditor;
     /**
      * Max list size.
      *
@@ -76,6 +77,9 @@ class ListField extends Field
      */
     public function getValidator(array $input)
     {
+        if (!$this->isWritable()) {
+            return false;
+        }
         if ($this->validator) {
             return $this->validator->call($this, $input);
         }
@@ -86,18 +90,24 @@ class ListField extends Field
 
         $rules = $attributes = [];
 
-        if (!$fieldRules = $this->getRules()) {
-            return false;
-        }
+        $fieldRules = $this->getRules();
 
         if (!Arr::has($input, $this->column)) {
             return false;
         }
 
-        $rules["{$this->column}.values.*"] = $fieldRules;
+        $value = Arr::get($input, $this->column);
+        if (is_array($value)) {
+            Arr::set($input, $this->column, $value + ['values' => []]);
+        }
+        $rules[$this->column] = 'array';
+
+        if ($fieldRules) {
+            $rules["{$this->column}.values.*"] = $fieldRules;
+        }
         $attributes["{$this->column}.values.*"] = __('Value');
 
-        $rules["{$this->column}.values"][] = 'array';
+        $rules["{$this->column}.values"] = ['present', 'array'];
 
         if (!is_null($this->max)) {
             $rules["{$this->column}.values"][] = "max:$this->max";
@@ -115,28 +125,13 @@ class ListField extends Field
     /**
      * {@inheritdoc}
      */
-    protected function setupScript()
-    {
-        $this->script = <<<SCRIPT
-
-$('.{$this->column}-add').on('click', function () {
-    var tpl = $('template.{$this->column}-tpl').html();
-    $('tbody.list-{$this->column}-table').append(tpl);
-});
-
-$('tbody').on('click', '.{$this->column}-remove', function () {
-    $(this).closest('tr').remove();
-});
-
-SCRIPT;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function prepare($value)
     {
-        return array_values($value['values']);
+        if (!is_array($value) || !is_array($value['values'] ?? [])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Invalid list input.']);
+        }
+
+        return array_values($value['values'] ?? []);
     }
 
     /**

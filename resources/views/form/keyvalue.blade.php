@@ -1,4 +1,6 @@
-<div class="{{$viewClass['form-group']}}">
+<div data-collection-field class="{{$viewClass['form-group']}}">
+
+    <input type="hidden" name="{{ $name }}[_present]" value="1" />
 
     <label class="{{$viewClass['label']}} control-label">{{$label}}</label>
 
@@ -11,18 +13,18 @@
                 <th style="width: 75px;"></th>
             </tr>
             </thead>
-            <tbody class="kv-{{$column}}-table">
+            <tbody data-collection-body class="kv-{{$column}}-table">
 
-            @foreach(old("{$column}.keys", ($value ?: [])) as $k => $v)
+            @foreach(old("{$errorKey}.keys", ($value ?: [])) as $k => $v)
 
-                @php($keysErrorKey = "{$column}.keys.{$loop->index}")
-                @php($valsErrorKey = "{$column}.values.{$loop->index}")
+                @php($keysErrorKey = "{$errorKey}.keys.{$loop->index}")
+                @php($valsErrorKey = "{$errorKey}.values.{$loop->index}")
 
                 <tr>
                     <td>
                         <div class="form-group {{ $errors->has($keysErrorKey) ? 'has-error' : '' }}">
                             <div class="col-sm-12">
-                                <input name="{{ $name }}[keys][]" value="{{ old("{$column}.keys.{$k}", $k) }}" class="form-control" required/>
+                                <input name="{{ $name }}[keys][]" value="{{ old("{$errorKey}.keys.{$k}", $k) }}" class="form-control" required/>
 
                                 @if($errors->has($keysErrorKey))
                                     @foreach($errors->get($keysErrorKey) as $message)
@@ -35,7 +37,7 @@
                     <td>
                         <div class="form-group {{ $errors->has($valsErrorKey) ? 'has-error' : '' }}">
                             <div class="col-sm-12">
-                                <input name="{{ $name }}[values][]" value="{{ old("{$column}.values.{$k}", $v) }}" class="form-control" />
+                                <input name="{{ $name }}[values][]" value="{{ old("{$errorKey}.values.{$k}", $v) }}" class="form-control" />
                                 @if($errors->has($valsErrorKey))
                                     @foreach($errors->get($valsErrorKey) as $message)
                                         <label class="control-label" for="inputError"><i class="fa fa-times-circle-o"></i> {{$message}}</label><br/>
@@ -47,7 +49,7 @@
 
                     <td class="form-group">
                         <div>
-                            <div class="{{$column}}-remove btn btn-warning btn-sm pull-right">
+                            <div data-collection-remove class="{{$column}}-remove btn btn-warning btn-sm pull-right">
                                 <i class="fa fa-trash">&nbsp;</i>{{ __('admin.remove') }}
                             </div>
                         </div>
@@ -60,7 +62,7 @@
                     <td></td>
                     <td></td>
                     <td>
-                        <div class="{{ $column }}-add btn btn-success btn-sm pull-right">
+                        <div data-collection-add class="{{ $column }}-add btn btn-success btn-sm pull-right">
                             <i class="fa fa-save"></i>&nbsp;{{ __('admin.new') }}
                         </div>
                     </td>
@@ -68,7 +70,7 @@
             </tfoot>
         </table>
     </div>
-    <template class="{{$column}}-tpl">
+    <template data-collection-template class="{{$column}}-tpl">
         <tr>
             <td>
                 <div class="form-group  ">
@@ -87,7 +89,7 @@
 
             <td class="form-group">
                 <div>
-                    <div class="{{$column}}-remove btn btn-warning btn-sm pull-right">
+                    <div data-collection-remove class="{{$column}}-remove btn btn-warning btn-sm pull-right">
                         <i class="fa fa-trash">&nbsp;</i>{{ __('admin.remove') }}
                     </div>
                 </div>

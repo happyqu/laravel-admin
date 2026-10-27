@@ -94,6 +94,7 @@ class MultipleSelect extends Select
      */
     public function setOriginal($data)
     {
+        $this->original = null;
         $relations = Arr::get($data, $this->column);
 
         if (is_string($relations)) {

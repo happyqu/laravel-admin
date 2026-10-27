@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 
 class KeyValue extends Field
 {
+    use HasCollectionEditor;
     /**
      * @var array
      */
@@ -34,6 +35,9 @@ class KeyValue extends Field
      */
     public function getValidator(array $input)
     {
+        if (!$this->isWritable()) {
+            return false;
+        }
         if ($this->validator) {
             return $this->validator->call($this, $input);
         }
@@ -44,41 +48,53 @@ class KeyValue extends Field
 
         $rules = $attributes = [];
 
-        if (!$fieldRules = $this->getRules()) {
-            return false;
-        }
+        $fieldRules = $this->getRules();
 
         if (!Arr::has($input, $this->column)) {
             return false;
         }
 
-        $rules["{$this->column}.keys.*"] = 'distinct';
-        $rules["{$this->column}.values.*"] = $fieldRules;
+        $value = Arr::get($input, $this->column);
+        if (is_array($value)) {
+            Arr::set($input, $this->column, $value + ['keys' => [], 'values' => []]);
+        }
+        $rules[$this->column] = 'array';
+        $rules["{$this->column}.keys"] = 'present|array';
+        $rules["{$this->column}.values"] = 'present|array';
+        $rules["{$this->column}.keys.*"] = ['required', 'distinct', function ($attribute, $key, $fail) {
+            if (!is_string($key) && !is_int($key)) {
+                $fail('Invalid key.');
+            }
+        }];
+        if ($fieldRules) {
+            $rules["{$this->column}.values.*"] = $fieldRules;
+        }
         $attributes["{$this->column}.keys.*"] = __('Key');
         $attributes["{$this->column}.values.*"] = __('Value');
 
-        return validator($input, $rules, $this->getValidationMessages(), $attributes);
-    }
-
-    protected function setupScript()
-    {
-        $this->script = <<<SCRIPT
-
-$('.{$this->column}-add').on('click', function () {
-    var tpl = $('template.{$this->column}-tpl').html();
-    $('tbody.kv-{$this->column}-table').append(tpl);
-});
-
-$('tbody').on('click', '.{$this->column}-remove', function () {
-    $(this).closest('tr').remove();
-});
-
-SCRIPT;
+        return validator($input, $rules, $this->getValidationMessages(), $attributes)
+            ->after(function ($validator) use ($input) {
+                $keys = Arr::get($input, $this->column.'.keys');
+                $values = Arr::get($input, $this->column.'.values');
+                if (is_array($keys) && is_array($values) && count($keys) !== count($values)) {
+                    $validator->errors()->add($this->column, 'Keys and values must have the same number of items.');
+                }
+            });
     }
 
     public function prepare($value)
     {
-        return array_combine($value['keys'], $value['values']);
+        if (!is_array($value) || !is_array($value['keys'] ?? []) || !is_array($value['values'] ?? [])
+            || count($value['keys'] ?? []) !== count($value['values'] ?? [])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Invalid key-value input.']);
+        }
+        foreach ($value['keys'] ?? [] as $key) {
+            if (!is_string($key) && !is_int($key)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Invalid key.']);
+            }
+        }
+
+        return array_combine($value['keys'] ?? [], $value['values'] ?? []);
     }
 
     public function render()

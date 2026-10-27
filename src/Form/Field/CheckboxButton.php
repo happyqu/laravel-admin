@@ -14,9 +14,11 @@ class CheckboxButton extends Checkbox
     protected function addScript()
     {
         $script = <<<'SCRIPT'
-$('.checkbox-group-toggle label').click(function(e) {
+$(document).off('click.adminPage.adminCheckboxButton', '.checkbox-group-toggle label').on('click.adminPage.adminCheckboxButton', '.checkbox-group-toggle label', function(e) {
     e.stopPropagation();
     e.preventDefault();
+
+    if ($(this).find('input').is(':disabled')) return;
 
     if ($(this).hasClass('active')) {
         $(this).removeClass('active');

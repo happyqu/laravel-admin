@@ -52,8 +52,12 @@ class BelongsToMany extends MultipleSelect
 
     var load = function (url) {
         var append='';
-        if ($('form').length>0) {
-            append = '&' + $('form').serialize();
+        var form = grid.closest('form');
+        if (form.length > 0) {
+            var context = form.find(':input[name]').filter(function () {
+                return this.type !== 'password' && !/^(?:_token|_method|_previous_)$/.test(this.name);
+            }).serialize();
+            if (context) append = '&' + context;
         }
         $.get(url + append, function (data) {
             modal.find('.modal-body').html(data);

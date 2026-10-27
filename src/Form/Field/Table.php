@@ -67,6 +67,18 @@ class Table extends HasMany
 
     public function prepare($input)
     {
+        if (!is_array($input)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Expected an array.']);
+        }
+        foreach ($input as $key => $record) {
+            if (!is_array($record)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Expected an object.']);
+            }
+            if ((!$this->options['allowDelete'] && ($record[NestedForm::REMOVE_FLAG_NAME] ?? 0))
+                || (!$this->options['allowCreate'] && !array_key_exists($key, $this->original ?: []))) {
+                throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'This related operation is disabled.']);
+            }
+        }
         $form = $this->buildNestedForm($this->column, $this->builder);
 
         $prepare = $form->setOriginal($this->original ?: [])->prepare($input, true);

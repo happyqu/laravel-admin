@@ -2,7 +2,6 @@
 
 namespace Encore\Admin\Form\Field;
 
-use Encore\Admin\Facades\Admin;
 use Encore\Admin\Form\Field;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Arr;
@@ -156,7 +155,7 @@ class Tags extends Field
      */
     public function prepare($value)
     {
-        $value = array_filter($value, 'strlen');
+        $value = array_values(array_filter((array) $value, static fn ($item) => $item !== '' && $item !== null));
 
         if ($this->keyAsValue) {
             return is_null($this->saveAction) ? $value : ($this->saveAction)($value);
@@ -210,44 +209,29 @@ class Tags extends Field
         ]);
     }
 
+    protected function sanitizeInput($input, $column)
+    {
+        $value = Arr::get($input, $column);
+        if (is_array($value)) {
+            Arr::set($input, $column, array_values(array_filter($value,
+                static fn ($item) => $item !== '' && $item !== null)));
+        }
+
+        return $input;
+    }
+
     protected function setupScript()
     {
         $separators = json_encode($this->separators);
-        $separatorsStr = implode('', $this->separators);
         $this->script = <<<JS
 $("{$this->getElementClassSelector()}").select2({
     tags: true,
     tokenSeparators: $separators,
     createTag: function(params) {
-        if (/[$separatorsStr]/.test(params.term)) {
-            var str = params.term.trim().replace(/[$separatorsStr]*$/, '');
-            return { id: str, text: str }
-        } else {
-            return null;
-        }
+        var term = params.term.trim();
+        return term === '' ? null : { id: term, text: term };
     }
 });
 JS;
-
-        Admin::script(
-            <<<'JS'
-$(document).off('keyup', '.select2-selection--multiple .select2-search__field').on('keyup', '.select2-selection--multiple .select2-search__field', function (event) {
-    try {
-        if (event.keyCode == 13) {
-            var $this = $(this), optionText = $this.val();
-            if (optionText != "" && $this.find("option[value='" + optionText + "']").length === 0) {
-                var $select = $this.parents('.select2-container').prev("select");
-                var newOption = new Option(optionText, optionText, true, true);
-                $select.append(newOption).trigger('change');
-                $this.val('');
-                $select.select2('close');
-            }
-        }
-    } catch (e) {
-        console.error(e);
-    }
-});
-JS
-        );
     }
 }
