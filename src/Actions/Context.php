@@ -70,6 +70,15 @@ class Context
         $descriptor = $definition['descriptor'];
         $keys = $ticket['phase'] === 'execute' ? $ticket['selected'] : $request->input('_key', []);
         $keys = is_array($keys) ? array_values($keys) : [$keys];
+
+        // Toolbar actions render a placeholder key (usually 0) but have no
+        // record context. Ignore it instead of rejecting a valid form load or
+        // execution with "Record is outside this action".
+        $recordScoped = !empty($descriptor['record']) || !empty($descriptor['batch']);
+        if (!$recordScoped && empty($definition['keys'])) {
+            $keys = [];
+        }
+
         abort_if(count($keys) > 1000, 422, 'Too many selected records.');
         foreach ($keys as $key) {
             abort_unless((is_string($key) || is_int($key)) && isset($definition['keys'][(string) $key]), 403, 'Record is outside this action.');

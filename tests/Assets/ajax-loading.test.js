@@ -116,14 +116,13 @@ function form() {
 test('slow requests display a localized indicator and finish after success', () => {
     const app = page();
     const xhr = app.request();
-    assert.equal(app.progress.parent, 'body');
-    assert.equal(app.progress.starts, 1);
+    assert.equal(app.progress.starts, 0);
     app.advance(180);
     assert.equal(app.visible.size, 1);
     assert.equal([...app.visible][0].label, '加载中...');
     xhr.complete();
     assert.equal(app.visible.size, 0);
-    assert.equal(app.progress.finishes, 1);
+    assert.equal(app.progress.finishes, 0);
 });
 
 test('fast requests cancel the delayed indicator', () => {
@@ -131,7 +130,7 @@ test('fast requests cancel the delayed indicator', () => {
     app.request().complete();
     app.advance(500);
     assert.equal(app.visible.size, 0);
-    assert.equal(app.progress.finishes, 1);
+    assert.equal(app.progress.finishes, 0);
 });
 
 test('concurrent requests keep loading until every foreground request ends', () => {
@@ -141,11 +140,11 @@ test('concurrent requests keep loading until every foreground request ends', () 
     app.advance(180);
     first.complete();
     assert.equal(app.visible.size, 1);
-    assert.equal(app.progress.starts, 1);
+    assert.equal(app.progress.starts, 0);
     assert.equal(app.progress.finishes, 0);
     second.complete();
     assert.equal(app.visible.size, 0);
-    assert.equal(app.progress.finishes, 1);
+    assert.equal(app.progress.finishes, 0);
 });
 
 test('failures and aborted requests both remove loading', () => {
@@ -156,7 +155,7 @@ test('failures and aborted requests both remove loading', () => {
         if (action === 'abort') xhr.abort();
         else xhr.complete('rejected');
         assert.equal(app.visible.size, 0);
-        assert.equal(app.progress.finishes, 1);
+        assert.equal(app.progress.finishes, 0);
     }
 });
 
@@ -183,8 +182,8 @@ test('beforeSend cancellation or abort does not leave loading stuck', () => {
     assert.equal(app.progress.finishes, 0);
     assert.equal(app.visible.size, 0);
     app.request().complete();
-    assert.equal(app.progress.starts, 1);
-    assert.equal(app.progress.finishes, 1);
+    assert.equal(app.progress.starts, 0);
+    assert.equal(app.progress.finishes, 0);
 });
 
 test('custom contexts and global:false preserve beforeSend and display loading', () => {
@@ -222,10 +221,9 @@ test('duplicate native submissions are blocked without adding another loading co
     const model = form();
     app.submit(model);
     assert.equal(app.submit(model).isDefaultPrevented(), true);
-    assert.equal(app.progress.starts, 1);
+    assert.equal(app.visible.size, 1);
     app.restore();
     assert.equal(app.visible.size, 0);
-    assert.equal(app.progress.finishes, 1);
 });
 
 test('cancelled confirmation or validation leaves the form usable', () => {

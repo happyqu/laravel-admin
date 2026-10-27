@@ -41,7 +41,17 @@ class Html
 
     public static function first(string $html, string $selector): ?DOMElement
     {
-        $document = self::document($html);
+        return self::firstNode(self::document($html), $selector);
+    }
+
+    /**
+     * Find the first matching element in an existing document.
+     *
+     * Keeping the document lets callers modify the node and serialize the
+     * complete markup, instead of losing any wrapper elements.
+     */
+    public static function firstNode(DOMDocument $document, string $selector): ?DOMElement
+    {
         $xpath = new DOMXPath($document);
         $nodes = $xpath->query(self::toXPath($selector));
 

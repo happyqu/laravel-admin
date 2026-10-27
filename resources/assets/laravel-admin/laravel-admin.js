@@ -56,9 +56,8 @@ $(document).ajaxError(function (event, xhr) {
     }, 800);
 });
 
-NProgress.configure({parent: 'body', showSpinner: false});
-
 // Track foreground requests, including requests with global:false or a custom context.
+// Page loads use the centered "loading" indicator; no top progress bar.
 (function ($) {
     var pending = 0;
     var timer = null;
@@ -77,8 +76,6 @@ NProgress.configure({parent: 'body', showSpinner: false});
     function start(immediate) {
         pending++;
         if (pending === 1) {
-            NProgress.start();
-            // Fast AJAX requests only need the progress bar.
             timer = setTimeout(function () {
                 timer = null;
                 showIndicator();
@@ -104,7 +101,6 @@ NProgress.configure({parent: 'body', showSpinner: false});
             indicator.remove();
             indicator = null;
         }
-        NProgress.done();
     }
 
     function restoreForm(record) {

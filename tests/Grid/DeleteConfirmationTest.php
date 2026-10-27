@@ -2,6 +2,7 @@
 
 namespace Encore\Admin\Tests\Grid;
 
+use Encore\Admin\Actions\Action;
 use Encore\Admin\Actions\Context;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Grid\Actions\Delete;
@@ -78,41 +79,58 @@ class DeleteConfirmationTest extends TestCase
         return [$html, $match[1]];
     }
 
-    public function test_rendered_delete_has_confirmation_and_a_record_bound_execution_ticket(): void
+    public function test_rendered_delete_defers_its_execution_ticket_until_confirmation(): void
     {
         [$html, $token] = $this->render();
         preg_match('/data-admin-dialog="([^"]+)"/', $html, $match);
         $dialog = json_decode(html_entity_decode($match[1], ENT_QUOTES, 'UTF-8'), true, 512, JSON_THROW_ON_ERROR);
         $this->assertTrue($dialog['showCancelButton']);
         $this->assertTrue($dialog['showLoaderOnConfirm']);
+        // The button carries the definition ticket only; the page must not
+        // embed a long-lived execution ticket that can expire or be consumed.
+        $this->assertStringContainsString('data-admin-prepare="1"', $html);
         $ticket = $this->session->get('admin.action_contexts.'.$token);
-        $this->assertSame('execute', $ticket['phase']);
-        $definition = $this->session->get('admin.action_contexts.'.$ticket['definition']);
-        $this->assertSame($definition['expires'], $ticket['expires']);
-        $this->assertSame([2], $ticket['selected']);
-        $this->assertSame('2026-01-01 12:00:00', $ticket['versions'][ConfirmationRow::class.':2']);
-        // Client-supplied keys cannot replace the record bound at render time.
-        [, $model] = $this->app[Context::class]->resolve(Request::create('/admin/_handle_action_', 'POST', [
-            '_action_token' => $token, '_key' => [99],
-        ]));
+        $this->assertSame('definition', $ticket['phase']);
+        $this->assertArrayHasKey('2', $ticket['keys']);
+        // Confirming loads a fresh single-use execution ticket bound to the
+        // record rendered with the button.
+        [$action, $model, $execution] = $this->app[Context::class]->resolve(
+            Request::create('/admin/_load_action_', 'GET', ['_action_token' => $token, '_key' => [2]]),
+            true
+        );
+        $this->assertInstanceOf(ConfirmationDelete::class, $action);
         $this->assertSame(2, $model->getKey());
+        $executeTicket = $this->session->get('admin.action_contexts.'.$execution);
+        $this->assertSame('execute', $executeTicket['phase']);
+        $this->assertSame([2], $executeTicket['selected']);
+        $this->assertSame('2026-01-01 12:00:00', $executeTicket['versions'][ConfirmationRow::class.':2']);
+        // Client-supplied keys cannot replace the record bound at load time.
+        [, $resolved] = $this->app[Context::class]->resolve(Request::create('/admin/_handle_action_', 'POST', [
+            '_action_token' => $execution, '_key' => [99],
+        ]));
+        $this->assertSame(2, $resolved->getKey());
     }
 
-    public function test_record_changes_after_render_still_reject_the_confirmation(): void
+    public function test_record_changes_after_confirmation_reject_the_execution(): void
     {
-        [, $token] = $this->render();
+        [$html, $token] = $this->render();
+        [, , $execution] = $this->app[Context::class]->resolve(
+            Request::create('/admin/_load_action_', 'GET', ['_action_token' => $token, '_key' => [2]]),
+            true
+        );
         $this->row->setRawAttributes(['id' => 2, 'updated_at' => '2026-01-01 12:01:00'], true);
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         $this->expectExceptionMessage('The record changed. Reopen the action.');
-        $this->app[Context::class]->resolve(Request::create('/admin/_handle_action_', 'POST', ['_action_token' => $token]));
+        $this->app[Context::class]->resolve(Request::create('/admin/_handle_action_', 'POST', ['_action_token' => $execution]));
     }
 
-    public function test_custom_row_dialogs_also_render_confirmation_and_execution_ticket(): void
+    public function test_custom_row_dialogs_also_defer_their_execution_ticket(): void
     {
         $html = (new ConfirmationCustomAction())->setRow($this->row)->render();
         $this->assertStringContainsString('data-admin-dialog=', $html);
+        $this->assertStringContainsString('data-admin-prepare="1"', $html);
         preg_match('/data-admin-action="([a-f0-9]{48})"/', $html, $match);
-        $this->assertSame('execute', $this->session->get('admin.action_contexts.'.$match[1].'.phase'));
+        $this->assertSame('definition', $this->session->get('admin.action_contexts.'.$match[1].'.phase'));
     }
 
     public function test_batch_dialogs_render_confirmation_but_defer_binding_selection(): void
@@ -127,6 +145,20 @@ class DeleteConfirmationTest extends TestCase
             '_action_token' => $match[1], '_key' => [2],
         ]));
     }
+
+    public function test_toolbar_action_placeholder_key_is_not_treated_as_a_record(): void
+    {
+        $token = $this->app[Context::class]->register(new ConfirmationToolbarAction());
+
+        [$action, $model, , $keys] = $this->app[Context::class]->resolve(
+            Request::create('/admin/_load_action_', 'GET', ['_action_token' => $token, '_key' => ['0']]),
+            true
+        );
+
+        $this->assertInstanceOf(ConfirmationToolbarAction::class, $action);
+        $this->assertNull($model);
+        $this->assertSame([], $keys);
+    }
 }
 
 class ConfirmationDelete extends Delete
@@ -135,6 +167,14 @@ class ConfirmationDelete extends Delete
 }
 
 class ConfirmationRow extends Model {}
+
+class ConfirmationToolbarAction extends Action
+{
+    public function form()
+    {
+        $this->text('name', 'Name');
+    }
+}
 
 class ConfirmationCustomAction extends \Encore\Admin\Actions\RowAction
 {

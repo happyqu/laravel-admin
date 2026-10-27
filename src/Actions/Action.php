@@ -369,6 +369,9 @@ abstract class Action implements Renderable
         $this->attribute('data-admin-action', $definition);
         $this->attribute('data-admin-mode', $this->interaction());
         $this->attribute('data-admin-batch', $this instanceof BatchAction ? '1' : '0');
+        // Toolbar actions have no selected record. Do not let the browser send
+        // their placeholder key (usually 0) as a record selection.
+        $this->attribute('data-admin-keyed', $this->contextKeys() ? '1' : '0');
         $this->attribute('data-admin-load', admin_url('_load_action_'));
         $this->attribute('data-admin-execute', $this->getHandleRoute());
 
@@ -378,15 +381,12 @@ abstract class Action implements Renderable
             $this->attribute('data-admin-dialog', json_encode(
                 $this->loadInteraction()['settings'], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE
             ));
-            if ($this instanceof BatchAction) {
-                // Selection is known only at click time. Resolve its execution
-                // ticket after confirmation, before sending the mutation.
-                $this->attribute('data-admin-prepare', '1');
-            } else {
-                $this->attribute('data-admin-action', $context->executionTicket(
-                    $definition, $this->contextKeys(), $model, 7200
-                ));
-            }
+            // Mint the execution ticket when the confirmation is accepted.
+            // Embedding a long-lived ticket in the rendered page made actions
+            // fail with "Expired action ticket" once the page sat open (the
+            // ticket expired or was consumed by an earlier run); a reload was
+            // the only way to use the button again.
+            $this->attribute('data-admin-prepare', '1');
         }
     }
 
@@ -442,7 +442,8 @@ abstract class Action implements Renderable
             return $content;
         }
 
-        $node = Html::first($content, $this->selector ?: 'a,button');
+        $document = Html::document($content);
+        $node = Html::firstNode($document, $this->selector ?: 'a,button');
 
         if (!$node) {
             return $content;
@@ -452,6 +453,12 @@ abstract class Action implements Renderable
             $node->setAttribute($name, $value);
         }
 
-        return Html::outerHtml($node);
+        // Return the whole fragment, not only the matched anchor. Navbar and
+        // other custom actions wrap their anchor in a list item; dropping that
+        // wrapper leaves a bare <a> in the navbar and moves the button out of
+        // its intended position.
+        $body = $document->getElementsByTagName('body')->item(0);
+
+        return $body ? Html::innerHtml($body) : Html::outerHtml($node);
     }
 }

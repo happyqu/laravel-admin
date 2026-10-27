@@ -165,6 +165,9 @@
     }
     function selected(button) {
         if (button.attr('data-admin-batch') !== '1') {
+            // Toolbar actions carry a placeholder key (0) but act on the page,
+            // not on a selected record.
+            if (button.attr('data-admin-keyed') === '0') return [];
             var key = button.attr('data-_key');
             return key == null || key === '' ? [] : [key];
         }
@@ -226,11 +229,10 @@
                 .catch(function () {}).finally(function () { state.unlock(); });
             return;
         }
-        if (mode === 'form') {
-            modal(); destroyFields();
-            shell.html('<div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button></div><div class="modal-body"><i class="fa fa-spinner fa-spin"></i></div></div></div>').modal('show');
-        }
-        var request = $.ajax({ url: button.attr('data-admin-load'), method: 'GET', data: { _action_token: current.ticket, _key: keys }, dataType: 'json', cache: false });
+        var request = $.ajax({
+            url: button.attr('data-admin-load'), method: 'GET',
+            data: { _action_token: current.ticket, _key: keys }, dataType: 'json', cache: false
+        });
         state.request = request;
         Promise.resolve(request).then(function (payload) {
             if ($.admin.isResponseError(payload)) { throw { responseJSON: payload }; }
@@ -243,9 +245,15 @@
                     var markup = $('<div>').append($.parseHTML(payload.html, root.document, false));
                     var content = markup.find('.modal').first();
                     var dialog = content.find('.modal-dialog').first();
-                    shell.attr('id', content.attr('id')).find('.modal-dialog').attr('class', dialog.attr('class')).empty().append(dialog.children());
+                    // The form only appears once its loading finished.
+                    modal(); destroyFields();
+                    shell.attr('id', content.attr('id'));
+                    var holder = shell.children('.modal-dialog').first();
+                    if (!holder.length) { holder = $('<div class="modal-dialog"></div>').appendTo(shell); }
+                    holder.attr('class', dialog.attr('class')).empty().append(dialog.children());
                     (payload.styles || []).forEach(function (style) { $('<style>').text(style).appendTo(shell); });
                     (payload.scripts || []).forEach(function (script) { Function('jQuery', '$', script).call(root, $, $); });
+                    shell.modal('show');
                 } else if (payload.mode === 'dialog') {
                     showDialog(current, payload.settings, sequence);
                 }
