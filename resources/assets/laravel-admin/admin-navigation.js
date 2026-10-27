@@ -8,6 +8,8 @@
     var scripts = {};
     var styles = {};
 
+    var SCROLL_PREFIX = 'admin-scroll:';
+
     function absolute(url, base) { return new URL(url, base || window.location.href).href; }
     function local(url) {
         var parsed = new URL(url, window.location.href);
@@ -19,9 +21,28 @@
     function state(scroll) {
         return $.extend({}, window.history.state, {adminNavigation: true, scrollY: scroll});
     }
+    function normalize(url) {
+        return String(url || window.location.href).split('#')[0];
+    }
+    function storedScroll(url) {
+        try {
+            var value = window.sessionStorage.getItem(SCROLL_PREFIX + normalize(url));
+            return value === null ? null : parseInt(value, 10);
+        } catch (e) {
+            return null;
+        }
+    }
+    function storeScroll(url, value) {
+        try {
+            window.sessionStorage.setItem(SCROLL_PREFIX + normalize(url), String(value));
+        } catch (e) {
+            // Private mode or a full storage quota must not break navigation.
+        }
+    }
     function rememberScroll() {
         if (window.location.href === renderedUrl) {
             window.history.replaceState(state(window.pageYOffset), '', renderedUrl);
+            storeScroll(renderedUrl, window.pageYOffset);
         }
     }
 
@@ -42,6 +63,14 @@
     }
 
     function render(html, url, options, id) {
+        var previousUrl = normalize(renderedUrl);
+        var previousScroll = window.pageYOffset;
+        var destination = normalize(url);
+        // Coming back from an edit/create form should restore the list
+        // position instead of jumping to the top. Filter forms on list pages
+        // are excluded (they are GET forms without this marker).
+        var fromForm = !!(document.getElementById('admin-content')
+            && document.querySelector('#admin-content form[data-admin-form]'));
         var parsed = new DOMParser().parseFromString(html, 'text/html');
         var content = parsed.getElementById('admin-content');
         if (!content || !document.getElementById('admin-content')) {
@@ -87,8 +116,25 @@
             }
             document.title = parsed.title || document.title;
             $.admin.grid.selects = {};
+
+            // Decide where the restored page should be scrolled to:
+            //  - back/forward passes an explicit position;
+            //  - refreshing the same URL keeps the current position;
+            //  - redirects after a save and links back from a form restore the
+            //    position remembered for the destination list page;
+            //  - anything else starts at the top.
+            var restore = 0;
+            if (typeof options.scroll === 'number') {
+                restore = options.scroll;
+            } else if (destination === previousUrl) {
+                restore = previousScroll;
+            } else if (options.replace || fromForm) {
+                var remembered = storedScroll(destination);
+                if (remembered !== null) { restore = remembered; }
+            }
+
             if (options.history !== false) {
-                var nextState = {adminNavigation: true, scrollY: 0};
+                var nextState = {adminNavigation: true, scrollY: restore};
                 if (options.replace || url === window.location.href) {
                     window.history.replaceState(nextState, '', url);
                 } else {
@@ -106,7 +152,14 @@
                 }
             });
             $('#admin-content [data-toggle="popover"]').popover();
-            window.scrollTo(0, options.scroll || 0);
+            window.scrollTo(0, restore);
+            if (restore > 0) {
+                // Images or fonts loaded after the swap can clamp the first
+                // restore; retry once the layout has settled.
+                setTimeout(function () {
+                    if (window.pageYOffset < restore) { window.scrollTo(0, restore); }
+                }, 60);
+            }
             $(document).trigger('admin:navigated', [url]);
             return true;
         });

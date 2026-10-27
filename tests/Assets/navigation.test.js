@@ -285,6 +285,40 @@ test('browser back and forward fetch the correct URL and restore scroll position
     assert.equal(app.scroll(), 260);
 });
 
+test('returning from an edit form restores the list scroll position', async t => {
+    const app = await page('List page');
+    t.after(() => app.window.close());
+
+    app.window.scrollTo(0, 520);
+    app.$(app.window).trigger('scroll');
+    await until(() => app.window.history.state.scrollY === 520);
+
+    const open = app.$.admin.navigate('/admin/users/1/edit');
+    app.requests[0].resolve(html('<form data-admin-form="true"><input name="name"></form>', 'Edit'));
+    await open;
+    assert.equal(app.scroll(), 0);
+
+    // Saving the form redirects back to the list with a replacing navigation.
+    const back = app.$.admin.navigate('/admin/users', {replace: true});
+    app.requests[1].resolve(html('List page again'));
+    await back;
+
+    assert.equal(app.window.location.pathname, '/admin/users');
+    await until(() => app.scroll() === 520);
+});
+
+test('refreshing the same list keeps the current scroll position', async t => {
+    const app = await page('List page');
+    t.after(() => app.window.close());
+
+    app.window.scrollTo(0, 430);
+    const task = app.$.admin.reload({adminLoading: false});
+    app.requests[0].resolve(html('List page'));
+    await task;
+
+    assert.equal(app.scroll(), 430);
+});
+
 test('a later pagination request supersedes an unfinished earlier request', async t => {
     const app = await page('Initial');
     t.after(() => app.window.close());
