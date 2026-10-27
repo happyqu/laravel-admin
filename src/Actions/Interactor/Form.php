@@ -412,6 +412,16 @@ class Form extends Interactor
         $values = $request->input();
         $files = $request->allFiles();
         foreach ($this->fields as $field) {
+            if ($field->isWritable() && ($field instanceof Field\HasMany || $field instanceof Field\Embeds)) {
+                foreach ((array) $field->column() as $column) {
+                    if (\Illuminate\Support\Arr::has($values, $column)) {
+                        \Illuminate\Support\Arr::set($values, $column, $field->sanitize(\Illuminate\Support\Arr::get($values, $column)));
+                    }
+                    if (\Illuminate\Support\Arr::has($files, $column)) {
+                        \Illuminate\Support\Arr::set($files, $column, $field->sanitize(\Illuminate\Support\Arr::get($files, $column)));
+                    }
+                }
+            }
             if (!$field->isWritable()) {
                 foreach ((array) $field->column() as $column) {
                     \Illuminate\Support\Arr::forget($values, $column);

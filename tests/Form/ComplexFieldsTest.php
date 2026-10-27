@@ -194,6 +194,70 @@ class ComplexFieldsTest extends TestCase
         $field->prepare(['new_1' => ['title' => 'New']]);
     }
 
+    public function test_table_with_deletion_disabled_rejects_omitted_original_rows(): void
+    {
+        $field = (new Table('rows', ['Rows', function ($form) { $form->text('title', 'Title'); }]))
+            ->setForm($this->form)->disableDelete();
+        $field->setOriginal(['rows' => [0 => ['title' => 'First'], 3 => ['title' => 'Second']]]);
+        foreach ([[], [0 => ['title' => 'Edited']]] as $input) {
+            try {
+                $field->prepare($input);
+                $this->fail('Omitting an existing row must not bypass disableDelete.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('rows', $exception->errors());
+            }
+        }
+        $this->assertSame([
+            0 => ['title' => 'Edited'], 3 => ['title' => 'Second'], 'new_1' => ['title' => 'New'],
+        ], $field->prepare([
+            0 => ['title' => 'Edited'], 3 => ['title' => 'Second'], 'new_1' => ['title' => 'New'],
+        ]));
+    }
+
+    public function test_action_table_filters_nested_values_and_files_without_losing_callback_parameters(): void
+    {
+        $action = new class extends \Encore\Admin\Actions\Action {
+            public function form()
+            {
+                $this->text('summary')->value('Server value')->readonly();
+                $this->table('rows', 'Rows', function ($form) {
+                    $form->text('title')->rules('required');
+                    $form->text('locked')->readonly();
+                    $form->text('disabled')->disable();
+                    $form->table('children', 'Children', function ($child) {
+                        $child->text('name');
+                        $child->text('locked')->readonly();
+                    });
+                });
+            }
+        };
+        $upload = new \Illuminate\Http\UploadedFile(__FILE__, 'test.php', null, null, true);
+        $request = Request::create('/admin/_handle_action_', 'POST', [
+            '_action_token' => 'signed-ticket', '_class' => 'TrustedController', '_cb' => 'save', '_key' => '7',
+            'summary' => 'Forged summary',
+            'rows' => ['new_1' => [
+                'title' => 'Valid', 'locked' => 'Forged', 'disabled' => 'Forged', 'extra' => 'Undeclared',
+                'children' => ['new_1' => ['name' => 'Child', 'locked' => 'Forged', 'extra' => 'Undeclared']],
+            ]],
+        ], [], ['rows' => ['new_1' => [
+            'locked' => $upload, 'extra' => $upload,
+            'children' => ['new_1' => ['locked' => $upload, 'extra' => $upload]],
+        ]]]);
+        $action->validate($request);
+        $this->assertSame(['new_1' => [
+            'title' => 'Valid', 'children' => ['new_1' => ['name' => 'Child']],
+        ]], request()->input('rows'));
+        $this->assertSame('Server value', request('summary'));
+        $this->assertSame('signed-ticket', request('_action_token'));
+        $this->assertSame('TrustedController', request('_class'));
+        $this->assertSame('save', request('_cb'));
+        $this->assertSame('7', request('_key'));
+        $this->assertFalse(request()->hasFile('rows.new_1.locked'));
+        $this->assertFalse(request()->hasFile('rows.new_1.extra'));
+        $this->assertFalse(request()->hasFile('rows.new_1.children.new_1.locked'));
+        $this->assertFalse(request()->hasFile('rows.new_1.children.new_1.extra'));
+    }
+
     public function test_list_size_limits_work_without_item_rules(): void
     {
         $field = (new ListField('items', ['Items']))->min(2)->max(3);

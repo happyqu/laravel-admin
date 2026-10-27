@@ -70,6 +70,9 @@ class Table extends HasMany
         if (!is_array($input)) {
             throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Expected an array.']);
         }
+        if (!$this->options['allowDelete'] && array_diff_key($this->original ?: [], $input)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'This related operation is disabled.']);
+        }
         foreach ($input as $key => $record) {
             if (!is_array($record)) {
                 throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Expected an object.']);
