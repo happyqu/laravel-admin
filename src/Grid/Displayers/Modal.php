@@ -20,9 +20,13 @@ class Modal extends AbstractDisplayer
      */
     protected function getLoadUrl()
     {
+        if (!$this->renderable) {
+            return '';
+        }
         $renderable = str_replace('\\', '_', $this->renderable);
 
-        return route('admin.handle-renderable', compact('renderable'));
+        return \Encore\Admin\Security\ComponentSubmission::url('admin.handle-renderable', compact('renderable'),
+            'renderable', $this->renderable, [$this->getKey()]);
     }
 
     /**

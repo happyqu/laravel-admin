@@ -37,7 +37,7 @@ class PermissionController extends AdminController
                 $method = $this->http_method ?: ['ANY'];
 
                 if (Str::contains($path, ':')) {
-                    list($method, $path) = explode(':', $path);
+                    list($method, $path) = explode(':', $path, 2);
                     $method = explode(',', $method);
                 }
 
@@ -87,7 +87,7 @@ class PermissionController extends AdminController
                 $method = $this->http_method ?: ['ANY'];
 
                 if (Str::contains($path, ':')) {
-                    list($method, $path) = explode(':', $path);
+                    list($method, $path) = explode(':', $path, 2);
                     $method = explode(',', $method);
                 }
 

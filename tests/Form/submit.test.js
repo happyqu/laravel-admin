@@ -38,6 +38,7 @@ function submitForm(fields, emittedScript = script, selector = 'form.model-form-
         }
         assert.equal(target, form);
         return {
+            submit(callback) { handler = callback; },
             find(selector) {
                 assert.equal(selector, 'div.cascade-group.hide :input');
                 return {
@@ -51,7 +52,7 @@ function submitForm(fields, emittedScript = script, selector = 'form.model-form-
             },
         };
     };
-    vm.runInNewContext(emittedScript, { $ });
+    vm.runInNewContext(emittedScript, { $, document: { getElementById() { return form; } } });
     assert.equal(typeof handler, 'function');
     const result = handler.call(form, { preventDefault() { prevented = true; } });
     return { submitted: !prevented && result !== false, fields };

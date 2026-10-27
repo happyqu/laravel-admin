@@ -149,7 +149,9 @@ class Content implements Renderable
      */
     public function row($content)
     {
-        if ($content instanceof Closure) {
+        if ($content instanceof Row) {
+            $this->addRow($content);
+        } elseif ($content instanceof Closure) {
             $row = new Row();
             call_user_func($content, $row);
             $this->addRow($row);
@@ -211,17 +213,19 @@ class Content implements Renderable
      */
     public function build()
     {
+        $level = ob_get_level();
         ob_start();
+        try {
+            foreach ($this->rows as $row) {
+                $row->build();
+            }
 
-        foreach ($this->rows as $row) {
-            $row->build();
+            return ob_get_contents();
+        } finally {
+            while (ob_get_level() > $level) {
+                ob_end_clean();
+            }
         }
-
-        $contents = ob_get_contents();
-
-        ob_end_clean();
-
-        return $contents;
     }
 
     /**
@@ -323,7 +327,7 @@ class Content implements Renderable
             'header'      => $this->title,
             'description' => $this->description,
             'breadcrumb'  => $this->breadcrumb,
-            '_content_'   => $this->build(),
+            '_content_'   => $this->view ? '' : $this->build(),
             '_view_'      => $this->view,
             '_user_'      => $this->getUserData(),
         ];

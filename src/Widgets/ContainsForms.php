@@ -30,9 +30,9 @@ trait ContainsForms
      */
     protected function buildTabbedForms($forms, $active = null)
     {
-        $active = $active ?: request($this->activeName);
+        $active = $active ?? request($this->activeName);
 
-        if (!isset($forms[$active])) {
+        if ((!is_string($active) && !is_int($active)) || !isset($forms[$active])) {
             $active = key($forms);
         }
 

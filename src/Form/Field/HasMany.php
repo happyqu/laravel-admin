@@ -314,6 +314,13 @@ class HasMany extends Field
         return $form->setOriginal($this->original, $keyName)->prepare($input);
     }
 
+    public function sanitize($input): array
+    {
+        $form = $this->buildNestedForm($this->column, $this->builder);
+
+        return array_map(static fn ($row) => \Encore\Admin\Form\SubmissionInput::onlyFields((array) $row, $form->fields()), (array) $input);
+    }
+
     /**
      * Build a Nested form.
      *

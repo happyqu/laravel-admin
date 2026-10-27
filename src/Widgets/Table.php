@@ -38,9 +38,8 @@ class Table extends Widget implements Renderable
     {
         $this->setHeaders($headers);
         $this->setRows($rows);
+        $this->class('table');
         $this->setStyle($style);
-
-        $this->class('table '.implode(' ', $this->style));
     }
 
     /**
@@ -66,6 +65,7 @@ class Table extends Widget implements Renderable
      */
     public function setRows($rows = [])
     {
+        $this->rows = [];
         if (Arr::isAssoc($rows)) {
             foreach ($rows as $key => $item) {
                 $this->rows[] = [$key, $item];
@@ -88,7 +88,9 @@ class Table extends Widget implements Renderable
      */
     public function setStyle($style = [])
     {
-        $this->style = $style;
+        $classes = array_diff(explode(' ', (string) $this->class), $this->style);
+        $this->style = (array) $style;
+        $this->class(implode(' ', array_unique(array_merge($classes, $this->style))));
 
         return $this;
     }

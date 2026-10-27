@@ -30,12 +30,13 @@ class LogController extends AdminController
         $grid->column('method')->display(function ($method) {
             $color = Arr::get(OperationLog::$methodColors, $method, 'grey');
 
-            return "<span class=\"badge bg-$color\">$method</span>";
+            return '<span class="badge bg-'.e($color).'">'.e($method).'</span>';
         });
         $grid->column('path')->label('info');
         $grid->column('ip')->label('primary');
         $grid->column('input')->display(function ($input) {
-            $input = json_decode($input, true);
+            $input = is_string($input) ? json_decode($input, true) : $input;
+            $input = is_array($input) ? $input : [];
             $input = Arr::except($input, ['_token', '_method', '_previous_']);
             if (empty($input)) {
                 return '<code>{}</code>';

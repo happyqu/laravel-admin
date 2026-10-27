@@ -19,7 +19,7 @@ class Box extends Widget implements Renderable
     /**
      * @var string
      */
-    protected $content = 'here is the box content.';
+    protected $content = '';
 
     /**
      * @var string
@@ -44,17 +44,9 @@ class Box extends Widget implements Renderable
      */
     public function __construct($title = '', $content = '', $footer = '')
     {
-        if ($title) {
-            $this->title($title);
-        }
-
-        if ($content) {
-            $this->content($content);
-        }
-
-        if ($footer) {
-            $this->footer($footer);
-        }
+        $this->title($title);
+        $this->content($content);
+        $this->footer($footer);
 
         $this->class('box');
     }
@@ -68,11 +60,7 @@ class Box extends Widget implements Renderable
      */
     public function content($content)
     {
-        if ($content instanceof Renderable) {
-            $this->content = $content->render();
-        } else {
-            $this->content = (string) $content;
-        }
+        $this->content = $content;
 
         return $this;
     }
@@ -86,11 +74,7 @@ class Box extends Widget implements Renderable
      */
     public function footer($footer)
     {
-        if ($footer instanceof Renderable) {
-            $this->footer = $footer->render();
-        } else {
-            $this->footer = (string) $footer;
-        }
+        $this->footer = $footer;
 
         return $this;
     }
@@ -132,11 +116,12 @@ class Box extends Widget implements Renderable
     public function scrollable($options = [], $nodeSelector = '')
     {
         $this->id = uniqid('box-slim-scroll-');
-        $scrollOptions = json_encode($options);
+        $scrollOptions = json_encode($options, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $nodeSelector = $nodeSelector ?: '.box-body';
+        $selector = json_encode('#'.$this->id.' '.$nodeSelector, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         $this->script = <<<SCRIPT
-$("#{$this->id} {$nodeSelector}").slimScroll({$scrollOptions});
+$({$selector}).slimScroll({$scrollOptions});
 SCRIPT;
 
         return $this;
@@ -196,8 +181,8 @@ SCRIPT;
     {
         return [
             'title'      => $this->title,
-            'content'    => $this->content,
-            'footer'     => $this->footer,
+            'content'    => $this->content instanceof Renderable ? $this->content->render() : (string) $this->content,
+            'footer'     => $this->footer instanceof Renderable ? $this->footer->render() : (string) $this->footer,
             'tools'      => $this->tools,
             'attributes' => $this->formatAttributes(),
             'script'     => $this->script,

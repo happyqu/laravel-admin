@@ -47,7 +47,7 @@ class AuthController extends Controller
         $this->loginValidator($request->all())->validate();
 
         $credentials = $request->only([$this->username(), 'password']);
-        $remember = $request->get('remember', false);
+        $remember = $request->boolean('remember');
         $throttleKey = Str::lower((string) ($credentials[$this->username()] ?? '')).'|'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
@@ -82,8 +82,8 @@ class AuthController extends Controller
     protected function loginValidator(array $data)
     {
         return Validator::make($data, [
-            $this->username()   => 'required',
-            'password'          => 'required',
+            $this->username()   => 'required|string',
+            'password'          => 'required|string',
         ]);
     }
 
@@ -97,6 +97,7 @@ class AuthController extends Controller
         $this->guard()->logout();
 
         $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect(config('admin.route.prefix'));
     }
@@ -121,7 +122,7 @@ class AuthController extends Controller
 
         return $content
             ->title(trans('admin.user_setting'))
-            ->body($form->edit(Admin::user()->id));
+            ->body($form->edit(Admin::user()->getAuthIdentifier()));
     }
 
     /**
@@ -131,7 +132,7 @@ class AuthController extends Controller
      */
     public function putSetting()
     {
-        return $this->settingForm()->update(Admin::user()->id);
+        return $this->settingForm()->update(Admin::user()->getAuthIdentifier());
     }
 
     /**
@@ -148,19 +149,20 @@ class AuthController extends Controller
         $form->display('username', trans('admin.username'));
         $form->text('name', trans('admin.name'))->rules('required');
         $form->image('avatar', trans('admin.avatar'));
-        $form->password('password', trans('admin.password'))->rules('confirmed|required');
-        $form->password('password_confirmation', trans('admin.password_confirmation'))->rules('required')
-            ->default(function ($form) {
-                return $form->model()->password;
-            });
+        $form->password('password', trans('admin.password'))->rules('nullable|string|confirmed')
+            ->customFormat(static fn () => '');
+        $form->password('password_confirmation', trans('admin.password_confirmation'))
+            ->rules('nullable|string|required_with:password');
 
         $form->setAction(admin_url('auth/setting'));
 
         $form->ignore(['password_confirmation']);
 
         $form->saving(function (Form $form) {
-            if ($form->password && $form->model()->password != $form->password) {
+            if ($form->password !== null && $form->password !== '') {
                 $form->password = Hash::make($form->password);
+            } else {
+                $form->password = $form->model()->password;
             }
         });
 

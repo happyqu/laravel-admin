@@ -99,4 +99,12 @@ class RoleController extends AdminController
 
         return $form;
     }
+
+    public function destroy($id)
+    {
+        $model = config('admin.database.roles_model');
+        abort_if($model::query()->whereKey(explode(',', (string) $id))->where('slug', 'administrator')->exists(), 403);
+
+        return parent::destroy($id);
+    }
 }

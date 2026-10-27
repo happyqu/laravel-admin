@@ -1,5 +1,5 @@
 <div {!! $attributes !!}>
-    @if($title || $tools)
+    @if(($title !== '' && $title !== null) || $tools)
         <div class="box-header with-border">
             <h3 class="box-title">{{ $title }}</h3>
             <div class="box-tools pull-right">
@@ -12,7 +12,7 @@
     <div class="box-body" style="display: block;">
         {!! $content !!}
     </div><!-- /.box-body -->
-    @if($footer)
+    @if($footer !== '' && $footer !== null)
         <div class="box-footer">
             {!! $footer !!}
         </div><!-- /.box-footer-->

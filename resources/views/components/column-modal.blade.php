@@ -46,8 +46,8 @@
     };
 
     modal.on('show.bs.modal', function (e) {
-        var key = $(e.relatedTarget).data('key');
-        load('{{ $url }}'+'&key='+key);
+        var key = $(e.relatedTarget).attr('data-key');
+        load(@json($url)+'&key='+encodeURIComponent(key));
     }).on('click', '.page-item a, .filter-box a', function (e) {
         load($(this).attr('href'));
         e.preventDefault();

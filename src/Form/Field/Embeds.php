@@ -49,6 +49,11 @@ class Embeds extends Field
         return $form->setOriginal($this->original)->prepare($input);
     }
 
+    public function sanitize($input): array
+    {
+        return \Encore\Admin\Form\SubmissionInput::onlyFields((array) $input, $this->buildEmbeddedForm()->fields());
+    }
+
     /**
      * {@inheritdoc}
      */

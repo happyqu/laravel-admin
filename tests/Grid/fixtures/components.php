@@ -28,4 +28,23 @@ foreach (['input', 'radio', 'multiple-select', 'upload'] as $type) {
         'script' => implode("\n", \Encore\Admin\Admin::$script),
     ];
 }
+foreach (['expand', 'modal'] as $type) {
+    foreach (['001', 'row&2/#'] as $index => $key) {
+        \Encore\Admin\Admin::$script = [];
+        \Encore\Admin\Admin::$html = [];
+        $token = str_repeat((string) ($index + 1), 48);
+        $data = [
+            'key' => $key, 'name' => 'preview-'.($index + 1), 'value' => 'Preview',
+            'url' => '/admin/_handle_renderable_?renderable=App_Preview&_component_token_='.$token,
+            'html' => '', 'async' => true, 'expand' => false, 'loadGrid' => false,
+            'elementClass' => 'grid-expand-table', 'title' => 'Preview', 'grid' => false,
+        ];
+        $html = \Encore\Admin\Admin::component('admin::components.column-'.$type, $data);
+        $components[$type.($index + 1)] = [
+            'html' => $html, 'script' => implode("\n", \Encore\Admin\Admin::$script),
+            'key' => $key, 'token' => $token,
+        ];
+    }
+}
+
 echo json_encode($components, JSON_THROW_ON_ERROR);

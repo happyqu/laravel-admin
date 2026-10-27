@@ -60,6 +60,7 @@ class MenuController extends Controller
     public function store()
     {
         if (request()->has('_order')) {
+            request()->validate(['_order' => 'required|string']);
             $menuModel = config('admin.database.menu_model');
 
             try {

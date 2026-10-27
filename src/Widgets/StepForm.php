@@ -26,6 +26,14 @@ class StepForm extends Form
 
     protected ?string $flow = null;
 
+    protected bool $footerAdded = false;
+
+    public static function flowIdentity(): array
+    {
+        return [(string) (\Encore\Admin\Facades\Admin::user()?->getAuthIdentifier() ?? ''),
+            config('admin.auth.guard', 'admin'), config('admin.route.prefix'), config('admin.database.connection')];
+    }
+
     public function setFlow(string $flow)
     {
         $this->flow = $flow;
@@ -50,6 +58,8 @@ class StepForm extends Form
      */
     protected function next($data = [])
     {
+        $index = array_search($this->current, $this->steps, true);
+        abort_if($index === false || !isset($this->steps[$index + 1]), 422, 'No next step.');
         $this->remember($data);
 
         return $this->redirectToNextStep();
@@ -57,7 +67,7 @@ class StepForm extends Form
 
     protected function prev()
     {
-        return back()->withInput();
+        return back()->withInput(request()->except(['password', 'password_confirmation']));
     }
 
     /**
@@ -66,6 +76,8 @@ class StepForm extends Form
     protected function remember($data)
     {
         $flow = session($this->flowKey());
+        abort_unless(is_array($flow) && $flow['expires'] >= time()
+            && ($flow['identity'] ?? null) === static::flowIdentity(), 403, 'Invalid step flow.');
         $index = array_search($this->current, $flow['steps'], true);
         abort_if($index === false || $index > $flow['allowed'], 403);
         foreach (array_slice($flow['steps'], $index) as $step) {
@@ -84,7 +96,8 @@ class StepForm extends Form
         $index = array_search($this->current, $this->steps, true);
         abort_if($index === false || !isset($this->steps[$index + 1]), 422, 'No next step.');
         $step = $this->steps[$index + 1];
-        $nextUrl = $this->url.'?'.http_build_query(['step' => $step, '_flow' => $this->flow]);
+        $query = session($this->flowKey().'.query', []);
+        $nextUrl = $this->url.'?'.http_build_query(array_replace($query, ['step' => $step, '_flow' => $this->flow]));
 
         return redirect($nextUrl);
     }
@@ -153,20 +166,24 @@ class StepForm extends Form
             $this->flow = bin2hex(random_bytes(24));
             session()->put($this->flowKey(), [
                 'steps' => $this->steps, 'classes' => [$this->current => static::class],
-                'url' => request()->url(), 'data' => [], 'allowed' => 0, 'expires' => time() + 7200,
+                'url' => request()->url(), 'query' => \Illuminate\Support\Arr::except(request()->query(), ['step', '_flow']),
+                'identity' => static::flowIdentity(), 'data' => [], 'allowed' => 0, 'expires' => time() + 7200,
             ]);
         }
 
-        $this->divider();
-
-        $this->addFooter();
+        if (!$this->footerAdded) {
+            $this->divider();
+            $this->addFooter();
+            $this->footerAdded = true;
+        }
     }
 
     protected function addFooter()
     {
         $footer = '';
 
-        $index = array_search($this->current, $this->steps);
+        $index = array_search($this->current, $this->steps, true);
+        abort_if($index === false, 422, 'Invalid step.');
 
         $trans = [
             'prev'   => __('admin.prev'),
@@ -177,7 +194,7 @@ class StepForm extends Form
         if ($index !== 0) {
             $step = $this->steps[$index - 1];
             $prevUrl = request()->fullUrlWithQuery(['step' => $step, '_flow' => $this->flow]);
-            $footer .= "<a href=\"{$prevUrl}\" class=\"btn btn-warning pull-left\">{$trans['prev']}</a>";
+            $footer .= '<a href="'.e($prevUrl).'" class="btn btn-warning pull-left">'.e($trans['prev']).'</a>';
         }
 
         if ($index !== count($this->steps) - 1) {
@@ -199,6 +216,7 @@ class StepForm extends Form
         $current = $context['current'] ?? null;
         $index = is_array($flow) ? array_search($current, $flow['steps'], true) : false;
         abort_unless($index !== false && $flow['expires'] >= time() && $index <= $flow['allowed']
+            && ($flow['identity'] ?? null) === static::flowIdentity()
             && ($flow['classes'][$current] ?? null) === static::class, 403, 'Invalid step.');
         foreach (array_slice($flow['steps'], 0, $index) as $previous) {
             abort_unless(array_key_exists($previous, $flow['data']), 403, 'Complete previous steps first.');
@@ -211,6 +229,8 @@ class StepForm extends Form
      */
     public function data()
     {
-        return $this->flow ? session($this->flowKey().'.data.'.$this->current, []) : [];
+        $state = $this->flow ? session($this->flowKey(), []) : [];
+
+        return $state['data'][$this->current] ?? [];
     }
 }

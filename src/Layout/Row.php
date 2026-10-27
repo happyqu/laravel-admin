@@ -25,7 +25,7 @@ class Row implements Buildable, Renderable
      */
     public function __construct($content = '')
     {
-        if (!empty($content)) {
+        if ($content !== '' && $content !== null) {
             $this->column(12, $content);
         }
     }
@@ -38,8 +38,6 @@ class Row implements Buildable, Renderable
      */
     public function column($width, $content)
     {
-        $width = $width < 1 ? round(12 * $width) : $width;
-
         $column = new Column($content, $width);
 
         $this->addColumn($column);
@@ -90,7 +88,7 @@ class Row implements Buildable, Renderable
     {
         $class = $this->class;
         $class[] = 'row';
-        echo '<div class="'.implode(' ', $class).'">';
+        echo '<div class="'.e(implode(' ', $class)).'">';
     }
 
     /**
@@ -108,14 +106,16 @@ class Row implements Buildable, Renderable
      */
     public function render()
     {
+        $level = ob_get_level();
         ob_start();
+        try {
+            $this->build();
 
-        $this->build();
-
-        $contents = ob_get_contents();
-
-        ob_end_clean();
-
-        return $contents;
+            return ob_get_contents();
+        } finally {
+            while (ob_get_level() > $level) {
+                ob_end_clean();
+            }
+        }
     }
 }

@@ -37,8 +37,9 @@ class Context
     public function register(Action $action): string
     {
         $descriptor = $action->contextDescriptor();
+        $source = request()->attributes->get('_admin_component_source', [request()->url(), request()->method()]);
         $definition = ['descriptor' => $descriptor, 'identity' => $this->identity(),
-            'source' => request()->url(), 'source_method' => request()->method(), 'mode' => $action->interaction()];
+            'source' => $source[0], 'source_method' => $source[1], 'mode' => $action->interaction()];
         $hash = hash('sha256', json_encode($definition, JSON_THROW_ON_ERROR));
         $tickets = $this->tickets();
         $token = $this->definitions[$hash] ?? null;

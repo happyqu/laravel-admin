@@ -4,6 +4,16 @@ namespace Encore\Admin\Form\Field;
 
 trait PlainInput
 {
+    protected ?string $defaultInputValue = null;
+
+    public function attribute($attribute, $value = null): self
+    {
+        if ($attribute === 'value' || (is_array($attribute) && array_key_exists('value', $attribute))) {
+            $this->defaultInputValue = null;
+        }
+
+        return parent::attribute($attribute, $value);
+    }
     /**
      * @var string
      */
@@ -60,8 +70,13 @@ trait PlainInput
      */
     protected function defaultAttribute($attribute, $value)
     {
-        if (!array_key_exists($attribute, $this->attributes)) {
+        if (!array_key_exists($attribute, $this->attributes)
+            || ($attribute === 'value' && $this->defaultInputValue !== null
+                && $this->attributes[$attribute] === $this->defaultInputValue)) {
             $this->attribute($attribute, $value);
+            if ($attribute === 'value') {
+                $this->defaultInputValue = $this->attributes[$attribute];
+            }
         }
 
         return $this;

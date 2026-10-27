@@ -62,7 +62,8 @@ trait BelongsToRelation
         $selectable = str_replace('\\', '_', $this->selectable);
         $args = [$multiple];
 
-        return route('admin.handle-selectable', compact('selectable', 'args'));
+        return \Encore\Admin\Security\ComponentSubmission::url('admin.handle-selectable', compact('selectable', 'args'),
+            'selectable', $this->selectable, $args);
     }
 
     /**

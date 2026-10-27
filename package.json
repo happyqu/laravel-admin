@@ -2,7 +2,7 @@
   "name": "laravel-admin-frontend-tests",
   "private": true,
   "scripts": {
-    "test": "node --test tests/Form/*.test.js tests/Grid/*.test.js tests/IframeTabs/*.test.js tests/Assets/*.test.js"
+    "test": "node --test tests/Form/*.test.js tests/Grid/*.test.js tests/Widgets/*.test.js tests/IframeTabs/*.test.js tests/Assets/*.test.js"
   },
   "devDependencies": {
     "jsdom": "26.1.0"

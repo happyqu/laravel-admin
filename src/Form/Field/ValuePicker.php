@@ -65,7 +65,8 @@ class ValuePicker
 
         $args = [$this->multiple, $this->column];
 
-        return route('admin.handle-selectable', compact('selectable', 'args'));
+        return \Encore\Admin\Security\ComponentSubmission::url('admin.handle-selectable', compact('selectable', 'args'),
+            'selectable', $this->selecteable, $args);
     }
 
     /**

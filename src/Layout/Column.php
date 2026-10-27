@@ -2,7 +2,7 @@
 
 namespace Encore\Admin\Layout;
 
-use Encore\Admin\Grid;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\Renderable;
 
 class Column implements Buildable
@@ -27,23 +27,38 @@ class Column implements Buildable
      */
     public function __construct($content, $width = 12)
     {
+        $this->width = $this->normalizeWidth($width);
+
         if ($content instanceof \Closure) {
             call_user_func($content, $this);
         } else {
             $this->append($content);
         }
+    }
 
-        ///// set width.
-        // if null, or $this->width is empty array, set as "md" => "12"
-        if (is_null($width) || (is_array($width) && count($width) === 0)) {
-            $this->width['md'] = 12;
+    protected function normalizeWidth($width): array
+    {
+        if ($width === null || $width === []) {
+            return ['md' => 12];
         }
-        // $this->width is number(old version), set as "md" => $width
-        elseif (is_numeric($width)) {
-            $this->width['md'] = $width;
-        } else {
-            $this->width = $width;
+        $widths = is_numeric($width) ? ['md' => $width] : $width;
+        if (!is_array($widths)) {
+            throw new \InvalidArgumentException('Column width must be a number or breakpoint map.');
         }
+        foreach ($widths as $breakpoint => &$size) {
+            if (!is_string($breakpoint) || !preg_match('/^[A-Za-z][A-Za-z0-9_-]*$/', $breakpoint) || !is_numeric($size)) {
+                throw new \InvalidArgumentException('Invalid column breakpoint or width.');
+            }
+            $size = (float) $size;
+            $size = $size > 0 && $size < 1 ? round(12 * $size) : $size;
+            $minimum = preg_match('/-(offset|push|pull)$/', $breakpoint) ? 0 : 1;
+            if (!is_finite($size) || $size < $minimum || $size > 12 || floor($size) !== $size) {
+                throw new \InvalidArgumentException('Column width must be an integer between 1 and 12.');
+            }
+            $size = (int) $size;
+        }
+
+        return $widths;
     }
 
     /**
@@ -77,15 +92,7 @@ class Column implements Buildable
             call_user_func($content, $row);
         }
 
-        ob_start();
-
-        $row->build();
-
-        $contents = ob_get_contents();
-
-        ob_end_clean();
-
-        return $this->append($contents);
+        return $this->append($row);
     }
 
     /**
@@ -96,8 +103,12 @@ class Column implements Buildable
         $this->startColumn();
 
         foreach ($this->contents as $content) {
-            if ($content instanceof Renderable || $content instanceof Grid) {
+            if ($content instanceof Renderable) {
                 echo $content->render();
+            } elseif ($content instanceof Buildable) {
+                $content->build();
+            } elseif ($content instanceof Htmlable) {
+                echo $content->toHtml();
             } else {
                 echo (string) $content;
             }
@@ -116,7 +127,7 @@ class Column implements Buildable
             return "col-$key-$value";
         })->implode(' ');
 
-        echo "<div class=\"{$classnName}\">";
+        echo '<div class="'.e($classnName).'">';
     }
 
     /**

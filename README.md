@@ -109,10 +109,16 @@ php artisan admin:install
 2.0 同时移除了旧版废弃 API：
 
 - `Admin::grid()`、`Admin::form()`、`Admin::show()`、`Admin::content()`、`Admin::registerAuthRoutes()`：直接使用 `new Grid(...)`、`new Form(...)`、`new Show(...)`、`Content` 注入控制器，或 `Admin::routes()`；
-- `_handle_selectable_` / `_handle_renderable_` 只接受实现 `Grid\Selectable` / `Grid\Renderable` 的类，其余返回 404；
+- `_handle_selectable_` / `_handle_renderable_` 只接受 `Grid\Selectable` 子类 / 实现 `Illuminate\Contracts\Support\Renderable` 的类，并校验页面签发的组件凭据；
 - 表单 `Display` 字段默认转义 HTML，需输出富文本时显式调用 `->unescape()`；
 - 菜单树的拖拽排序通过向 `admin/auth/menu` POST `_order` JSON 完成，不再依赖旧模型保存钩子；
 - `admin:make`、`admin:export` 不再需要 `doctrine/dbal`，表结构读取使用 Laravel 原生 Schema。
+
+动态选择器、异步展开和弹窗的 URL 由内置组件自动附带 `_component_token_`，凭据绑定当前会话用户、来源页面、组件类和参数；加载时重新检查来源页面权限。自定义代码若直接拼接这两个接口的 URL，需改用 `Encore\Admin\Security\ComponentSubmission::url($routeName, $routeParameters, $kind, $class, $payload)`：`$kind` 为 `selectable` 时，`$payload` 是构造参数列表；为 `renderable` 时，是包含当前记录主键的单元素数组。缺少或过期的凭据返回 419，篡改参数或失去来源权限返回 403。
+
+内置用户编辑和个人设置页面不再回填密码哈希；编辑时密码留空保留原密码，创建用户仍要求密码及确认。布局列宽支持 1–12、比例值和响应式映射；无效列宽会抛出 `InvalidArgumentException`。
+
+Widget 表单的 `form()` 在每个实例中只构建一次，重复渲染和校验不会重复添加字段；`fill([])` 会清空已填数据，PATCH/DELETE 等方法通过 POST 与 `_method` 提交。表单渲染也会检查 `authorize()`，提交时递归过滤嵌套编辑器中未声明或只读的字段。分步表单的流程绑定用户、后台配置和页面查询参数，升级前已创建的分步流程需重新开始。
 
 ## 日志查看器
 

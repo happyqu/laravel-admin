@@ -30,6 +30,7 @@ class Tab extends Widget implements Renderable
 
     public function __construct()
     {
+        $this->id('widget-tabs-'.uniqid());
         $this->class('nav-tabs-custom');
     }
 
@@ -46,7 +47,7 @@ class Tab extends Widget implements Renderable
     public function add($title, $content, $active = false, $id = null)
     {
         $this->data['tabs'][] = [
-            'id'      => $id ?: mt_rand(),
+            'id'      => $id ?? mt_rand(),
             'title'   => $title,
             'content' => $content,
             'type'    => static::TYPE_CONTENT,
@@ -92,6 +93,8 @@ class Tab extends Widget implements Renderable
     public function title($title = '')
     {
         $this->data['title'] = $title;
+
+        return $this;
     }
 
     /**
@@ -103,6 +106,9 @@ class Tab extends Widget implements Renderable
      */
     public function dropDown(array $links)
     {
+        if ($links === []) {
+            return $this;
+        }
         if (is_array($links[0])) {
             foreach ($links as $link) {
                 call_user_func([$this, 'dropDown'], $link);
@@ -111,6 +117,9 @@ class Tab extends Widget implements Renderable
             return $this;
         }
 
+        if (!isset($links[0], $links[1])) {
+            throw new \InvalidArgumentException('Dropdown items require a label and URL.');
+        }
         $this->data['dropDown'][] = [
             'name' => $links[0],
             'href' => $links[1],
@@ -141,16 +150,23 @@ class Tab extends Widget implements Renderable
      */
     protected function setupScript()
     {
-        $script = <<<'SCRIPT'
+        $id = json_encode($this->id, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $script = <<<SCRIPT
+;(function () {
+var root = $(document.getElementById({$id}));
+var links = root.children('.nav-tabs').find('a[data-toggle="tab"]');
 var hash = document.location.hash;
 if (hash) {
-    $('.nav-tabs a[href="' + hash + '"]').tab('show');
+    links.filter(function () { return this.hash === hash; }).tab('show');
 }
 
 // Change hash for page-reload
-$('.nav-tabs a').on('shown.bs.tab', function (e) {
-    history.pushState(null,null, e.target.hash);
+links.off('shown.bs.tab.adminWidgetTab').on('shown.bs.tab.adminWidgetTab', function (e) {
+    if (e.target.hash && document.location.hash !== e.target.hash) {
+        history.pushState(null, null, e.target.hash);
+    }
 });
+})();
 SCRIPT;
         Admin::script($script);
     }

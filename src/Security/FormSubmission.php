@@ -15,9 +15,10 @@ class FormSubmission
         $tickets = array_filter(session('admin.form_submissions', []), static fn ($ticket) => $ticket['expires'] >= time());
         $tickets = array_slice($tickets, -127, null, true);
         $token = bin2hex(random_bytes(24));
+        $source = request()->attributes->get('_admin_component_source', [request()->url(), request()->method()]);
         $tickets[$token] = [
-            'class' => get_class($form), 'source' => request()->url(),
-            'method' => request()->method(),
+            'class' => get_class($form), 'source' => $source[0],
+            'method' => $source[1],
             'user' => (string) (Admin::user()?->getAuthIdentifier() ?? ''),
             'guard' => config('admin.auth.guard', 'admin'), 'expires' => time() + 7200,
             'scope' => [config('admin.route.prefix'), config('admin.database.connection')],

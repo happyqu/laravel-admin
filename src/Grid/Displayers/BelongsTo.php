@@ -14,10 +14,12 @@ class BelongsTo extends AbstractDisplayer
      */
     protected function getLoadUrl($selectable, $multiple = 0)
     {
+        $class = $selectable;
         $selectable = str_replace('\\', '_', $selectable);
         $args = [$multiple];
 
-        return route('admin.handle-selectable', compact('selectable', 'args'));
+        return \Encore\Admin\Security\ComponentSubmission::url('admin.handle-selectable', compact('selectable', 'args'),
+            'selectable', $class, $args);
     }
 
     /**

@@ -44,7 +44,7 @@ class HandleController extends Controller
     protected function resolveForm(Request $request)
     {
         if (!$request->has('_form_')) {
-            throw new Exception('Invalid form request.');
+            abort(400, 'Invalid form request.');
         }
 
         $formClass = $request->input('_form_');
@@ -131,7 +131,10 @@ class HandleController extends Controller
         $class = $request->get('selectable');
         $args = $request->get('args', []);
 
-        $class = str_replace('_', '\\', (string) $class);
+        abort_unless(is_string($class) && is_array($args) && collect($args)->every(static fn ($arg) => is_scalar($arg)), 400);
+        $class = str_replace('_', '\\', $class);
+        $args = \Encore\Admin\Security\ComponentSubmission::verify($request, 'selectable', $class, array_values($args));
+        $class = $request->attributes->get('_admin_component_class');
 
         if (class_exists($class) && is_subclass_of($class, \Encore\Admin\Grid\Selectable::class)) {
             /** @var \Encore\Admin\Grid\Selectable $selectable */
@@ -153,7 +156,11 @@ class HandleController extends Controller
         $class = $request->get('renderable');
         $key = $request->get('key');
 
-        $class = str_replace('_', '\\', (string) $class);
+        abort_unless(is_string($class) && ($key === null || is_scalar($key)), 400);
+        $class = str_replace('_', '\\', $class);
+        $payload = \Encore\Admin\Security\ComponentSubmission::verify($request, 'renderable', $class, [$key]);
+        $class = $request->attributes->get('_admin_component_class');
+        $key = $payload[0];
 
         if (class_exists($class) && is_subclass_of($class, Renderable::class)) {
             /** @var Renderable $renderable */

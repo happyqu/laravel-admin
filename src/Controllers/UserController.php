@@ -6,6 +6,7 @@ use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UserController extends AdminController
 {
@@ -91,21 +92,17 @@ class UserController extends AdminController
 
         $form = new Form(new $userModel());
 
-        $userTable = config('admin.database.users_table');
-        $connection = config('admin.database.connection');
-
         $form->display('id', 'ID');
         $form->text('username', trans('admin.username'))
-            ->creationRules(['required', "unique:{$connection}.{$userTable}"])
-            ->updateRules(['required', "unique:{$connection}.{$userTable},username,{{id}}"]);
+            ->creationRules(['required', 'string', Rule::unique($userModel, 'username')])
+            ->updateRules(fn (Form $form) => ['required', 'string', Rule::unique($userModel, 'username')->ignore($form->model())]);
 
         $form->text('name', trans('admin.name'))->rules('required');
         $form->image('avatar', trans('admin.avatar'));
-        $form->password('password', trans('admin.password'))->rules('required|confirmed');
-        $form->password('password_confirmation', trans('admin.password_confirmation'))->rules('required')
-            ->default(function ($form) {
-                return $form->model()->password;
-            });
+        $form->password('password', trans('admin.password'))->creationRules('required|string|confirmed')
+            ->updateRules('nullable|string|confirmed')->customFormat(static fn () => '');
+        $form->password('password_confirmation', trans('admin.password_confirmation'))
+            ->rules('nullable|string|required_with:password');
 
         $form->ignore(['password_confirmation']);
 
@@ -116,11 +113,21 @@ class UserController extends AdminController
         $form->display('updated_at', trans('admin.updated_at'));
 
         $form->saving(function (Form $form) {
-            if ($form->password && $form->model()->password != $form->password) {
+            if ($form->password !== null && $form->password !== '') {
                 $form->password = Hash::make($form->password);
+            } else {
+                $form->password = $form->model()->password;
             }
         });
 
         return $form;
+    }
+
+    public function destroy($id)
+    {
+        $model = config('admin.database.users_model');
+        abort_if($model::query()->whereKey(explode(',', (string) $id))->whereKey(1)->exists(), 403);
+
+        return parent::destroy($id);
     }
 }

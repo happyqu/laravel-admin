@@ -129,6 +129,8 @@ class Form implements Renderable
      */
     protected $form;
 
+    protected bool $definitionBuilt = false;
+
     /**
      * Form constructor.
      *
@@ -192,9 +194,10 @@ class Form implements Renderable
             $data = $data->toArray();
         }
 
-        if (!empty($data)) {
-            $this->data = $data;
+        if ($data !== null && !is_array($data)) {
+            throw new \InvalidArgumentException('Form data must be an array or Arrayable.');
         }
+        $this->data = $data ?? [];
 
         return $this;
     }
@@ -205,25 +208,10 @@ class Form implements Renderable
     public function sanitize()
     {
         $request = request();
-        $input = $files = [];
         $values = $request->input();
         $uploads = $request->allFiles();
-        foreach ($this->fields() as $field) {
-            if (!$field->isWritable()) {
-                continue;
-            }
-            foreach ((array) $field->column() as $column) {
-                if (!is_string($column) || in_array($column, ['_form_', '_form_token_', '_token'], true)) {
-                    continue;
-                }
-                if (Arr::has($values, $column)) {
-                    Arr::set($input, $column, Arr::get($values, $column));
-                }
-                if (Arr::has($uploads, $column)) {
-                    Arr::set($files, $column, Arr::get($uploads, $column));
-                }
-            }
-        }
+        $input = BaseForm\SubmissionInput::onlyFields($values, $this->fields());
+        $files = BaseForm\SubmissionInput::onlyFields($uploads, $this->fields());
         BaseForm\SubmissionInput::replace($request, $input, $files);
 
         return $this;
@@ -327,13 +315,16 @@ class Form implements Renderable
      */
     public function method($method = 'POST')
     {
-        if (strtolower($method) == 'put') {
+        $method = strtoupper($method);
+        if (!in_array($method, ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'], true)) {
+            throw new \InvalidArgumentException('Invalid form method.');
+        }
+        $this->fields = array_values(array_filter($this->fields, static fn ($field) => $field->column() !== '_method'));
+        if (!in_array($method, ['GET', 'POST'], true)) {
             $this->hidden('_method')->default($method);
-
-            return $this;
         }
 
-        return $this->attribute('method', strtoupper($method));
+        return $this->attribute('method', in_array($method, ['GET', 'POST'], true) ? $method : 'POST');
     }
 
     /**
@@ -406,6 +397,7 @@ class Form implements Renderable
     public function pushField(Field $field)
     {
         $field->setWidgetForm($this);
+        $field->setWidth($this->width['field'], $this->width['label']);
 
         array_push($this->fields, $field);
 
@@ -429,7 +421,8 @@ class Form implements Renderable
      */
     protected function getVariables()
     {
-        $this->fields()->each->fill($this->data());
+        $this->fields()->reject(static fn ($field) => in_array($field->column(), ['_method', '_form_', '_form_token_'], true))
+            ->each->fill($this->data());
 
         return [
             'fields'     => $this->fields,
@@ -448,7 +441,8 @@ class Form implements Renderable
     public function hasFile()
     {
         foreach ($this->fields as $field) {
-            if ($field instanceof Field\File || $field instanceof Field\MultipleFile) {
+            if ($field instanceof Field\File || $field instanceof Field\MultipleFile
+                || $field instanceof Field\HasMany || $field instanceof Field\Embeds) {
                 return true;
             }
         }
@@ -465,9 +459,7 @@ class Form implements Renderable
      */
     public function validate(Request $request)
     {
-        if (method_exists($this, 'form')) {
-            $this->form();
-        }
+        $this->buildDefinition();
 
         $failedValidators = BaseForm\SubmissionValidator::failed($this->fields(), $request->all());
 
@@ -527,7 +519,7 @@ class Form implements Renderable
 
     protected function addConfirmScript()
     {
-        $id = $this->attributes['id'];
+        $id = json_encode($this->attributes['id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         $trans = [
             'cancel' => trans('admin.cancel'),
@@ -550,7 +542,7 @@ class Form implements Renderable
 
         $script = <<<SCRIPT
 
-$('form#{$id}').off('submit').on('submit', function (e) {
+$(document.getElementById({$id})).off('submit.adminWidgetConfirm').on('submit.adminWidgetConfirm', function (e) {
     e.preventDefault();
     var form = this;
     $.admin.swal($settings).then(function (result) {
@@ -574,11 +566,11 @@ SCRIPT;
 
     protected function addCascadeScript()
     {
-        $id = $this->attributes['id'];
+        $id = json_encode($this->attributes['id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         $script = <<<SCRIPT
 ;(function () {
-    $('form#{$id}').submit(function () {
+    $(document.getElementById({$id})).submit(function () {
         $(this).find('div.cascade-group.hide :input').attr('disabled', true);
     });
 })();
@@ -589,9 +581,7 @@ SCRIPT;
 
     protected function prepareForm()
     {
-        if (method_exists($this, 'form')) {
-            $this->form();
-        }
+        $this->buildDefinition();
 
         if (!empty($this->confirm)) {
             $this->addConfirmScript();
@@ -603,6 +593,8 @@ SCRIPT;
     protected function prepareHandle()
     {
         if (method_exists($this, 'handle')) {
+            $this->fields = array_values(array_filter($this->fields,
+                static fn ($field) => !in_array($field->column(), ['_form_', '_form_token_'], true)));
             $this->method('POST');
             $this->action(admin_url('_handle_form_'));
             $this->hidden('_form_')->default(get_called_class());
@@ -617,6 +609,7 @@ SCRIPT;
      */
     public function render()
     {
+        abort_unless($this->passesAuthorization(), 403);
         $this->prepareForm();
 
         $this->prepareHandle();
@@ -628,6 +621,14 @@ SCRIPT;
         }
 
         return (new Box($title, $form))->render();
+    }
+
+    protected function buildDefinition(): void
+    {
+        if (!$this->definitionBuilt && method_exists($this, 'form')) {
+            $this->form();
+            $this->definitionBuilt = true;
+        }
     }
 
     /**

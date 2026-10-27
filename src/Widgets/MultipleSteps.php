@@ -53,9 +53,9 @@ class MultipleSteps implements Renderable
      */
     protected function resolveCurrentStep($steps, $current)
     {
-        $current = $current ?: request($this->stepName, 0);
+        $current = $current ?? request($this->stepName, 0);
 
-        if (!isset($steps[$current])) {
+        if ((!is_string($current) && !is_int($current)) || !isset($steps[$current])) {
             $current = key($steps);
         }
 
@@ -72,6 +72,9 @@ class MultipleSteps implements Renderable
      */
     public function render()
     {
+        if ($this->steps === []) {
+            return '';
+        }
         $flow = request('_flow');
         if ($flow === null) {
             $this->current = key($this->steps);
@@ -79,7 +82,8 @@ class MultipleSteps implements Renderable
             $flows = array_filter(session('admin.step_flows', []), static fn ($item) => $item['expires'] >= time());
             $flows = array_slice($flows, -31, null, true);
             $flows[$flow] = ['steps' => array_keys($this->steps), 'classes' => $this->steps,
-                'url' => request()->url(), 'data' => [], 'allowed' => 0, 'expires' => time() + 7200];
+                'url' => request()->url(), 'query' => \Illuminate\Support\Arr::except(request()->query(), ['step', '_flow']),
+                'identity' => StepForm::flowIdentity(), 'data' => [], 'allowed' => 0, 'expires' => time() + 7200];
             session()->put('admin.step_flows', $flows);
         }
         abort_unless(is_string($flow) && preg_match('/^[a-f0-9]{48}$/D', $flow), 419);
@@ -87,6 +91,8 @@ class MultipleSteps implements Renderable
         $index = array_search($this->current, array_keys($this->steps), true);
         abort_unless(is_array($state) && $state['expires'] >= time()
             && $state['classes'] === $this->steps && $state['url'] === request()->url()
+            && ($state['query'] ?? []) == \Illuminate\Support\Arr::except(request()->query(), ['step', '_flow'])
+            && ($state['identity'] ?? null) === StepForm::flowIdentity()
             && $index !== false && $index <= $state['allowed'], 403, 'Invalid step flow.');
         $class = $this->steps[$this->current];
 
