@@ -19,6 +19,9 @@ foreach (['default', 'tab', 'table'] as $mode) {
     };
     $field->emit($mode);
     $scripts[$mode] = implode("\n", \Encore\Admin\Admin::$script);
+    \Encore\Admin\Admin::$script = [];
+    $field->scopeElement('action-modal')->emit($mode);
+    $scripts['scoped_'.$mode] = implode("\n", \Encore\Admin\Admin::$script);
 }
 
 $field = new class('labels', ['Labels']) extends \Encore\Admin\Form\Field\Tags {

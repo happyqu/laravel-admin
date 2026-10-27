@@ -497,6 +497,24 @@ test('long-lived action forms load once, preserve input on failure and never ren
     assert.equal(app.window.location.pathname, '/admin/users');
 });
 
+test('action forms retain auxiliary widget markup and replace it on reopening', async t => {
+    const app = await page('<a id="action" data-admin-action="a3.page" data-admin-mode="form" data-admin-load="/load" data-admin-execute="/execute">Edit</a>');
+    t.after(() => app.window.close());
+    app.$.fn.modal = function () { return this; };
+    app.window.eval(read('resources/assets/actions.js'));
+    for (let index = 0; index < 2; index++) {
+        app.$('#action').trigger('click');
+        app.requests[index].resolve({ mode: 'form', ticket: 'a3.loaded', html:
+            '<div class="modal" id="action-form"><div class="modal-dialog"><form><input name="title"></form></div></div>' +
+            '<div id="relation-widget">Version ' + index + '</div>', scripts: [
+                'window.widgetInitialized = document.getElementById("relation-widget").textContent;'
+            ] });
+        await until(() => app.window.widgetInitialized === 'Version ' + index);
+        assert.equal(app.$('#relation-widget').length, 1);
+        assert.equal(app.$('[data-admin-action-extra]').length, 1);
+    }
+});
+
 test('a rejected batch action does not load or retry and restores the confirmation controls', async t => {
     const app = await page('<a id="batch" data-admin-action="a3.signed" data-admin-mode="dialog" data-admin-execute="/execute">Batch</a>');
     t.after(() => app.window.close());

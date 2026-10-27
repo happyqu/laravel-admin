@@ -53,6 +53,26 @@ for (const mode of ['default', 'table', 'tab']) {
     });
 }
 
+for (const mode of ['default', 'table', 'tab']) {
+    test(`${mode} hasMany inside an action leaves a same-named page editor unchanged`, () => {
+        const w = page('<form id="page"><div id="has-many-rows"><div class="has-many-rows-forms">Page rows</div></div></form>' +
+            '<form id="action"><div id="has-many-action-modal-rows">' +
+            '<div class="header"><button type="button" class="add">Add</button></div><ul class="nav"></ul>' +
+            '<div class="tab-content has-many-action-modal-rows-forms"></div>' +
+            '<template class="action-modal-rows-tpl"><div class="has-many-action-modal-rows-form"><input name="rows[new___LA_KEY__][title]"></div></template>' +
+            '<template class="nav-tab-tpl"><li><a href="#action-rows_new___LA_KEY__">New</a></li></template>' +
+            '<template class="pane-tpl"><div id="action-rows_new___LA_KEY__"><input name="rows[new___LA_KEY__][title]"></div></template>' +
+            '</div></form>');
+        try {
+            w.eval(scripts['scoped_' + mode]);
+            w.$('#action .add').trigger('click').trigger('click');
+            assert.equal(w.$('#action :input[name]').length, 2);
+            assert.equal(w.$('#page :input').length, 0);
+            assert.equal(w.$('#has-many-rows .has-many-rows-forms').text(), 'Page rows');
+        } finally { close(w); }
+    });
+}
+
 test('deleting a tab releases native required constraints on all controls', () => {
     const w = page(`<form><div id="has-many-rows"><ul class="nav"><li class="active">
       <a href="#rows_7">Row</a><i class="close-tab"></i></li></ul>

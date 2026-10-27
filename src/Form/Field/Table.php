@@ -107,6 +107,7 @@ class Table extends HasMany
     protected function buildNestedForm($column, \Closure $builder, $key = null)
     {
         $form = new NestedForm($column);
+        $form->scopeElements($this->elementScope);
 
         if ($this->form instanceof WidgetForm) {
             $form->setWidgetForm($this->form);

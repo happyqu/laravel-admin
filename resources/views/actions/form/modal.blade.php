@@ -6,7 +6,7 @@
                 <h4 class="modal-title">{{ $title }}</h4>
             </div>
             <form>
-            <div class="modal-body">
+            <div class="modal-body fields-group">
                 @foreach($fields as $field)
                     {!! $field->render() !!}
                 @endforeach

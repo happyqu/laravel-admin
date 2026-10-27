@@ -258,6 +258,54 @@ class ComplexFieldsTest extends TestCase
         $this->assertFalse(request()->hasFile('rows.new_1.children.new_1.extra'));
     }
 
+    public function test_action_select_initialization_matches_only_its_own_field(): void
+    {
+        $row = new class extends Model {};
+        $row->setRawAttributes(['id' => 323], true);
+        $action = new class extends \Encore\Admin\Actions\RowAction {
+            public $name = 'Add performance';
+            public function form()
+            {
+                $this->hidden('performance_id')->value($this->getRow()->getKey());
+                $this->select('team_user_id', 'Employee')->options([1 => 'Alice'])->required();
+                $this->text('percent', 'Percent')->required()->help('Enter 8 for 8%');
+                $this->select('status', 'Status')->options([0 => 'Pending', 1 => 'Paid']);
+            }
+        };
+        $action->setRow($row);
+        $payload = $action->loadInteraction();
+        $dom = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try { $dom->loadHTML($payload['html']); } finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
+        $xpath = new \DOMXPath($dom);
+        $hidden = $xpath->query('//input[@name="performance_id"]')->item(0);
+        $text = $xpath->query('//input[@name="percent"]')->item(0);
+        $this->assertSame('hidden', $hidden->getAttribute('type'));
+        $this->assertSame('323', $hidden->getAttribute('value'));
+        $this->assertSame('text', $text->getAttribute('type'));
+        preg_match_all('/\$\("([^"]+)"\)\.select2\(/', implode("\n", $payload['scripts']), $matches);
+        $this->assertCount(2, $matches[1]);
+        $names = [];
+        foreach ($matches[1] as $selector) {
+            $conditions = array_map(static fn ($class) => "contains(concat(' ', normalize-space(@class), ' '), ' ".$class." ')",
+                explode('.', ltrim($selector, '.')));
+            $nodes = $xpath->query('//*['.implode(' and ', $conditions).']');
+            $this->assertSame(1, $nodes->length, 'Widget selector must match exactly one field: '.$selector);
+            $this->assertSame('select', $nodes->item(0)->nodeName);
+            $names[] = $nodes->item(0)->getAttribute('name');
+        }
+        $this->assertSame(['team_user_id', 'status'], $names);
+
+        $second = $action->loadInteraction();
+        $this->assertSame($payload['scripts'], $second['scripts']);
+        // Another action in the same document must have a different modal scope.
+        $otherAction = new class extends \Encore\Admin\Actions\Action {
+            public function form() { $this->select('team_user_id', 'Employee')->options([2 => 'Bob']); }
+        };
+        $other = $otherAction->loadInteraction();
+        $this->assertNotSame($payload['scripts'][0], $other['scripts'][0]);
+    }
+
     public function test_list_size_limits_work_without_item_rules(): void
     {
         $field = (new ListField('items', ['Items']))->min(2)->max(3);

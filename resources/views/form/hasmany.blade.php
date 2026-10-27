@@ -6,13 +6,13 @@
 
 <hr style="margin-top: 0px;">
 
-<div id="has-many-{{$column}}" class="has-many-{{$column}}">
+<div id="has-many-{{$domName ?? $column}}" class="has-many-{{$domName ?? $column}}">
 
-    <div class="has-many-{{$column}}-forms">
+    <div class="has-many-{{$domName ?? $column}}-forms">
 
         @foreach($forms as $pk => $form)
 
-            <div class="has-many-{{$column}}-form fields-group">
+            <div class="has-many-{{$domName ?? $column}}-form fields-group">
 
                 @foreach($form->fields() as $field)
                     {!! $field->render() !!}
@@ -33,8 +33,8 @@
     </div>
     
 
-    <template class="{{$column}}-tpl">
-        <div class="has-many-{{$column}}-form fields-group">
+    <template class="{{$domName ?? $column}}-tpl">
+        <div class="has-many-{{$domName ?? $column}}-form fields-group">
 
             {!! $template !!}
 

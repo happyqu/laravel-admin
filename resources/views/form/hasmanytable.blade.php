@@ -7,8 +7,8 @@
 <div class="row">
     <div class="{{$viewClass['label']}}"><h4 class="pull-right">{{ $label }}</h4></div>
     <div class="{{$viewClass['field']}}">
-        <div id="has-many-{{$column}}" style="margin-top: 15px;">
-            <table class="table table-has-many has-many-{{$column}}">
+        <div id="has-many-{{$domName ?? $column}}" style="margin-top: 15px;">
+            <table class="table table-has-many has-many-{{$domName ?? $column}}">
                 <thead>
                 <tr>
                     @foreach($headers as $header)
@@ -22,9 +22,9 @@
                     @endif
                 </tr>
                 </thead>
-                <tbody class="has-many-{{$column}}-forms">
+                <tbody class="has-many-{{$domName ?? $column}}-forms">
                 @foreach($forms as $pk => $form)
-                    <tr class="has-many-{{$column}}-form fields-group">
+                    <tr class="has-many-{{$domName ?? $column}}-form fields-group">
 
                         <?php $hidden = ''; ?>
 
@@ -52,8 +52,8 @@
                 </tbody>
             </table>
 
-            <template class="{{$column}}-tpl">
-                <tr class="has-many-{{$column}}-form fields-group">
+            <template class="{{$domName ?? $column}}-tpl">
+                <tr class="has-many-{{$domName ?? $column}}-form fields-group">
 
                     {!! $template !!}
 

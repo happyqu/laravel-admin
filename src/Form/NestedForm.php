@@ -415,13 +415,15 @@ class NestedForm
         return [$html, implode("\r\n", $scripts)];
     }
 
-    /**
-     * Set `errorKey` `elementName` `elementClass` for fields inside hasmany fields.
-     *
-     * @param Field $field
-     *
-     * @return Field
-     */
+    protected ?string $elementScope = null;
+
+    public function scopeElements(?string $scope): self
+    {
+        $this->elementScope = $scope;
+        return $this;
+    }
+
+    /** Set field names and selectors while retaining the nested submission path. */
     protected function formatField(Field $field)
     {
         $column = $field->column();
@@ -470,6 +472,9 @@ class NestedForm
             }
 
             $field = $this->formatField($field);
+            if ($this->elementScope !== null) {
+                $field->scopeElement($this->elementScope.'-'.$this->relationName, (string) $this->getKey());
+            }
 
             $this->pushField($field);
 

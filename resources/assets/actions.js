@@ -244,6 +244,8 @@
                     var holder = shell.children('.modal-dialog').first();
                     if (!holder.length) { holder = $('<div class="modal-dialog"></div>').appendTo(shell); }
                     holder.attr('class', dialog.attr('class')).empty().append(dialog.children());
+                    shell.children('[data-admin-action-extra]').remove();
+                    $('<div data-admin-action-extra="1"></div>').append(markup.contents().not(content)).appendTo(shell);
                     (payload.styles || []).forEach(function (style) { $('<style>').text(style).appendTo(shell); });
                     (payload.scripts || []).forEach(function (script) { Function('jQuery', '$', script).call(root, $, $); });
                     shell.modal('show');

@@ -115,6 +115,7 @@ class Select extends Field
      */
     public function load($field, $sourceUrl, $idField = 'id', $textField = 'text', bool $allowClear = true)
     {
+        $eventRoot = $this->elementScope === null ? '$(document)' : '$("'.$this->getElementClassSelector().'").closest("form")';
         if (Str::contains($field, '.')) {
             $field = $this->formatName($field);
             $class = str_replace(['[', ']'], '_', $field);
@@ -130,8 +131,8 @@ class Select extends Field
         $strAllowClear = var_export($allowClear, true);
 
         $script = <<<EOT
-$(document).off('change', "{$this->getElementClassSelector()}");
-$(document).on('change.adminPage', "{$this->getElementClassSelector()}", function () {
+{$eventRoot}.off('change.adminPage', "{$this->getElementClassSelector()}");
+{$eventRoot}.on('change.adminPage', "{$this->getElementClassSelector()}", function () {
     var target = $(this).closest('.fields-group').find(".$class");
     $.get("$sourceUrl",{q : this.value}, function (data) {
         target.find("option").remove();
@@ -169,6 +170,7 @@ EOT;
      */
     public function loads($fields = [], $sourceUrls = [], $idField = 'id', $textField = 'text', bool $allowClear = true)
     {
+        $eventRoot = $this->elementScope === null ? '$(document)' : '$("'.$this->getElementClassSelector().'").closest("form")';
         $fieldsStr = implode('.', $fields);
         $urlsStr = implode('^', $sourceUrls);
 
@@ -199,8 +201,8 @@ var refreshOptions = function(url, target) {
     });
 };
 
-$(document).off('change', "{$this->getElementClassSelector()}");
-$(document).on('change.adminPage', "{$this->getElementClassSelector()}", function () {
+{$eventRoot}.off('change.adminPage', "{$this->getElementClassSelector()}");
+{$eventRoot}.on('change.adminPage', "{$this->getElementClassSelector()}", function () {
     var _this = this;
     var promises = [];
 
@@ -388,7 +390,7 @@ EOT;
         //移除特定字段名称,增加MultipleSelect的修订
         //没有特定字段名可以使多个readonly的JS代码片段被Admin::script的array_unique精简代码
         $script = <<<'EOT'
-$("form select").on("select2:opening", function (e) {
+$(document).off('select2:opening.adminReadonly', 'form select').on('select2:opening.adminReadonly', 'form select', function (e) {
     if($(this).attr('readonly') || $(this).is(':hidden')){
     e.preventDefault();
     }

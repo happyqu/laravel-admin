@@ -333,6 +333,7 @@ class HasMany extends Field
     protected function buildNestedForm($column, \Closure $builder, $model = null)
     {
         $form = new Form\NestedForm($column, $model);
+        $form->scopeElements($this->elementScope);
 
         if ($this->form instanceof WidgetForm) {
             $form->setWidgetForm($this->form);
@@ -481,6 +482,7 @@ class HasMany extends Field
      */
     protected function setupScriptForDefaultView($templateScript)
     {
+        $domName = $this->domName();
         $removeClass = NestedForm::REMOVE_FLAG_CLASS;
         $defaultKey = NestedForm::DEFAULT_KEY_NAME;
 
@@ -493,27 +495,27 @@ class HasMany extends Field
          */
         $script = <<<EOT
 ;(function () {
-var index = $('.has-many-{$this->column}-form').size();
-$('#has-many-{$this->column}').off('click', '.add').on('click', '.add', function () {
+var index = $('.has-many-{$domName}-form').size();
+$('#has-many-{$domName}').off('click', '.add').on('click', '.add', function () {
 
-    var tpl = $('template.{$this->column}-tpl');
+    var tpl = $('template.{$domName}-tpl');
 
     do {
         index++;
-    } while ($('#has-many-{$this->column}').find(':input[name]').filter(function () {
+    } while ($('#has-many-{$domName}').find(':input[name]').filter(function () {
         return this.name.indexOf('{$this->column}[new_' + index + ']') === 0;
     }).length);
 
     var template = tpl.html().replace(/{$defaultKey}/g, index);
-    $('.has-many-{$this->column}-forms').append(template);
+    $('.has-many-{$domName}-forms').append(template);
     {$templateScript}
     return false;
 });
 
-$('#has-many-{$this->column}').off('click', '.remove').on('click', '.remove', function () {
-    $(this).closest('.has-many-{$this->column}-form').find(':input').removeAttr('required');
-    $(this).closest('.has-many-{$this->column}-form').hide();
-    $(this).closest('.has-many-{$this->column}-form').find('.$removeClass').val(1);
+$('#has-many-{$domName}').off('click', '.remove').on('click', '.remove', function () {
+    $(this).closest('.has-many-{$domName}-form').find(':input').removeAttr('required');
+    $(this).closest('.has-many-{$domName}-form').hide();
+    $(this).closest('.has-many-{$domName}-form').find('.$removeClass').val(1);
     return false;
 });
 
@@ -532,13 +534,14 @@ EOT;
      */
     protected function setupScriptForTabView($templateScript)
     {
+        $domName = $this->domName();
         $removeClass = NestedForm::REMOVE_FLAG_CLASS;
         $defaultKey = NestedForm::DEFAULT_KEY_NAME;
 
         $script = <<<EOT
 ;(function () {
 
-$('#has-many-{$this->column} > .nav').off('click', 'i.close-tab').on('click', 'i.close-tab', function(){
+$('#has-many-{$domName} > .nav').off('click', 'i.close-tab').on('click', 'i.close-tab', function(){
     var \$navTab = $(this).siblings('a');
     var \$pane = $(\$navTab.attr('href'));
     if( \$pane.hasClass('new') ){
@@ -549,24 +552,24 @@ $('#has-many-{$this->column} > .nav').off('click', 'i.close-tab').on('click', 'i
     }
     if(\$navTab.closest('li').hasClass('active')){
         \$navTab.closest('li').remove();
-        $('#has-many-{$this->column} > .nav > li:nth-child(1) > a').tab('show');
+        $('#has-many-{$domName} > .nav > li:nth-child(1) > a').tab('show');
     }else{
         \$navTab.closest('li').remove();
     }
 });
 
 var index = 0;
-$('#has-many-{$this->column} > .header').off('click', '.add').on('click', '.add', function(){
+$('#has-many-{$domName} > .header').off('click', '.add').on('click', '.add', function(){
     do {
         index++;
-    } while ($('#has-many-{$this->column}').find(':input[name]').filter(function () {
+    } while ($('#has-many-{$domName}').find(':input[name]').filter(function () {
         return this.name.indexOf('{$this->column}[new_' + index + ']') === 0;
     }).length);
-    var navTabHtml = $('#has-many-{$this->column} > template.nav-tab-tpl').html().replace(/{$defaultKey}/g, index);
-    var paneHtml = $('#has-many-{$this->column} > template.pane-tpl').html().replace(/{$defaultKey}/g, index);
-    $('#has-many-{$this->column} > .nav').append(navTabHtml);
-    $('#has-many-{$this->column} > .tab-content').append(paneHtml);
-    $('#has-many-{$this->column} > .nav > li:last-child a').tab('show');
+    var navTabHtml = $('#has-many-{$domName} > template.nav-tab-tpl').html().replace(/{$defaultKey}/g, index);
+    var paneHtml = $('#has-many-{$domName} > template.pane-tpl').html().replace(/{$defaultKey}/g, index);
+    $('#has-many-{$domName} > .nav').append(navTabHtml);
+    $('#has-many-{$domName} > .tab-content').append(paneHtml);
+    $('#has-many-{$domName} > .nav > li:last-child a').tab('show');
     {$templateScript}
 });
 
@@ -594,6 +597,7 @@ EOT;
      */
     protected function setupScriptForTableView($templateScript)
     {
+        $domName = $this->domName();
         $removeClass = NestedForm::REMOVE_FLAG_CLASS;
         $defaultKey = NestedForm::DEFAULT_KEY_NAME;
 
@@ -607,30 +611,30 @@ EOT;
         $script = <<<EOT
 ;(function () {
 var index = 0;
-$('#has-many-{$this->column}').off('click', '.add').on('click', '.add', function () {
+$('#has-many-{$domName}').off('click', '.add').on('click', '.add', function () {
 
-    var tpl = $('template.{$this->column}-tpl');
+    var tpl = $('template.{$domName}-tpl');
 
     do {
         index++;
-    } while ($('#has-many-{$this->column}').find(':input[name]').filter(function () {
+    } while ($('#has-many-{$domName}').find(':input[name]').filter(function () {
         return this.name.indexOf('{$this->column}[new_' + index + ']') === 0;
     }).length);
 
     var template = tpl.html().replace(/{$defaultKey}/g, index);
-    $('.has-many-{$this->column}-forms').append(template);
+    $('.has-many-{$domName}-forms').append(template);
     {$templateScript}
     return false;
 });
 
-$('#has-many-{$this->column}').off('click', '.remove').on('click', '.remove', function () {
-    var first_input_name = $(this).closest('.has-many-{$this->column}-form').find('input[name]:first').attr('name');
+$('#has-many-{$domName}').off('click', '.remove').on('click', '.remove', function () {
+    var first_input_name = $(this).closest('.has-many-{$domName}-form').find('input[name]:first').attr('name');
     if (first_input_name.match('{$this->column}\\\[new_')) {
-        $(this).closest('.has-many-{$this->column}-form').remove();
+        $(this).closest('.has-many-{$domName}-form').remove();
     } else {
-        $(this).closest('.has-many-{$this->column}-form').hide();
-        $(this).closest('.has-many-{$this->column}-form').find('.$removeClass').val(1);
-        $(this).closest('.has-many-{$this->column}-form').find(':input').removeAttr('required');
+        $(this).closest('.has-many-{$domName}-form').hide();
+        $(this).closest('.has-many-{$domName}-form').find('.$removeClass').val(1);
+        $(this).closest('.has-many-{$domName}-form').find(':input').removeAttr('required');
     }
     return false;
 });
@@ -665,6 +669,11 @@ EOT;
         return $this;
     }
 
+    protected function domName(): string
+    {
+        return $this->elementScope ? $this->elementScope.'-'.$this->column : $this->column;
+    }
+
     /**
      * Render the `HasMany` field.
      *
@@ -693,7 +702,8 @@ EOT;
         return parent::fieldRender([
             'forms'        => $this->buildRelatedForms(),
             'template'     => $template,
-            'relationName' => $this->relationName,
+            'relationName' => $this->elementScope ? $this->domName() : $this->relationName,
+            'domName'      => $this->domName(),
             'options'      => $this->options,
         ]);
     }
@@ -751,7 +761,8 @@ EOT;
             'headers'      => $headers,
             'forms'        => $this->buildRelatedForms(),
             'template'     => $template,
-            'relationName' => $this->relationName,
+            'relationName' => $this->elementScope ? $this->domName() : $this->relationName,
+            'domName'      => $this->domName(),
             'options'      => $this->options,
         ]);
     }

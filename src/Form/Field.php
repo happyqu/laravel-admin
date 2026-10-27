@@ -85,6 +85,8 @@ class Field implements Renderable
      */
     protected $elementClass = [];
 
+    protected ?string $elementScope = null;
+
     /**
      * Variables of elements.
      *
@@ -931,12 +933,18 @@ class Field implements Renderable
         return $this->column;
     }
 
-    public function scopeElement(string $scope): self
+    public function scopeElement(string $scope, string $instance = ''): self
     {
+        if ($this->elementScope === $scope) return $this;
+        $this->elementScope = $scope;
+        // Preserve the column's lazy default class before adding the modal scope.
+        // Otherwise every field shares a selector and one widget initializes them all.
+        $this->getElementClass();
+        $idPrefix = $scope.($instance !== '' ? '-'.$instance : '');
         $this->id = is_array($this->id)
-            ? array_map(static fn ($id) => $scope.'-'.$id, $this->id) : $scope.'-'.$this->id;
+            ? array_map(static fn ($id) => $idPrefix.'-'.$id, $this->id) : $idPrefix.'-'.$this->id;
         $this->addElementClass([$scope]);
-        if (is_string($this->id)) {
+        if (is_string($this->id) && !($this instanceof Field\Checkbox) && !($this instanceof Field\Radio)) {
             $this->attribute('id', $this->id);
         }
         return $this;
