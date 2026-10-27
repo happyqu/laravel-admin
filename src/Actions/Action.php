@@ -79,6 +79,9 @@ abstract class Action implements Renderable
 
     protected $resolvedModel;
 
+    /** Non-secret runtime options explicitly required to rebuild this action. */
+    protected $contextProperties = [];
+
     /**
      * @var array
      */
@@ -292,34 +295,27 @@ abstract class Action implements Renderable
             $record = Context::modelReference($this->parent?->model()->getOriginalModel() ?? new $class);
             unset($record['key']);
         }
+        if (!$record && $this->contextModel() instanceof \Illuminate\Database\Eloquent\Model) {
+            $record = Context::modelReference($this->contextModel());
+            unset($record['key']);
+        }
         return ['class' => get_class($this), 'state' => $this->contextState(), 'record' => $record,
             'batch' => $this instanceof BatchAction, 'parameters' => $parameters];
     }
 
-    /** Store only explicit scalar configuration and model references, never serialized PHP objects. */
+    /** Only declared runtime options; fixed class properties are rebuilt from code. */
     public function contextState(): array
     {
         $state = [];
-        $skip = ['parent', 'row', 'column', 'interactor', 'response', 'resolvedModel', 'attributes', 'selector'];
-        foreach ((new \ReflectionObject($this))->getProperties() as $property) {
-            if ($property->isStatic() || !$property->isInitialized($this) || in_array($property->getName(), $skip, true)) {
-                continue;
-            }
-
-            if (preg_match('/password|secret|token|api_?key|credential/i', $property->getName())) {
-                continue;
-            }
+        foreach ($this->contextProperties as $name) {
+            $property = new \ReflectionProperty($this, $name);
+            if ($property->isStatic() || !$property->isInitialized($this)) continue;
             $value = $property->getValue($this);
-            $key = $property->getDeclaringClass()->getName().'#'.$property->getName();
-            if ($value instanceof \Illuminate\Database\Eloquent\Model) {
-                $state[$key] = ['model' => Context::modelReference($value)];
-            } else {
-                $this->assertContextValue($value);
-                $state[$key] = ['value' => $value];
-            }
+            $this->assertContextValue($value);
+            $state[$name] = $value;
         }
-        if (strlen(json_encode($state, JSON_THROW_ON_ERROR)) > 65536) {
-            throw new \LogicException('Action configuration exceeds 64 KiB. Load large option sets on demand.');
+        if (strlen(json_encode($state, JSON_THROW_ON_ERROR)) > 4096) {
+            throw new \LogicException('Explicit action options exceed 4 KiB. Load large option sets on demand.');
         }
         return $state;
     }
@@ -331,17 +327,17 @@ abstract class Action implements Renderable
                 $this->assertContextValue($item);
             }
         } elseif ($value !== null && !is_scalar($value)) {
-            throw new \LogicException('Action context must contain scalar configuration or model references. Override contextState for custom services.');
+            throw new \LogicException('Action options must contain scalar values and arrays only.');
         }
     }
 
     public function restoreContext(array $state): void
     {
-        foreach ($state as $key => $entry) {
-            [$class, $name] = explode('#', $key, 2);
-            $value = array_key_exists('model', $entry)
-                ? app(Context::class)->query($entry['model'])->findOrFail($entry['model']['key']) : $entry['value'];
-            (new \ReflectionProperty($class, $name))->setValue($this, $value);
+        foreach ($state as $name => $value) {
+            if (!in_array($name, $this->contextProperties, true)) {
+                ContextToken::fail('action_context_invalid');
+            }
+            (new \ReflectionProperty($this, $name))->setValue($this, $value);
         }
     }
 
@@ -381,12 +377,6 @@ abstract class Action implements Renderable
             $this->attribute('data-admin-dialog', json_encode(
                 $this->loadInteraction()['settings'], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE
             ));
-            // Mint the execution ticket when the confirmation is accepted.
-            // Embedding a long-lived ticket in the rendered page made actions
-            // fail with "Expired action ticket" once the page sat open (the
-            // ticket expired or was consumed by an earlier run); a reload was
-            // the only way to use the button again.
-            $this->attribute('data-admin-prepare', '1');
         }
     }
 

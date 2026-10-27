@@ -392,12 +392,14 @@ test('a failed delete cannot run a refresh command and can be retried', async t 
     app.requests[0].resolve({ mode: 'dialog', ticket: 'execution', settings: { title: 'Delete?' } });
     await until(() => confirmation);
     const task = confirmation.preConfirm();
+    await until(() => app.requests.length === 2);
     assert.equal(app.requests[1].options.data.get('_action_token'), 'execution');
     app.requests[1].resolve({ success: false, msg: '删除失败', then: { action: 'refresh' } });
     await assert.rejects(task);
     assert.deepEqual(app.errors, ['删除失败']);
     assert.equal(app.requests.length, 2);
     const retry = confirmation.preConfirm();
+    await until(() => app.requests.length === 3);
     assert.equal(app.requests.length, 3);
     app.requests[2].reject(500, { success: false, msg: '系统异常' });
     let rejected = false;
@@ -421,6 +423,7 @@ test('inline delete confirmation opens immediately, cancel sends nothing, and co
     app.$('#delete').trigger('click');
     const confirmation = confirmations[1];
     const task = confirmation.preConfirm();
+    await until(() => app.requests.length === 1);
     assert.equal(app.requests.length, 1);
     assert.equal(app.requests[0].options.method, 'POST');
     assert.equal(app.requests[0].options.url, '/admin/_handle_action_');
@@ -434,8 +437,8 @@ test('inline delete confirmation opens immediately, cancel sends nothing, and co
     assert.equal(confirmation.allowOutsideClick(), true);
 });
 
-test('batch confirmations do not load tickets until confirmed and retain the original selection', async t => {
-    const app = await page('<div class="grid-box"><input type="checkbox" data-id="2" class="rows-checkbox" checked><a id="batch" data-admin-action="definition" data-admin-mode="dialog" data-admin-prepare="1" data-admin-batch="1" data-admin-selection="rows-checkbox" data-admin-load="/admin/_load_action_" data-admin-execute="/admin/_handle_action_">Batch</a></div>');
+test('batch confirmation sends selected keys in one handle request without loading a ticket', async t => {
+    const app = await page('<div class="grid-box"><input type="checkbox" data-id="2" class="rows-checkbox" checked><a id="batch" data-admin-action="a3.signed" data-admin-mode="dialog" data-admin-batch="1" data-admin-selection="rows-checkbox" data-admin-load="/load" data-admin-execute="/execute">Batch</a></div>');
     t.after(() => app.window.close());
     app.$('#batch').attr('data-admin-dialog', JSON.stringify({ title: 'Confirm batch?' }));
     let confirmation;
@@ -447,18 +450,55 @@ test('batch confirmations do not load tickets until confirmed and retain the ori
     app.$('input').prop('checked', false);
     const task = confirmation.preConfirm();
     assert.equal(app.requests.length, 1);
-    assert.equal(app.requests[0].options.method, 'GET');
-    assert.deepEqual(Array.from(app.requests[0].options.data._key), ['2']);
-    app.requests[0].resolve({ mode: 'dialog', ticket: 'selected-execution' });
-    await until(() => app.requests.length === 2);
-    assert.equal(app.requests[1].options.method, 'POST');
-    assert.equal(app.requests[1].options.data.get('_action_token'), 'selected-execution');
-    app.requests[1].resolve({ status: true });
+    assert.equal(app.requests[0].options.url, '/execute');
+    assert.equal(app.requests[0].options.data.get('_key[0]'), '2');
+    assert.equal(app.requests[0].options.data.get('_action_token'), 'a3.signed');
+    app.requests[0].resolve({ status: true });
     await task;
+    assert.equal(app.requests.length, 1);
 });
 
-test('a rejected batch preparation never sends the mutation', async t => {
-    const app = await page('<a id="batch" data-admin-action="definition" data-admin-mode="dialog" data-admin-prepare="1" data-admin-load="/admin/_load_action_" data-admin-execute="/admin/_handle_action_">Batch</a>');
+test('long-lived action forms load once, preserve input on failure and never renew or auto-retry writes', async t => {
+    const app = await page('<a id="action" data-admin-action="a3.page" data-admin-mode="form" data-admin-load="/load" data-admin-execute="/execute" data-_key="2">Import</a>');
+    t.after(() => app.window.close());
+    app.$.fn.modal = function () { return this; };
+    app.$.fn.button = function () { return this; };
+    app.window.eval(read('resources/assets/actions.js'));
+    app.$('#action').trigger('click');
+    assert.equal(app.requests[0].options.method, 'POST');
+    assert.equal(app.requests[0].options.data._token, app.$.admin.token);
+    app.requests[0].resolve({ mode: 'form', ticket: 'a3.loaded', html:
+        '<div class="modal" id="action-form"><div class="modal-dialog"><div class="modal-content"><h4 class="modal-title">Default</h4><form><input name="title"><input type="file" name="attachment"><button type="submit">Save</button></form></div></div></div>' });
+    await until(() => app.$('#action-form form').length);
+    assert.equal(app.$('#action-form .modal-title').text(), 'Import');
+    const form = app.$('#action-form form')[0];
+    const input = app.$(form).find('[name="title"]').val('Unsaved draft')[0];
+    const upload = app.$(form).find('[name="attachment"]')[0];
+    app.window.performance.now = () => 3 * 24 * 3600000;
+    app.$(form).trigger('submit');
+    await until(() => app.requests.length === 2);
+    assert.equal(app.requests[1].options.url, '/execute');
+    assert.equal(app.requests[1].options.data.get('_action_token'), 'a3.loaded');
+    assert.equal(app.requests[1].options.data.get('title'), 'Unsaved draft');
+    app.requests[1].reject(500, { message: 'Network failed' });
+    await until(() => app.errors.includes('Network failed'));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(app.requests.length, 2);
+    assert.equal(input.value, 'Unsaved draft');
+    assert.equal(app.$(form).find('[name="attachment"]')[0], upload);
+    app.$(form).trigger('submit');
+    await until(() => app.requests.length === 3);
+    assert.equal(app.requests[2].options.url, '/execute');
+    app.requests[2].reject(409, { status: false, code: 'action_record_changed', message: 'Record changed' });
+    await until(() => app.errors.includes('Record changed'));
+    assert.equal(app.requests.length, 3);
+    assert.equal(app.$('#action-form form')[0], form);
+    assert.equal(input.value, 'Unsaved draft');
+    assert.equal(app.window.location.pathname, '/admin/users');
+});
+
+test('a rejected batch action does not load or retry and restores the confirmation controls', async t => {
+    const app = await page('<a id="batch" data-admin-action="a3.signed" data-admin-mode="dialog" data-admin-execute="/execute">Batch</a>');
     t.after(() => app.window.close());
     app.$('#batch').attr('data-admin-dialog', JSON.stringify({ title: 'Confirm?' }));
     let confirmation;
@@ -466,9 +506,11 @@ test('a rejected batch preparation never sends the mutation', async t => {
     app.window.eval(read('resources/assets/actions.js'));
     app.$('#batch').trigger('click');
     const task = confirmation.preConfirm();
+    assert.equal(app.requests[0].options.url, '/execute');
     app.requests[0].resolve({ success: false, msg: 'Permission denied' });
     await assert.rejects(task);
     assert.equal(app.requests.length, 1);
+    assert.equal(confirmation.allowOutsideClick(), true);
     assert.deepEqual(app.errors, ['Permission denied']);
 });
 

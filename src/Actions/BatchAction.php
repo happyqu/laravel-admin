@@ -80,6 +80,11 @@ abstract class BatchAction extends GridAction
         return collect($data['data'] ?? $data)->pluck($key)->all();
     }
 
+    public function contextModel()
+    {
+        return $this->resolvedModel ?? $this->parent?->model()->buildData(false);
+    }
+
     /**
      * @return string
      */

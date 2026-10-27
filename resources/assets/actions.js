@@ -97,11 +97,11 @@
                 var confirmation = current.confirm ? $.admin.swal({ type: 'question', title: current.confirm, showCancelButton: true }) : Promise.resolve({ value: true });
                 Promise.resolve(confirmation).then(function (result) {
                     if (!result.value) return;
+                    shell.find(':submit').button('loading');
+                    clearErrors();
                     var data = new root.FormData(form);
                     data.set('_action_token', current.ticket);
                     data.set('_token', $.admin.token);
-                    shell.find(':submit').button('loading');
-                    clearErrors();
                     return send(current, data, true);
                 }).catch(notify).finally(function () { state.unlock(); shell.find(':submit').button('reset'); });
             });
@@ -181,24 +181,14 @@
         settings = Object.assign({}, settings);
         settings.preConfirm = function (value) {
             if (!state.current(sequence) || !state.lock()) return Promise.reject();
-            var ready = Promise.resolve();
-            if (current.prepare) {
-                ready = Promise.resolve($.ajax({ url: current.loadUrl, method: 'GET',
-                    data: { _action_token: current.ticket, _key: current.keys }, dataType: 'json', cache: false }))
-                    .then(function (payload) {
-                        if ($.admin.isResponseError(payload)) { throw { responseJSON: payload }; }
-                        if (!payload.ticket) { throw new Error('Unable to prepare this action.'); }
-                        current.ticket = payload.ticket;
-                        current.prepare = false;
-                    }).catch(function (error) { notify(error); throw error; });
-            }
             function execute() {
                 var data = new root.FormData();
                 append(data, '_input', value);
+                append(data, '_key', current.keys);
                 data.set('_action_token', current.ticket); data.set('_token', $.admin.token);
                 return send(current, data, true, true);
             }
-            return (current.prepare ? ready.then(execute) : execute()).finally(function () { state.unlock(); });
+            return execute().finally(function () { state.unlock(); });
         };
         settings.allowOutsideClick = function () { return !state.saving; };
         settings.allowEscapeKey = function () { return !state.saving; };
@@ -216,7 +206,7 @@
         var keys = selected(button), mode = button.attr('data-admin-mode');
         if (button.attr('data-admin-batch') === '1' && !keys.length) { $.admin.toastr.warning('No data selected!'); return; }
         var current = { target: button, url: button.attr('data-admin-execute'), ticket: button.attr('data-admin-action'), mode: mode,
-            prepare: button.attr('data-admin-prepare') === '1', loadUrl: button.attr('data-admin-load'), keys: keys };
+            keys: keys };
         var inlineDialog = button.attr('data-admin-dialog');
         if (mode === 'dialog' && inlineDialog) {
             try { showDialog(current, JSON.parse(inlineDialog), sequence); }
@@ -230,14 +220,15 @@
             return;
         }
         var request = $.ajax({
-            url: button.attr('data-admin-load'), method: 'GET',
-            data: { _action_token: current.ticket, _key: keys }, dataType: 'json', cache: false
+            url: button.attr('data-admin-load'), method: 'POST',
+            data: { _action_token: current.ticket, _key: keys, _token: $.admin.token }, dataType: 'json', cache: false
         });
         state.request = request;
         Promise.resolve(request).then(function (payload) {
             if ($.admin.isResponseError(payload)) { throw { responseJSON: payload }; }
             return assets(payload.assets).then(function () {
                 if (!state.current(sequence)) return;
+                if (!payload.ticket) { throw new Error('Unable to prepare this action.'); }
                 current.ticket = payload.ticket;
                 current.confirm = payload.confirm;
                 active = current;
@@ -245,6 +236,8 @@
                     var markup = $('<div>').append($.parseHTML(payload.html, root.document, false));
                     var content = markup.find('.modal').first();
                     var dialog = content.find('.modal-dialog').first();
+                    var title = button.text().trim();
+                    if (title) dialog.find('.modal-title').text(title);
                     // The form only appears once its loading finished.
                     modal(); destroyFields();
                     shell.attr('id', content.attr('id'));

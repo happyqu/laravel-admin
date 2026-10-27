@@ -42,6 +42,7 @@ class ControllerBehaviorTest extends TestCase
             ]],
         ]));
         $app->instance('files', new \Illuminate\Filesystem\Filesystem());
+        $app->instance('encrypter', new \Illuminate\Encryption\Encrypter(str_repeat('k', 32), 'AES-256-CBC'));
         $this->session = new Store('controllers', new ArraySessionHandler(120));
         $app->instance('session', $this->session);
         foreach ([\Illuminate\Translation\TranslationServiceProvider::class, \Illuminate\Validation\ValidationServiceProvider::class,
@@ -277,7 +278,7 @@ class ControllerBehaviorTest extends TestCase
         $this->assertSame('http://localhost/admin/source', session('admin.form_submissions.'.$token.'.source'));
         $action = new class extends \Encore\Admin\Actions\Action {};
         $token = (new \Encore\Admin\Actions\Context())->register($action);
-        $this->assertSame('http://localhost/admin/source', session('admin.action_contexts.'.$token.'.source'));
+        $this->assertSame(['http://localhost/admin/source', 'GET'], \Encore\Admin\Actions\ContextToken::decode($token)['source']);
     }
 }
 

@@ -4,6 +4,7 @@ namespace Encore\Admin\Tests\Grid;
 
 use Encore\Admin\Actions\Action;
 use Encore\Admin\Actions\Context;
+use Encore\Admin\Actions\ContextToken;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Grid\Actions\Delete;
 use Illuminate\Config\Repository;
@@ -23,6 +24,7 @@ class DeleteConfirmationTest extends TestCase
     private Application $app;
     private Store $session;
     private ConfirmationRow $row;
+    private object $user;
 
     protected function setUp(): void
     {
@@ -30,8 +32,11 @@ class DeleteConfirmationTest extends TestCase
         $this->app = new Application(dirname(__DIR__, 2));
         $this->app->instance('config', new Repository([
             'app' => ['locale' => 'en', 'fallback_locale' => 'en'],
+            'view' => ['paths' => [], 'compiled' => sys_get_temp_dir()],
             'admin' => ['route' => ['prefix' => 'admin']],
+            'cache' => ['default' => 'array', 'stores' => ['array' => ['driver' => 'array']]],
         ]));
+        $this->app->instance('encrypter', new \Illuminate\Encryption\Encrypter(str_repeat('k', 32), 'AES-256-CBC'));
         $this->app->instance('files', new \Illuminate\Filesystem\Filesystem());
         $this->session = new Store('actions', new ArraySessionHandler(120));
         $this->app->instance('session', $this->session);
@@ -39,12 +44,17 @@ class DeleteConfirmationTest extends TestCase
         $this->app->register(\Illuminate\Events\EventServiceProvider::class);
         $this->app->register(\Illuminate\Routing\RoutingServiceProvider::class);
         $this->app->register(\Illuminate\Translation\TranslationServiceProvider::class);
-        $this->app['router']->get('admin/users', fn () => '');
+        $this->app->register(\Illuminate\View\ViewServiceProvider::class);
+        $this->app->register(\Illuminate\Cache\CacheServiceProvider::class);
+        $this->app['router']->get('admin/users', fn () => '')->middleware('admin.permission:check,view-users');
         Facade::clearResolvedInstances();
         Facade::setFacadeApplication($this->app);
-        $user = new class {
-            public function getAuthIdentifier() { return 42; }
-            public function isRole($role) { return $role === 'administrator'; }
+        $user = $this->user = new class {
+            public int $id = 42;
+            public bool $allowed = true;
+            public function getAuthIdentifier() { return $this->id; }
+            public function isRole($role) { return false; }
+            public function can($permission) { return $this->allowed; }
         };
         $admin = $this->createMock(\Encore\Admin\Admin::class);
         $admin->method('user')->willReturn($user);
@@ -75,93 +85,215 @@ class DeleteConfirmationTest extends TestCase
     private function render(): array
     {
         $html = (new ConfirmationDelete())->setRow($this->row)->render();
-        preg_match('/data-admin-action="([a-f0-9]{48})"/', $html, $match);
+        preg_match('/data-admin-action="([^"]+)"/', $html, $match);
         return [$html, $match[1]];
     }
 
-    public function test_rendered_delete_defers_its_execution_ticket_until_confirmation(): void
+    private function assertActionError(callable $callback, string $code, int $status = 409): void
     {
-        [$html, $token] = $this->render();
-        preg_match('/data-admin-dialog="([^"]+)"/', $html, $match);
-        $dialog = json_decode(html_entity_decode($match[1], ENT_QUOTES, 'UTF-8'), true, 512, JSON_THROW_ON_ERROR);
-        $this->assertTrue($dialog['showCancelButton']);
-        $this->assertTrue($dialog['showLoaderOnConfirm']);
-        // The button carries the definition ticket only; the page must not
-        // embed a long-lived execution ticket that can expire or be consumed.
-        $this->assertStringContainsString('data-admin-prepare="1"', $html);
-        $ticket = $this->session->get('admin.action_contexts.'.$token);
-        $this->assertSame('definition', $ticket['phase']);
-        $this->assertArrayHasKey('2', $ticket['keys']);
-        // Confirming loads the definition and issues a fresh execution ticket
-        // bound to the record rendered with the button (HandleController::loadAction).
-        $context = $this->app[Context::class];
-        [$action, $model] = $context->resolve(
-            Request::create('/admin/_load_action_', 'GET', ['_action_token' => $token, '_key' => [2]]),
-            true
-        );
-        $this->assertInstanceOf(ConfirmationDelete::class, $action);
-        $this->assertSame(2, $model->getKey());
-        $execution = $context->executionTicket($token, [2], $model);
-        $executeTicket = $this->session->get('admin.action_contexts.'.$execution);
-        $this->assertSame('execute', $executeTicket['phase']);
-        $this->assertSame([2], $executeTicket['selected']);
-        $this->assertSame('2026-01-01 12:00:00', $executeTicket['versions'][ConfirmationRow::class.':2']);
-        // Client-supplied keys cannot replace the record bound at load time.
-        [, $resolved] = $this->app[Context::class]->resolve(Request::create('/admin/_handle_action_', 'POST', [
-            '_action_token' => $execution, '_key' => [99],
-        ]));
-        $this->assertSame(2, $resolved->getKey());
+        try {
+            $callback();
+            $this->fail('Expected action error: '.$code);
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $exception) {
+            $this->assertSame($status, $exception->getResponse()->getStatusCode());
+            $this->assertSame($code, $exception->getResponse()->getData(true)['code']);
+        }
     }
 
-    public function test_record_changes_after_confirmation_reject_the_execution(): void
+    public function test_row_confirmation_uses_a_small_signed_ticket_and_executes_without_a_load(): void
     {
         [$html, $token] = $this->render();
-        $context = $this->app[Context::class];
-        [, $model] = $context->resolve(
-            Request::create('/admin/_load_action_', 'GET', ['_action_token' => $token, '_key' => [2]]),
-            true
-        );
-        $execution = $context->executionTicket($token, [2], $model);
-        $this->row->setRawAttributes(['id' => 2, 'updated_at' => '2026-01-01 12:01:00'], true);
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
-        $this->expectExceptionMessage('The record changed. Reopen the action.');
-        $context->resolve(Request::create('/admin/_handle_action_', 'POST', ['_action_token' => $execution]));
-    }
-
-    public function test_custom_row_dialogs_also_defer_their_execution_ticket(): void
-    {
-        $html = (new ConfirmationCustomAction())->setRow($this->row)->render();
         $this->assertStringContainsString('data-admin-dialog=', $html);
-        $this->assertStringContainsString('data-admin-prepare="1"', $html);
-        preg_match('/data-admin-action="([a-f0-9]{48})"/', $html, $match);
-        $this->assertSame('definition', $this->session->get('admin.action_contexts.'.$match[1].'.phase'));
+        $this->assertStringNotContainsString('data-admin-prepare=', $html);
+        $this->assertStringStartsWith('a3.', $token);
+        $this->assertLessThan(1200, strlen($token));
+        $ticket = ContextToken::decode($token);
+        $this->assertSame(ConfirmationDelete::class, $ticket['action']);
+        $this->assertSame(['2'], $ticket['keys']);
+        $this->assertSame('2026-01-01 12:00:00', $ticket['versions'][2]);
+        foreach (['expires', 'phase', 'state', 'identity', 'definition'] as $key) $this->assertArrayNotHasKey($key, $ticket);
+        [$action, $model] = $this->app[Context::class]->resolve(Request::create('/execute', 'POST', [
+            '_action_token' => $token, '_key' => 2, '_input' => true,
+        ]));
+        $this->assertInstanceOf(ConfirmationDelete::class, $action);
+        $this->assertSame($this->row, $model);
     }
 
-    public function test_batch_dialogs_render_confirmation_but_defer_binding_selection(): void
+    public function test_display_properties_do_not_enter_the_ticket(): void
+    {
+        $action = (new ConfirmationCustomAction())->setRow($this->row);
+        $context = $this->app[Context::class];
+        $first = $context->register($action);
+        $action->name = str_repeat('display only', 10000);
+        $this->assertSame($first, $context->register($action));
+        $this->assertArrayNotHasKey('options', ContextToken::decode($first));
+    }
+
+    public function test_record_changes_reject_a_signed_row_action(): void
+    {
+        [, $token] = $this->render();
+        $this->row->setRawAttributes(['id' => 2, 'updated_at' => '2026-01-01 12:01:00'], true);
+        $this->assertActionError(fn () => $this->app[Context::class]->resolve(Request::create('/execute', 'POST', [
+            '_action_token' => $token, '_key' => 2,
+        ])), 'action_record_changed');
+    }
+
+    public function test_batch_confirmations_submit_only_selected_records_in_the_signed_scope(): void
     {
         $html = (new ConfirmationBatchAction())->render();
-        $this->assertStringContainsString('data-admin-dialog=', $html);
-        $this->assertStringContainsString('data-admin-prepare="1"', $html);
-        preg_match('/data-admin-action="([a-f0-9]{48})"/', $html, $match);
-        $this->assertSame('definition', $this->session->get('admin.action_contexts.'.$match[1].'.phase'));
-        $this->expectExceptionMessage('Open the action first.');
-        $this->app[Context::class]->resolve(Request::create('/admin/_handle_action_', 'POST', [
+        $this->assertStringNotContainsString('data-admin-prepare=', $html);
+        preg_match('/data-admin-action="([^"]+)"/', $html, $match);
+        [, $models, , $keys] = $this->app[Context::class]->resolve(Request::create('/execute', 'POST', [
             '_action_token' => $match[1], '_key' => [2],
         ]));
+        $this->assertInstanceOf(Collection::class, $models);
+        $this->assertSame([2], $keys);
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->app[Context::class]->resolve(Request::create('/execute', 'POST', ['_action_token' => $match[1], '_key' => [99]]));
     }
 
-    public function test_toolbar_action_placeholder_key_is_not_treated_as_a_record(): void
+    public function test_toolbar_placeholder_is_ignored_but_a_bound_model_is_restored(): void
     {
-        $token = $this->app[Context::class]->register(new ConfirmationToolbarAction());
-
-        [$action, $model, , $keys] = $this->app[Context::class]->resolve(
-            Request::create('/admin/_load_action_', 'GET', ['_action_token' => $token, '_key' => ['0']]),
-            true
-        );
-
-        $this->assertInstanceOf(ConfirmationToolbarAction::class, $action);
+        $context = $this->app[Context::class];
+        $token = $context->register(new ConfirmationToolbarAction());
+        [, $model, , $keys] = $context->resolve(Request::create('/load', 'POST', ['_action_token' => $token, '_key' => '0']), true);
         $this->assertNull($model);
         $this->assertSame([], $keys);
+        $action = new ConfirmationBoundToolbar();
+        $action->bind($this->row);
+        $token = $context->register($action);
+        [$resolved, $model] = $context->resolve(Request::create('/load', 'POST', ['_action_token' => $token, '_key' => 2]), true);
+        $this->assertSame($this->row, $model);
+        $this->assertSame($this->row, $resolved->contextModel());
+    }
+
+    public function test_definitions_survive_more_than_512_actions_without_a_session_map(): void
+    {
+        [, $token] = $this->render();
+        $context = $this->app[Context::class];
+        for ($i = 10; $i < 540; $i++) {
+            $row = clone $this->row;
+            $row->id = $i;
+            $context->register((new ConfirmationDelete())->setRow($row));
+        }
+        $this->assertFalse($this->session->has('admin.action_contexts'));
+        $this->session->forget('admin.action_contexts');
+        [, $model] = $context->resolve(Request::create('/execute', 'POST', ['_action_token' => $token, '_key' => 2]));
+        $this->assertSame(2, $model->getKey());
+    }
+
+    public function test_invalid_and_tampered_tickets_are_business_errors_and_not_419(): void
+    {
+        [, $token] = $this->render();
+        foreach ([str_repeat('a', 48), 'a2.old-ticket', ['invalid']] as $invalid) {
+            $this->assertActionError(fn () => $this->app[Context::class]->resolve(Request::create('/load', 'POST', [
+                '_action_token' => $invalid,
+            ]), true), 'action_context_invalid');
+        }
+        $parts = explode('.', $token);
+        $payload = ContextToken::decode($token);
+        $payload['parameters']['_cb'] = 'unauthorizedMethod';
+        $parts[1] = rtrim(strtr(base64_encode(json_encode($payload)), '+/', '-_'), '=');
+        $this->assertActionError(fn () => ContextToken::decode(implode('.', $parts)), 'action_context_invalid', 403);
+    }
+
+    public function test_login_user_and_admin_scope_changes_invalidate_tickets(): void
+    {
+        [, $token] = $this->render();
+        $this->user->id = 43;
+        $this->assertActionError(fn () => ContextToken::decode($token), 'action_context_invalid', 403);
+        $this->user->id = 42;
+        config(['admin.route.prefix' => 'other']);
+        $this->assertActionError(fn () => ContextToken::decode($token), 'action_context_invalid', 403);
+        config(['admin.route.prefix' => 'admin']);
+        $this->session->regenerateToken();
+        $this->assertActionError(fn () => ContextToken::decode($token), 'action_context_invalid', 403);
+    }
+
+    public function test_execution_rechecks_current_source_and_record_permissions(): void
+    {
+        [, $token] = $this->render();
+        foreach (['source', 'record'] as $permission) {
+            $this->user->allowed = $permission !== 'source';
+            $this->row->actionAllowed = $permission !== 'record';
+            try {
+                $this->app[Context::class]->resolve(Request::create('/execute', 'POST', ['_action_token' => $token, '_key' => 2]));
+                $this->fail('Permission revocation was ignored.');
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+                $this->assertSame(403, $exception->getStatusCode());
+            }
+        }
+    }
+
+    public function test_signed_callbacks_override_client_controls_and_row_is_available_to_form_builders(): void
+    {
+        $context = $this->app[Context::class];
+        $action = (new ConfirmationImportRow())->setRow($this->row);
+        $action->headers(['id', 'code']);
+        $token = $context->register($action);
+        $ticket = ContextToken::decode($token);
+        $this->assertSame(['headerList' => ['id', 'code']], $ticket['options']);
+        [$resolved] = $context->resolve(Request::create('/load', 'POST', [
+            '_action_token' => $token, '_key' => 2, '_class' => 'Forged', '_cb' => 'evil',
+        ]), true);
+        $this->assertSame('AllowedController', request('_class'));
+        $this->assertSame('import', request('_cb'));
+        $this->app['view']->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
+        $payload = $resolved->loadInteraction();
+        $this->assertStringContainsString('id,code', $payload['html']);
+        $this->assertStringContainsString('value="2"', $payload['html']);
+    }
+
+    public function test_form_load_binds_selection_and_versions_without_expiry_or_renewal_metadata(): void
+    {
+        $context = $this->app[Context::class];
+        $token = $context->register((new ConfirmationImportRow())->setRow($this->row));
+        $this->assertActionError(fn () => $context->resolve(Request::create('/execute', 'POST', [
+            '_action_token' => $token, '_key' => 2,
+        ])), 'action_open_required');
+        $this->app['view']->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
+        $controller = new \Encore\Admin\Controllers\HandleController();
+        $payload = $controller->loadAction(Request::create('/load', 'POST', ['_action_token' => $token, '_key' => 2]))->getData(true);
+        $this->assertArrayNotHasKey('expires_in', $payload);
+        $loaded = ContextToken::decode($payload['ticket']);
+        $this->assertTrue($loaded['loaded']);
+        $this->assertArrayNotHasKey('expires', $loaded);
+        [, $model] = $context->resolve(Request::create('/execute', 'POST', ['_action_token' => $payload['ticket'], '_key' => 99]));
+        $this->assertSame(2, $model->getKey());
+        $this->row->setRawAttributes(['id' => 2, 'updated_at' => 'changed'], true);
+        $this->assertActionError(fn () => $context->resolve(Request::create('/execute', 'POST', [
+            '_action_token' => $payload['ticket'],
+        ])), 'action_record_changed');
+    }
+
+    public function test_existing_completed_execution_marker_still_blocks_repeats(): void
+    {
+        [, $token] = $this->render();
+        $context = $this->app[Context::class];
+        $calls = 0;
+        $run = function () use (&$calls) { $calls++; return response()->json(['status' => true]); };
+        $context->execute(Request::create('/execute', 'POST', ['_action_token' => $token]), $run);
+        try {
+            $context->execute(Request::create('/execute', 'POST', ['_action_token' => $token]), $run);
+            $this->fail('Duplicate execution passed.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+        $this->assertSame(1, $calls);
+    }
+
+    public function test_explicit_options_and_total_payload_have_size_limits(): void
+    {
+        $action = (new ConfirmationImportRow())->setRow($this->row);
+        $action->headers([str_repeat('x', 4097)]);
+        try {
+            $this->app[Context::class]->register($action);
+            $this->fail('Oversized explicit options were accepted.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('4 KiB', $exception->getMessage());
+        }
+        $this->expectException(\LengthException::class);
+        ContextToken::encode(['data' => str_repeat('x', ContextToken::MAX_PAYLOAD_BYTES)]);
     }
 }
 
@@ -170,7 +302,10 @@ class ConfirmationDelete extends Delete
     public function parameters() { return []; }
 }
 
-class ConfirmationRow extends Model {}
+class ConfirmationRow extends Model {
+    public bool $actionAllowed = true;
+    public function actionAuthorize($user, $action) { return $this->actionAllowed; }
+}
 
 class ConfirmationToolbarAction extends Action
 {
@@ -193,4 +328,23 @@ class ConfirmationBatchAction extends \Encore\Admin\Actions\BatchAction
     public function contextKeys(): array { return [2, 3]; }
     public function dialog() { $this->confirm('Confirm batch'); }
     public function render() { $this->addScript(); return $this->formatAttributes(); }
+}
+
+class ConfirmationBoundToolbar extends ConfirmationToolbarAction
+{
+    protected $model;
+    public function bind(Model $model) { $this->model = $model; }
+}
+
+class ConfirmationImportRow extends \Encore\Admin\Actions\RowAction
+{
+    protected $contextProperties = ['headerList'];
+    protected $headerList = [];
+    public function headers(array $headers) { $this->headerList = $headers; }
+    public function parameters() { return ['_model' => ConfirmationRow::class, '_class' => 'AllowedController', '_cb' => 'import']; }
+    public function form() {
+        $this->text('id', 'ID')->value($this->getRow()->getKey())->readonly();
+        $this->text('sample', 'Sample')->value(implode(',', $this->headerList))->readonly();
+        $this->text('name', 'Name')->rules('required');
+    }
 }
