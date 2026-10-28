@@ -181,6 +181,33 @@ test('datetime ranges keep time precision and time-only fields enable seconds an
     } finally { w.finish(); }
 });
 
+test('empty datetime and time pickers start at midnight while explicit defaults and saved values are retained', () => {
+    const w = page('<input id="date"><input id="time"><input id="custom"><input id="saved" value="2026-10-28 15:34:56">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'YYYY-MM-DD HH:mm:ss' });
+        assert.equal(p.instance.hourElement.value, '00');
+        assert.equal(p.instance.minuteElement.value, '00');
+        assert.equal(p.instance.secondElement.value, '00');
+        p.show();
+        const day = p.instance.daysContainer.querySelector('.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)');
+        day.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+        assert.match(p.input.value, / 00:00:00$/);
+        const time = w.$.admin.datepicker.init(w.document.querySelector('#time'), { format: 'HH:mm:ss' });
+        assert.equal(time.instance.hourElement.value, '00');
+        assert.equal(time.instance.minuteElement.value, '00');
+        assert.equal(time.instance.secondElement.value, '00');
+        const custom = w.$.admin.datepicker.init(w.document.querySelector('#custom'), {
+            format: 'YYYY-MM-DD HH:mm:ss', defaultHour: 9, defaultMinute: 15, defaultSeconds: 30,
+        });
+        assert.equal(custom.instance.hourElement.value, '09');
+        assert.equal(custom.instance.minuteElement.value, '15');
+        assert.equal(custom.instance.secondElement.value, '30');
+        const saved = w.$.admin.datepicker.init(w.document.querySelector('#saved'), { format: 'YYYY-MM-DD HH:mm:ss' });
+        assert.equal(saved.input.value, '2026-10-28 15:34:56');
+        assert.equal(saved.instance.hourElement.value, '15');
+    } finally { w.finish(); }
+});
+
 test('transition datetimepicker API exposes change dates without a Moment dependency', () => {
     const w = page('<div class="input-group"><input id="date"><span class="input-group-addon">Open</span></div>');
     try {

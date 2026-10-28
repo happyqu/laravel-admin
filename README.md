@@ -127,7 +127,7 @@ AJAX 请求超过 180 毫秒时显示居中的“加载中”提示，并发请�
 
 ### 日期与时间
 
-日期、日期时间、时间、起止范围、`DateMultiple`、Grid 日期筛选及日期行内编辑统一使用 Flatpickr 4.6.13，不再加载 Moment 或旧 DateTimePicker。PHP 字段接口、字段名和默认提交格式保持一致：
+日期、日期时间、时间、起止范围、`DateMultiple`、Grid 日期筛选及日期行内编辑统一使用 Flatpickr 4.6.13，不再加载 Moment 或旧 DateTimePicker。空字段默认时间为 `00:00:00`，已有时间值保持原样，也可通过 `defaultHour`、`defaultMinute`、`defaultSeconds` 显式覆盖。PHP 字段接口、字段名和默认提交格式保持一致：
 
 ```php
 $form->date('date');                            // YYYY-MM-DD
