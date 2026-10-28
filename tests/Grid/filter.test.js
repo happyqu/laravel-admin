@@ -48,25 +48,21 @@ test('date and range filters initialize and constrain only their own named grid'
     const second = fixtures.dates_second;
     const w = page(first.html + second.html);
     try {
-        const initialized = [];
-        const constraints = [];
-        w.$.fn.datetimepicker = function () {
-            this.each(function () {
-                initialized.push(this.id);
-                w.$(this).data('DateTimePicker', {
-                    minDate: value => constraints.push([this.id, 'min', value]),
-                    maxDate: value => constraints.push([this.id, 'max', value]),
-                });
-            });
-            return this;
-        };
+        for (const asset of ['flatpickr/dist/flatpickr.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+            w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
+        }
         w.eval(first.script);
         w.eval(second.script);
-        assert.deepEqual(initialized, ['first_created_at', 'first_updated_at_start', 'first_updated_at_end',
-            'second_created_at', 'second_updated_at_start', 'second_updated_at_end']);
-        w.$('#first_updated_at_start').trigger(w.$.Event('dp.change', { date: '2026-10-28' }));
-        w.$('#second_updated_at_end').trigger(w.$.Event('dp.change', { date: '2026-10-29' }));
-        assert.deepEqual(constraints, [['first_updated_at_end', 'min', '2026-10-28'], ['second_updated_at_start', 'max', '2026-10-29']]);
+        const picker = id => w.$('#' + id).data('adminDatepicker');
+        for (const id of ['first_created_at', 'first_updated_at_start', 'first_updated_at_end',
+            'second_created_at', 'second_updated_at_start', 'second_updated_at_end']) assert.ok(picker(id), id);
+        picker('first_updated_at_start').date('2026-10-28 10:00:00');
+        picker('second_updated_at_end').date('2026-10-29 11:00:00');
+        assert.equal(picker('first_updated_at_end').instance.config.minDate.getDate(), 28);
+        assert.equal(picker('second_updated_at_start').instance.config.maxDate.getDate(), 29);
+        assert.equal(picker('second_updated_at_end').instance.config.minDate, undefined);
+        assert.equal(picker('first_updated_at_start').instance.config.maxDate, undefined);
+
     } finally { w.close(); }
 });
 

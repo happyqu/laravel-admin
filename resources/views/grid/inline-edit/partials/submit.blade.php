@@ -6,6 +6,15 @@ $(document).off('click.adminPage', '.{{ $trigger }}-content .ie-submit').on('cli
     var $popover = $(this).closest('.ie-content');
     var $trigger = $popover.data('trigger');
 
+    // Inline editors submit through AJAX without a native form submission.
+    var invalidInput = $popover.find(':input').filter(function () {
+        return typeof this.checkValidity === 'function' && !this.checkValidity();
+    }).first()[0];
+    if (invalidInput) {
+        invalidInput.reportValidity();
+        return;
+    }
+
     @isset($val)
         {{ $val }}
     @else

@@ -1,0 +1,311 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+const { JSDOM } = require('jsdom');
+
+const root = path.join(__dirname, '../..');
+const read = name => fs.readFileSync(path.join(root, 'resources/assets', name), 'utf8');
+
+function page(html = '<input id="date" name="date">', editable = false) {
+    const w = new JSDOM('<div id="admin-content"><form>' + html + '</form></div>', {
+        runScripts: 'outside-only', url: 'http://localhost/admin/items', pretendToBeVisual: true,
+    }).window;
+    w.eval(read('AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'));
+    if (editable) {
+        w.eval(read('AdminLTE/bootstrap/js/bootstrap.min.js'));
+        w.eval(read('bootstrap3-editable/js/bootstrap-editable.min.js'));
+    }
+    w.eval(read('flatpickr/dist/flatpickr.js'));
+    w.eval(read('laravel-admin/flatpickr-locales.js'));
+    w.eval(read('laravel-admin/datepicker.js'));
+    w.finish = () => { w.$.admin.datepicker.destroy(); w.close(); };
+    return w;
+}
+
+test('legacy formats retain submitted date, datetime, time, year and month values', () => {
+    const w = page();
+    try {
+        for (const [format, value] of [['YYYY-MM-DD', '2024-02-29'], ['YYYY-MM-DD HH:mm:ss', '2026-10-28 23:59:58'],
+            ['HH:mm:ss', '23:59:58'], ['YYYY', '2026'], ['MM', '10'], ['DD', '28'],
+            ['YYYY-MM-DD hh:mm:ss A', '2026-10-28 01:05:06 PM'],
+            ['DD/MM/YYYY', '28/10/2026'], ['YYYY-MM-DD[T]HH:mm:ss', '2026-10-28T09:08:07']]) {
+            const picker = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format });
+            picker.date(value);
+            assert.equal(picker.input.value, value, format);
+            assert.equal(picker.date().format(format), value, format);
+            assert.equal(new w.FormData(w.document.querySelector('form')).get('date'), value);
+            assert.equal(w.moment, undefined);
+            picker.destroy();
+        }
+    } finally { w.finish(); }
+});
+
+test('date formatting preserves bracket literals and rejects unsupported tokens explicitly', () => {
+    const w = page();
+    try {
+        assert.equal(w.$.admin.datepicker.convertFormat('YYYY-MM-DD [at] HH:mm:ss'), 'Y-m-d \\a\\t H:i:S');
+        assert.throws(() => w.$.admin.datepicker.convertFormat('YYYY-[Q]Q'), /Unsupported date format token/);
+        assert.throws(() => w.$('#date').adminDatepicker({ timeZone: 'Asia/Shanghai' }), /not supported/);
+    } finally { w.finish(); }
+});
+
+test('locale aliases and existing multiple-date format options are honored', () => {
+    const w = page();
+    try {
+        for (const [locale, firstMonth] of [['zh-CN', '一月'], ['zh_TW', '一月'], ['fr', 'janvier'], ['en_US', 'January']]) {
+            const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'DD/MM/YYYY', locale, mode: 'multiple' });
+            p.date(['28/10/2026', '29/10/2026']);
+            assert.equal(p.input.value, '28/10/2026, 29/10/2026');
+            assert.equal(p.instance.l10n.months.longhand[0], firstMonth);
+            assert.equal(p.instance.calendarContainer.querySelectorAll('.admin-datepicker-buttons').length, 1);
+        }
+    } finally { w.finish(); }
+});
+
+test('invalid dates are retained and fail native validation instead of rolling into another month', () => {
+    const w = page('<input id="date" name="date" value="2026-02-30">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'YYYY-MM-DD' });
+        assert.equal(p.input.value, '2026-02-30');
+        assert.equal(p.input.checkValidity(), false);
+        p.date('2026-10-28');
+        assert.equal(p.input.value, '2026-10-28');
+        assert.equal(p.input.checkValidity(), true);
+        p.date('2026-13-01');
+        assert.equal(p.input.value, '2026-13-01');
+        assert.equal(p.input.checkValidity(), false);
+        p.clear();
+        assert.equal(p.input.value, '');
+        assert.equal(p.input.checkValidity(), true);
+    } finally { w.finish(); }
+});
+
+test('manual input updates the selected date, rejects impossible values and can recover', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'YYYY-MM-DD' });
+        for (const [value, valid] of [['2026-10-28', true], ['2026-02-30', false], ['2024-02-29', true]]) {
+            p.input.value = value;
+            p.input.dispatchEvent(new w.Event('input', { bubbles: true }));
+            assert.equal(p.input.checkValidity(), valid, 'Validity is checked before submission, even without blur');
+            p.input.dispatchEvent(new w.FocusEvent('blur', { bubbles: true, relatedTarget: w.document.body }));
+            assert.equal(p.input.value, value);
+            assert.equal(p.input.checkValidity(), valid);
+        }
+    } finally { w.finish(); }
+});
+
+test('a real calendar selection recovers from preloaded and manually entered invalid dates', () => {
+    const w = page('<input id="date" value="2026-02-30">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'YYYY-MM-DD' });
+        const changes = [];
+        w.$('#date').on('dp.change', event => changes.push(event.date.format('YYYY-MM-DD')));
+        for (const initial of ['2026-02-30', '2026-13-01']) {
+            if (initial === '2026-13-01') {
+                p.input.value = initial;
+                p.input.dispatchEvent(new w.Event('input', { bubbles: true }));
+                p.input.dispatchEvent(new w.FocusEvent('blur', { bubbles: true, relatedTarget: w.document.body }));
+            }
+            assert.equal(p.input.checkValidity(), false);
+            assert.equal(changes.length, initial === '2026-02-30' ? 0 : 1);
+            p.show();
+            const day = p.instance.daysContainer.querySelector('.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)');
+            const expected = w.flatpickr.formatDate(day.dateObj, 'Y-m-d');
+            day.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+            assert.equal(p.input.value, expected);
+            assert.equal(p.input.checkValidity(), true);
+            assert.equal(p.date().format('YYYY-MM-DD'), expected);
+            assert.equal(changes[changes.length - 1], expected);
+        }
+        assert.equal(changes.length, 2);
+    } finally { w.finish(); }
+});
+
+test('partially invalid multiple-date input is preserved until corrected with the calendar', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'YYYY-MM-DD', mode: 'multiple' });
+        const value = '2026-10-28, 2026-02-30';
+        p.input.value = value;
+        p.input.dispatchEvent(new w.Event('input', { bubbles: true }));
+        p.input.dispatchEvent(new w.FocusEvent('blur', { bubbles: true, relatedTarget: w.document.body }));
+        assert.equal(p.input.value, value);
+        assert.equal(p.input.checkValidity(), false);
+        p.show();
+        const day = p.instance.daysContainer.querySelector('.flatpickr-day:not(.selected):not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)');
+        day.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+        assert.equal(p.input.checkValidity(), true);
+        assert.equal(p.input.value.includes('2026-02-30'), false);
+    } finally { w.finish(); }
+});
+
+test('range bounds initialize from values, reset on clearing and retain configured limits', () => {
+    const w = page('<input id="start" value="2026-10-10"><input id="end" value="2026-10-20">');
+    try {
+        w.$.admin.datepicker.range('#start', '#end', { format: 'YYYY-MM-DD', minDate: '2026-10-01', maxDate: '2026-10-31' });
+        const a = w.$('#start').data('adminDatepicker'), b = w.$('#end').data('adminDatepicker');
+        assert.equal(a.instance.config.maxDate.getDate(), 20);
+        assert.equal(b.instance.config.minDate.getDate(), 10);
+        a.clear();
+        assert.equal(b.instance.config.minDate.getDate(), 1);
+        b.clear();
+        assert.equal(a.instance.config.maxDate.getDate(), 31);
+        assert.equal(w.$('#start').val(), '');
+        assert.equal(w.$('#end').val(), '');
+        a.date('2026-10-15');
+        b.date('2026-10-16');
+        assert.equal(a.instance.config.maxDate.getDate(), 16);
+        assert.equal(b.instance.config.minDate.getDate(), 15);
+    } finally { w.finish(); }
+});
+
+test('datetime ranges keep time precision and time-only fields enable seconds and stepping', () => {
+    const w = page('<input id="start"><input id="end"><input id="time">');
+    try {
+        w.$.admin.datepicker.range('#start', '#end', { format: 'YYYY-MM-DD HH:mm:ss' });
+        const a = w.$('#start').data('adminDatepicker'), b = w.$('#end').data('adminDatepicker');
+        a.date('2026-10-28 12:34:56');
+        assert.equal(b.instance.config.minDate.getHours(), 12);
+        assert.equal(b.instance.config.minDate.getMinutes(), 34);
+        assert.equal(b.instance.config.minDate.getSeconds(), 56);
+        w.$('#time').adminDatepicker({ format: 'HH:mm:ss', stepping: 15 });
+        const p = w.$('#time').data('adminDatepicker');
+        assert.equal(p.instance.config.noCalendar, true);
+        assert.equal(p.instance.config.enableSeconds, true);
+        assert.equal(p.instance.config.time_24hr, true);
+        assert.equal(p.instance.config.minuteIncrement, 15);
+        p.date('23:45:59');
+        assert.equal(p.input.value, '23:45:59');
+    } finally { w.finish(); }
+});
+
+test('transition datetimepicker API exposes change dates without a Moment dependency', () => {
+    const w = page('<div class="input-group"><input id="date"><span class="input-group-addon">Open</span></div>');
+    try {
+        const group = w.$('.input-group');
+        group.datetimepicker({ format: 'YYYY-MM-DD', showClear: true });
+        const p = group.data('DateTimePicker');
+        let changes = 0, shown = 0;
+        group.on('dp.show', () => shown++).on('dp.change', e => {
+            changes++;
+            assert.equal(e.date ? e.date.format('YYYY-MM-DD') : false, changes === 1 ? '2026-10-28' : false);
+        });
+        p.date('2026-10-28');
+        group.find('.input-group-addon').trigger('click');
+        assert.equal(shown, 1);
+        p.instance.calendarContainer.querySelector('.admin-datepicker-buttons button').click();
+        assert.equal(changes, 2);
+        assert.equal(p.input.value, '');
+        p.minDate(false).maxDate(false).hide();
+    } finally { w.finish(); }
+});
+
+test('reinitialization and repeated range binding leave one picker and one event handler per input', () => {
+    const w = page('<input id="start"><input id="end">');
+    try {
+        w.$.admin.datepicker.range('#start', '#end', { format: 'YYYY-MM-DD' });
+        w.$.admin.datepicker.range('#start', '#end', { format: 'YYYY-MM-DD' });
+        let changes = 0;
+        w.$('#start').on('dp.change', () => changes++);
+        w.$('#start').data('adminDatepicker').date('2026-10-28');
+        assert.equal(changes, 1);
+        assert.equal(w.document.querySelectorAll('.flatpickr-calendar').length, 2);
+    } finally { w.finish(); }
+});
+
+test('Action modal calendars stay in the focus trap and are destroyed when the modal closes', () => {
+    const w = page('<div class="modal" data-admin-action-shell="1"><input id="date"></div>');
+    try {
+        w.$('#date').adminDatepicker({ format: 'YYYY-MM-DD' });
+        const p = w.$('#date').data('adminDatepicker');
+        assert.equal(p.instance.calendarContainer.parentNode, w.document.querySelector('.modal'));
+        w.$('.modal').trigger('hidden.bs.modal');
+        assert.equal(w.$('#date').data('adminDatepicker'), undefined);
+        assert.equal(w.document.querySelectorAll('.flatpickr-calendar').length, 0);
+    } finally { w.finish(); }
+});
+
+test('reusable modal fields keep their picker when hidden and can reopen', () => {
+    const w = page('<div class="modal"><input id="date"></div>');
+    try {
+        w.$('#date').adminDatepicker({ format: 'YYYY-MM-DD' });
+        const p = w.$('#date').data('adminDatepicker');
+        p.show();
+        w.$('.modal').trigger('hidden.bs.modal');
+        assert.equal(p.instance.isOpen, false);
+        assert.equal(w.$('#date').data('adminDatepicker'), p);
+        p.show();
+        assert.equal(p.instance.isOpen, true);
+    } finally { w.finish(); }
+});
+
+test('navigation and removal of dynamic editors clean up calendars and permit new inputs', async () => {
+    const w = page('<div class="row"><input id="date"></div>');
+    try {
+        w.$('#date').adminDatepicker({ format: 'YYYY-MM-DD' });
+        w.$('.row').remove();
+        await new Promise(resolve => w.setTimeout(resolve, 0));
+        assert.equal(w.document.querySelectorAll('.flatpickr-calendar').length, 0);
+        w.$('form').append('<input id="next">');
+        w.$('#next').adminDatepicker({ format: 'YYYY-MM-DD' });
+        assert.equal(w.document.querySelectorAll('.flatpickr-calendar').length, 1);
+        w.$(w).trigger('admin:before-navigate');
+        assert.equal(w.document.querySelectorAll('.flatpickr-calendar').length, 0);
+    } finally { w.finish(); }
+});
+
+test('read-only fields cannot open from input focus or the calendar icon', () => {
+    const w = page('<div class="input-group"><input id="date" readonly><span class="input-group-addon">Open</span></div>');
+    try {
+        w.$('#date').adminDatepicker({ format: 'YYYY-MM-DD' });
+        w.$('.input-group-addon').trigger('click');
+        w.$('#date').trigger('focus');
+        assert.equal(w.$('#date').data('adminDatepicker').instance.isOpen, false);
+    } finally { w.finish(); }
+});
+
+test('X-Editable dates use Flatpickr and retain plain string submission without Moment', () => {
+    const w = page('', true);
+    try {
+        const Input = w.$.fn.editabletypes.adminDate;
+        const editor = new Input({ format: 'YYYY-MM-DD HH:mm:ss', locale: 'zh-CN', combodate: { minYear: 2000, maxYear: 2035 } });
+        editor.$input = w.$('<input>').appendTo('form');
+        editor.render();
+        editor.value2input('2026-10-28 12:34:56');
+        assert.equal(editor.input2value(), '2026-10-28 12:34:56');
+        assert.equal(editor.$input.data('adminDatepicker').instance.config.minDate.getFullYear(), 2000);
+        assert.equal(editor.$input.data('adminDatepicker').instance.config.maxDate.getFullYear(), 2035);
+        assert.equal(w.$.fn.editabletypes.combodate, Input);
+        assert.equal(w.moment, undefined);
+        editor.destroy();
+        assert.equal(w.document.querySelectorAll('.flatpickr-calendar').length, 0);
+    } finally { w.finish(); }
+});
+
+test('native Flatpickr date formats, parsing callbacks and input restrictions remain available', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {
+            dateFormat: 'Y/m/d', minDate: '2026-10-01', maxDate: '2026-10-31',
+            disabledDates: ['2026-10-15'], daysOfWeekDisabled: [0, 6], calendarWeeks: true,
+        });
+        p.date('2026/10/28');
+        assert.equal(p.input.value, '2026/10/28');
+        assert.equal(p.instance.config.weekNumbers, true);
+        assert.equal(p.instance.isEnabled('2026/10/15'), false);
+        assert.equal(p.instance.isEnabled('2026/10/25'), false);
+        assert.equal(p.instance.isEnabled('2026/11/01'), false);
+        assert.equal(p.instance.isEnabled('2026/10/28'), true);
+        const custom = w.$.admin.datepicker.init(p.input, {
+            dateFormat: 'Y-m-d', parseDate(value) {
+                if (value === 'payday') return new w.Date(2026, 9, 28);
+                return w.flatpickr.parseDate(value, 'Y-m-d');
+            },
+        });
+        custom.date('payday');
+        assert.equal(custom.input.value, '2026-10-28');
+        assert.equal(custom.input.checkValidity(), true);
+    } finally { w.finish(); }
+});

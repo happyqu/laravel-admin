@@ -149,10 +149,11 @@ class Editable extends AbstractDisplayer
      */
     public function combodate($format = 'YYYY-MM-DD')
     {
-        $this->type = 'combodate';
+        $this->type = 'adminDate';
 
         $this->addOptions([
             'format'     => $format,
+            'locale'     => config('app.locale'),
             'viewformat' => $format,
             'template'   => $format,
             'combodate'  => [

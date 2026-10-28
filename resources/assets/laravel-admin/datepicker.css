@@ -1,0 +1,4 @@
+.flatpickr-calendar.admin-datepicker { z-index: 1100; }
+.admin-datepicker-buttons { display: flex; gap: 6px; padding: 6px; border-top: 1px solid #eee; }
+.ie-container .flatpickr-calendar.inline { box-shadow: none; }
+.modal .flatpickr-calendar { z-index: 1100; }

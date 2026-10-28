@@ -13,8 +13,9 @@ test('date fields open from the calendar icon and from an action input without a
     const dom = new JSDOM(payloads[0].html, { runScripts: 'outside-only', url: 'http://localhost/admin/items' });
     const w = dom.window;
     w.eval(read('resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'));
-    w.eval(read('resources/assets/moment/min/moment-with-locales.min.js'));
-    w.eval(read('resources/assets/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js'));
+    w.eval(read('resources/assets/flatpickr/dist/flatpickr.js'));
+    w.eval(read('resources/assets/laravel-admin/flatpickr-locales.js'));
+    w.eval(read('resources/assets/laravel-admin/datepicker.js'));
     const $ = w.jQuery;
     const input = $('[name="start"]');
     $('.modal-body').css('position', 'relative');
@@ -26,7 +27,7 @@ test('date fields open from the calendar icon and from an action input without a
     group.on('dp.show', () => iconOpened++);
     input.on('dp.show', () => inputOpened++);
     try {
-        w.eval(payloads[0].scripts.find(script => script.includes('.datetimepicker(')));
+        w.eval(payloads[0].scripts.find(script => script.includes('.adminDatepicker(')));
         assert.ok(group.data('DateTimePicker'));
         assert.ok(input.data('DateTimePicker'));
         group.find('.input-group-addon').trigger('click');
@@ -49,7 +50,7 @@ test('action widgets isolate their controls, nested rows and cascading options f
     w.eval(read('resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'));
     w.eval(read('resources/assets/AdminLTE/plugins/select2/select2.full.min.js'));
     const $ = w.jQuery;
-    const calls = { inputmask: [], datetimepicker: [], fileinput: [], iCheck: [] };
+    const calls = { inputmask: [], adminDatepicker: [], fileinput: [], iCheck: [] };
     Object.keys(calls).forEach(plugin => {
         $.fn[plugin] = function () { calls[plugin].push(...this.toArray()); return this; };
     });
@@ -64,8 +65,8 @@ test('action widgets isolate their controls, nested rows and cascading options f
         assert.equal($('input[name="record_id"]').filter('[type="hidden"]').length, 2);
         assert.equal(calls.fileinput.length, 8);
         assert.ok(calls.fileinput.every(input => input.type === 'file'));
-        assert.equal(new Set(calls.datetimepicker).size, 4);
-        assert.ok(calls.datetimepicker.every(node => $(node).is('input') || $(node).find('input').length === 1));
+        assert.equal(new Set(calls.adminDatepicker).size, 4);
+        assert.ok(calls.adminDatepicker.every(node => $(node).is('input') || $(node).find('input').length === 1));
         assert.ok(calls.inputmask.every(input => input.name.endsWith('quantity]') || input.name === 'quantity'));
         assert.ok(calls.iCheck.every(input => ['checkbox', 'radio'].includes(input.type)));
         const ids = $('[id]').map(function () { return this.id; }).get();

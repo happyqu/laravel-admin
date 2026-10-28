@@ -100,12 +100,14 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\DateMultiple' => 
@@ -113,49 +115,55 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/flatpickr/dist/shortcut-buttons-flatpickr/themes/light.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
-      1 => '/vendor/laravel-admin/flatpickr/dist/shortcut-buttons-flatpickr/shortcut-buttons-flatpickr.min.js',
-      2 => '/vendor/laravel-admin/flatpickr/dist/l10n/zh.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\DateRange' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Datetime' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\DatetimeRange' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Decimal' => 
@@ -328,12 +336,14 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\MultipleFile' => 
@@ -510,24 +520,28 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\TimeRange' => 
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Timezone' => 
@@ -554,12 +568,14 @@ return array (
   array (
     'css' => 
     array (
-      0 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ),
     'js' => 
     array (
-      0 => '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-      1 => '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+      0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+      1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ),
   ),
 );

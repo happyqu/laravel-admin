@@ -38,7 +38,6 @@ Log Viewer 基于 `laravel-admin-ext/log-viewer` 修改，上游地址为 https:
 | Font Awesome（CSS） | 4.7.0 | MIT | Copyright (c) 2016 Dave Gandy | `licenses/MIT.txt` |
 | Font Awesome（字体） | 4.7.0 | SIL OFL 1.1 | Copyright (c) 2016 Dave Gandy | `licenses/OFL-1.1.txt` |
 | Source Sans Pro | 随包 | SIL OFL 1.1 | Copyright 2010, 2012 Adobe Systems Incorporated | `licenses/OFL-1.1.txt` |
-| Moment.js | 2.10.6 | MIT | Copyright (c) 2011-2015 Tim Wood, Iskren Chernev, Moment.js contributors | `licenses/MIT.txt` |
 | toastr | 2.1.3 | MIT | Copyright (c) John Papa, Hans Fjällemark, Tim Ferrell | `licenses/MIT.txt` |
 | SweetAlert2 | 7.26.12 | MIT | Copyright (c) Limon Monte | `licenses/MIT.txt` |
 | Select2 | 4.0.3 | MIT | Copyright (c) Kevin Brown, Igor Vaynberg, Select2 contributors | `licenses/MIT.txt` |
@@ -54,7 +53,6 @@ Log Viewer 基于 `laravel-admin-ext/log-viewer` 修改，上游地址为 https:
 | slimScroll | 1.3.8 | MIT（上游为 MIT/GPL 双许可） | Copyright (c) 2011 Piotr Rochala | `licenses/MIT.txt` |
 | Font Awesome Icon Picker | 未标注 | MIT | Copyright (c) 2016 Javi Aguilar | `licenses/MIT.txt` |
 | normalize.css | 3.0.3 | MIT | Copyright (c) Nicolas Gallagher and Jonathan Neal | `licenses/MIT.txt` |
-| eonasdan-bootstrap-datetimepicker | 4.17.37 | MIT | Copyright (c) 2015 Jonathan Peterson | `licenses/MIT.txt` |
 | piexifjs | 未标注 | MIT | Copyright (c) 2014, 2015 hMatoba | `licenses/MIT.txt` |
 | JavaScript Canvas to Blob | 2.0.5 | MIT | Copyright 2012 Sebastian Tschan | `licenses/MIT.txt` |
 | Sortable | 1.7.0 | MIT | Copyright (c) RubaXa and contributors | `licenses/MIT.txt` |
@@ -72,8 +70,14 @@ Log Viewer 基于 `laravel-admin-ext/log-viewer` 修改，上游地址为 https:
 2. **bootstrap-fileinput**：除自身的 BSD-3-Clause 外，还捆绑了 DOMPurify（Apache-2.0/MPL-2.0）、piexifjs（MIT）、JavaScript Canvas to Blob（MIT）和 Sortable（MIT），各自声明见上表。
 3. **双许可组件**：slimScroll 为 MIT/GPL 双许可，Nestable 为 MIT/BSD 双许可，本包均按 MIT 使用。DOMPurify 为 Apache-2.0/MPL-2.0 双许可，本包按 Apache-2.0 使用。
 4. **Glyphicons Halflings**：随 Bootstrap 3.3.5 分发。Bootstrap 文档请求在使用时尽量保留指向 glyphicons.com 的来源说明；本包未修改该字体，仅按原样分发。
-5. **压缩文件头部**：部分上游压缩文件在发布时已移除版权注释（如 Moment.js、toastr、SweetAlert2、DOMPurify、Select2），本清单及 `licenses/` 下的版权行即为这些文件的统一声明，分发时不要移除本清单。
+5. **压缩文件头部**：部分上游压缩文件在发布时已移除版权注释（如 toastr、SweetAlert2、DOMPurify、Select2），本清单及 `licenses/` 下的版权行即为这些文件的统一声明，分发时不要移除本清单。
 6. **修改过的文件**：`resources/assets/iframe-tabs/bootstrap-tab.js`、`resources/assets/iframe-tabs/layer/layer.js` 及本包自有的 `custom.css`、`global-navigation.js`、`global-navigation.css`、`actions.js`、`iframe.css`、`laravel-admin/admin-navigation.js` 由本项目维护或修改，仍按对应上游许可证（MIT）分发。
 7. **业务资源**：业务品牌资源、业务入口和业务服务不纳入包内。
 8. **来源清单**：`source-manifest.json` 中 `packages` 记录导入时的原始库文件与哈希，`assets` 记录每个前端文件的原始来源、当前包内路径及 SHA256。源码和 Blade 因内置化、安全修复与发布前清理而调整，`assets` 中的哈希对应当前包内基线。
 9. **图片与字体**：作为普通 Git 文件随包分发，文件内容可通过 `source-manifest.json` 中的 SHA256 校验。
+
+## 日期组件迁移
+
+日期、时间、范围、多日期、Grid 筛选和日期行内编辑统一使用 flatpickr 4.6.13，Moment.js 和 eonasdan-bootstrap-datetimepicker 已移除。原始 flatpickr `dist` 目录保持原样。
+
+`resources/assets/laravel-admin/datepicker.js` 与 `datepicker.css` 为本包维护的适配代码。`resources/assets/laravel-admin/flatpickr-locales.js` 原样取自 npm 官方 `flatpickr@4.6.13` 的 `dist/l10n/index.js`，沿用 MIT 许可证，并保留文件中附带的版权及许可声明。X-Editable 内置的旧 combodate 代码保留在上游资源中，但本包日期输入通过 Flatpickr 适配器注册，不再调用其 Moment 实现。

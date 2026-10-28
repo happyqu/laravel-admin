@@ -6000,24 +6000,6 @@
                     "source_path": "public/vendor/laravel-admin/custom.css"
                 },
                 {
-                    "path": "eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css",
-                    "sha256": "673f392d2ff5f8dfca21c26ccbd9b87b72c68de57fcbb555a5b94cd53fff947c",
-                    "bytes": 7775,
-                    "source_path": "public/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css"
-                },
-                {
-                    "path": "eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js",
-                    "sha256": "57f7835226d801419b3f0a07dffae98dbac8a0e6712eb2220b5db9a1e19608b8",
-                    "bytes": 37963,
-                    "source_path": "public/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"
-                },
-                {
-                    "path": "eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.zh-CN.js",
-                    "sha256": "e5d404ef5df64a78fc8d2ad4f7c9fb512ce96ae6ccdabbfb58b11fed7b9d65a4",
-                    "bytes": 829,
-                    "source_path": "public/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.zh-CN.js"
-                },
-                {
                     "path": "flatpickr/dist/flatpickr.js",
                     "sha256": "bd04bb4978d38fce197da3095bff68da165f6de18d2fc56ac5f1d7fb61c8e947",
                     "bytes": 50680,
@@ -6282,12 +6264,6 @@
                     "source_path": "public/vendor/laravel-admin/laravel-admin/laravel-admin.js"
                 },
                 {
-                    "path": "moment/min/moment-with-locales.min.js",
-                    "sha256": "75cf0299d64d07d15235c30fc81acf6a2b9489aef1222eb5f86856e2376ee213",
-                    "bytes": 170728,
-                    "source_path": "public/vendor/laravel-admin/moment/min/moment-with-locales.min.js"
-                },
-                {
                     "path": "nestable/jquery.nestable.js",
                     "sha256": "5dab80b5a1e90af5bc29e8cb514065d95c03aa599070f53f024543403df1f360",
                     "bytes": 18084,
@@ -6424,6 +6400,25 @@
                     "sha256": "ad1f22ca0d823a6f4ee7f50178412227f170b30af5da2b6f50e393c9c98db1b3",
                     "bytes": 14328,
                     "origin": "happyqu/laravel-admin action runtime"
+                },
+                {
+                    "path": "laravel-admin/datepicker.js",
+                    "sha256": "3eb26b45cbdce7b86c8199b1ca1a6465fecbb1a9b86858a6d459efb45ecd1997",
+                    "bytes": 19554,
+                    "origin": "happyqu/laravel-admin Flatpickr adapter"
+                },
+                {
+                    "path": "laravel-admin/datepicker.css",
+                    "sha256": "f1334c81f4a49dd27ecbf20b1da15ae37fcbfdcd9e4e53bc528dbb97904668cb",
+                    "bytes": 262,
+                    "origin": "happyqu/laravel-admin Flatpickr styles"
+                },
+                {
+                    "path": "laravel-admin/flatpickr-locales.js",
+                    "sha256": "72f206dafc55aefa955b9be4969c543ff12db4c01d75213ef261bceaf050694a",
+                    "bytes": 102847,
+                    "origin": "flatpickr@4.6.13 dist/l10n/index.js",
+                    "source_url": "https://registry.npmjs.org/flatpickr/-/flatpickr-4.6.13.tgz"
                 }
             ],
             "source_paths": [

@@ -13,14 +13,14 @@ $app->register(\Illuminate\View\ViewServiceProvider::class);
 $app['view']->addNamespace('admin', dirname(__DIR__, 3).'/resources/views');
 
 $components = [];
-foreach (['input', 'radio', 'multiple-select', 'upload'] as $type) {
+foreach (['input', 'radio', 'multiple-select', 'upload', 'datetime'] as $type) {
     \Encore\Admin\Admin::$script = [];
     \Encore\Admin\Admin::$html = [];
     $data = [
         'trigger' => 'trigger-'.$type, 'target' => 'target-'.$type, 'name' => 'field_'.$type,
         'key' => 7, 'value' => $type === 'multiple-select' ? '["a"]' : 'old', 'display' => 'Old',
         'resource' => '/admin/records', 'options' => ['a' => 'A', 'b' => '<b>B</b>'],
-        'mask' => '', 'multiple' => true,
+        'mask' => '', 'multiple' => true, 'format' => 'YYYY-MM-DD HH:mm:ss', 'locale' => 'en',
     ];
     $html = \Encore\Admin\Admin::component('admin::grid.inline-edit.'.$type, $data);
     $components[$type] = [

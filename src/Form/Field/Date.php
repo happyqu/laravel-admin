@@ -5,12 +5,14 @@ namespace Encore\Admin\Form\Field;
 class Date extends Text
 {
     protected static $css = [
-        '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css',
+        '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
+        '/vendor/laravel-admin/laravel-admin/datepicker.css',
     ];
 
     protected static $js = [
-        '/vendor/laravel-admin/moment/min/moment-with-locales.min.js',
-        '/vendor/laravel-admin/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js',
+        '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+        '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
+        '/vendor/laravel-admin/laravel-admin/datepicker.js',
     ];
 
     protected $format = 'YYYY-MM-DD';
@@ -47,7 +49,7 @@ class Date extends Text
 $('{$selector}').filter('input').each(function () {
     var input = $(this);
     var group = input.parent('.input-group');
-    (group.length ? group : input).datetimepicker({$options});
+    (group.length ? group : input).adminDatepicker({$options});
 });
 JS;
 

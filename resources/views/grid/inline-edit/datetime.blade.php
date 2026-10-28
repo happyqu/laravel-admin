@@ -7,11 +7,11 @@
 @section('assert')
     <style>
         .ie-content-{{ $name }} .ie-container  {
-            height: 290px;
+            min-height: 290px;
         }
 
         .ie-content-{{ $name }} .ie-input {
-            display: none;
+            margin-bottom: 6px;
         }
     </style>
 
@@ -23,14 +23,11 @@
             @slot('shown')
             var $input  = $popover.find('.ie-input');
 
-            $popover.find('.ie-container').datetimepicker({
+            $input.adminDatepicker({
                 inline: true,
-                format: '{{ $format }}',
+                format: {!! json_encode($format, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 date: $input.val(),
-                locale: '{{ $locale }}'
-            }).on('dp.change', function (event) {
-                var date = event.date.format('{{ $format }}');
-                $input.val(date);
+                locale: {!! json_encode($locale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!}
             });
             @endslot
         @endcomponent

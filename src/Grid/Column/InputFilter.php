@@ -75,7 +75,7 @@ class InputFilter extends Filter
 
         $options = json_encode($options);
 
-        Admin::script("$('.{$this->class}').datetimepicker($options);");
+        Admin::script("$('.{$this->class}').adminDatepicker($options);");
     }
 
     /**

@@ -125,6 +125,42 @@ AJAX 请求超过 180 毫秒时显示居中的“加载中”提示，并发请�
 
 ## 表单与动态组件
 
+### 日期与时间
+
+日期、日期时间、时间、起止范围、`DateMultiple`、Grid 日期筛选及日期行内编辑统一使用 Flatpickr 4.6.13，不再加载 Moment 或旧 DateTimePicker。PHP 字段接口、字段名和默认提交格式保持一致：
+
+```php
+$form->date('date');                            // YYYY-MM-DD
+$form->datetime('created_at');                   // YYYY-MM-DD HH:mm:ss
+$form->time('time');                             // HH:mm:ss
+$form->dateRange('start', 'end');                 // 两个独立字段
+$form->datetimeRange('started_at', 'ended_at');
+$form->timeRange('start_time', 'end_time');
+$form->DateMultiple('dates')->format('DD/MM/YYYY');
+```
+
+`format()` 继续使用旧格式 token，常用的 `YYYY`、`YY`、`MM`、`M`、`DD`、`D`、`HH`、`hh`、`mm`、`ss`、`A` 和方括号字面量均可使用；也可以通过 `options(['dateFormat' => 'Y-m-d'])` 显式使用 Flatpickr 原生格式。不支持的格式 token 会报错，不会按其他格式提交。非法日期保留在输入框中，并阻止浏览器提交。
+
+语言默认取 `app.locale`，支持 Flatpickr 自带语言及 `zh-CN`、`zh_TW`、`en_US` 等别名；缺少对应语言时提示并回退英文。多日期字段也使用所配置的格式和语言。
+
+| 旧选项 | 迁移行为 |
+| --- | --- |
+| `format`、`locale`、`date`、`defaultDate`、`inline` | 保留用途；`date` 对应初始值 |
+| `minDate`、`maxDate` | 保留边界限制；范围字段自动联动，清空后恢复配置边界 |
+| `stepping` | 转换为 `minuteIncrement` |
+| `disabledDates`、`enabledDates`、`daysOfWeekDisabled` | 转换为 Flatpickr 日期限制 |
+| `calendarWeeks` | 转换为 `weekNumbers` |
+| `widgetParent` | 转换为 `appendTo` |
+| `showClear`、`showTodayButton`、`showClose` | 显示对应操作按钮 |
+| `allowInputToggle`、`useCurrent`、`useStrict`、`sideBySide`、`icons`、`tooltips`、`widgetPositioning` | 不再控制旧组件；默认允许输入和点击打开、不自动填当前时间，并严格校验输入；界面使用 Flatpickr 布局 |
+| `timeZone`、`disabledTimeIntervals`、`enabledHours`、`disabledHours`、`viewMode`、`toolbarPlacement`、`extraFormats`、`parseInputDate` | 不支持时明确报错，需迁移为业务逻辑或对应原生配置 |
+
+本包脚本通过 `$(input).adminDatepicker(options)` 初始化，起止字段通过 `$.admin.datepicker.range(start, end, options)` 绑定。普通动态字段移除和 AJAX 导航会清理实例；可复用弹窗关闭时收起日历，Action 弹窗关闭时销毁实例。
+
+为了过渡宿主自定义脚本，保留 `.datetimepicker(options)`、`.data('DateTimePicker')` 的 `date()`、`minDate()`、`maxDate()`、`show()`、`hide()`、`clear()`、`destroy()`，以及 `dp.change`、`dp.show`、`dp.hide`。`dp.change` 的 `event.date` 仅提供 `format()`、`toDate()`、`clone()`、`valueOf()`、`isValid()`，清空时为 `false`，不是完整的 Moment 对象。直接调用 `moment()`、旧插件其他方法或 `.combodate()` 的宿主代码需要自行迁移。
+
+资源由 `resources/assets/laravel-admin/datepicker.js`、`datepicker.css`、`flatpickr-locales.js` 管理，原有 `resources/assets/flatpickr/dist` 不放置本包新增适配代码。升级后需重新发布前端资源并刷新页面。
+
 ### 动态选择器、异步展开与弹窗
 
 `_handle_selectable_` 和 `_handle_renderable_` 的 URL 由内置组件自动附带 `_component_token_`，凭据绑定当前会话用户、来源页面、组件类和参数；加载时重新检查来源页面权限。自定义代码若直接拼接这两个接口的 URL，需改用 `Encore\Admin\Security\ComponentSubmission::url($routeName, $routeParameters, $kind, $class, $payload)`：`$kind` 为 `selectable` 时，`$payload` 是构造参数列表；为 `renderable` 时，是包含当前记录主键的单元素数组。缺少或过期的凭据返回 419，篡改参数或失去来源权限返回 403。

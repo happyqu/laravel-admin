@@ -46,6 +46,30 @@ test('different inline editor types keep their own handlers, and double clicks s
     } finally { w.close(); }
 });
 
+test('inline datetime popovers use Flatpickr and submit the selected string value', async () => {
+    const { w, calls } = page(['datetime']);
+    try {
+        for (const asset of ['flatpickr/dist/flatpickr.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+            w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
+        }
+        const content = open(w, 'datetime');
+        const input = content.find('.ie-input');
+        const picker = input.data('adminDatepicker');
+        assert.ok(picker);
+        assert.equal(picker.instance.config.inline, true);
+        picker.date('2026-10-28 12:34:56');
+        content.find('.ie-submit').trigger('click');
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].data.field_datetime, '2026-10-28 12:34:56');
+        calls[0].success({ status: true, message: 'Saved' });
+        calls[0].complete();
+        assert.equal(w.$('.trigger-datetime .ie-display').text(), '2026-10-28 12:34:56');
+        content.closest('.popover').remove();
+        await new Promise(resolve => w.setTimeout(resolve, 0));
+        assert.equal(w.document.querySelectorAll('.flatpickr-calendar').length, 0);
+    } finally { if (w.$.admin.datepicker) w.$.admin.datepicker.destroy(); w.close(); }
+});
+
 test('inline failures preserve the value and render validation messages as text', () => {
     const { w, calls } = page(['input']);
     try {
@@ -63,6 +87,33 @@ test('inline failures preserve the value and render validation messages as text'
         assert.match(content.find('.error').text(), /<img/);
         assert.equal(content.find('.ie-submit').prop('disabled'), false);
     } finally { w.close(); }
+});
+
+test('inline datetime submission rejects invalid input and allows correction without locking the button', () => {
+    const { w, calls } = page(['datetime']);
+    try {
+        for (const asset of ['flatpickr/dist/flatpickr.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+            w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
+        }
+        const content = open(w, 'datetime');
+        const input = content.find('.ie-input')[0];
+        input.value = '2026-02-30 12:00:00';
+        input.dispatchEvent(new w.Event('input', { bubbles: true }));
+        let reported = 0;
+        input.reportValidity = () => { reported++; return input.checkValidity(); };
+        content.find('.ie-submit').trigger('click');
+        assert.equal(reported, 1);
+        assert.equal(calls.length, 0);
+        assert.equal(input.value, '2026-02-30 12:00:00');
+        assert.equal(content.find('.ie-submit').prop('disabled'), false);
+        const picker = w.$(input).data('adminDatepicker');
+        const day = picker.instance.daysContainer.querySelector('.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)');
+        day.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+        assert.equal(input.checkValidity(), true);
+        content.find('.ie-submit').trigger('click');
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].data.field_datetime, input.value);
+    } finally { if (w.$.admin.datepicker) w.$.admin.datepicker.destroy(); w.close(); }
 });
 
 test('clearing an inline multiSelect includes an explicit field in the request', () => {
