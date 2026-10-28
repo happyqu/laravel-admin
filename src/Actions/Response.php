@@ -92,6 +92,8 @@ class Response
      */
     public function success(string $message = '')
     {
+        $this->status = true;
+
         return $this->show('success', $message);
     }
 
