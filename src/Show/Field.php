@@ -3,6 +3,7 @@
 namespace Encore\Admin\Show;
 
 use Encore\Admin\Show;
+use Encore\Admin\Support\Url;
 use Encore\Admin\Widgets\Carousel;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Renderable;
@@ -81,6 +82,13 @@ class Field implements Renderable
      * @var string
      */
     protected $relation;
+
+    /**
+     * Attribute selected from the related model.
+     *
+     * @var string|null
+     */
+    protected $relationField;
 
     /**
      * If show contents in box.
@@ -336,7 +344,12 @@ class Field implements Renderable
     public function link($href = '', $target = '_blank')
     {
         return $this->unescape()->as(function ($link) use ($href, $target) {
-            $href = $href ?: $link;
+            $href = Url::sanitizeHref($href ?: $link);
+
+            if ($href === null) {
+                return e($link);
+            }
+
             $target = in_array($target, ['_blank', '_self', '_parent', '_top'], true) ? $target : '_blank';
 
             return "<a href='".e($href)."' target='".e($target)."'>".e($link)."</a>";
@@ -417,19 +430,22 @@ class Field implements Renderable
         return $this->unescape()->as(function ($value) use ($field) {
             if (is_string($value)) {
                 $content = json_decode($value, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    return e($value);
+                }
             } else {
                 $content = $value;
             }
 
-            if (json_last_error() == 0) {
-                $field->border = false;
+            $json = json_encode($content, JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
-                $json = json_encode($content, JSON_PRETTY_PRINT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-
-                return '<pre><code>'.e($json).'</code></pre>';
+            if ($json === false) {
+                return is_scalar($value) ? e($value) : '';
             }
 
-            return e($value);
+            $field->border = false;
+
+            return '<pre><code>'.e($json).'</code></pre>';
         });
     }
 
@@ -499,11 +515,10 @@ class Field implements Renderable
     public function setValue(Model $model)
     {
         if ($this->relation) {
-            if (!$relationValue = $model->{$this->relation}) {
-                return $this;
-            }
-
-            $this->value = $relationValue;
+            $relationValue = $model->{$this->relation};
+            $this->value = $this->relationField !== null && $relationValue instanceof Model
+                ? $relationValue->getAttribute($this->relationField)
+                : $relationValue;
         } else {
             if (Str::contains($this->name, '.')) {
                 $this->value = $this->getRelationValue($model, $this->name);
@@ -537,11 +552,15 @@ class Field implements Renderable
      */
     protected function getRelationValue($model, $name)
     {
-        list($relation, $key) = explode('.', $name);
-
-        if ($related = $model->getRelationValue($relation)) {
-            return $related->getAttribute($key);
+        $value = $model;
+        foreach (explode('.', $name) as $key) {
+            if (!$value instanceof Model) {
+                return null;
+            }
+            $value = $value->getAttribute($key);
         }
+
+        return $value;
     }
 
     /**
@@ -626,6 +645,7 @@ class Field implements Renderable
         }
 
         if ($this->relation) {
+            $this->relationField = $method;
             $this->name = $method;
             $this->label = $this->formatLabel(Arr::get($arguments, 0));
         }
@@ -658,10 +678,10 @@ class Field implements Renderable
     {
         if ($this->showAs->isNotEmpty()) {
             $this->showAs->each(function ($callable) {
-                $this->value = $callable->call(
-                    $this->parent->getModel(),
-                    $this->value
-                );
+                $this->value = $callable instanceof \Closure
+                    && !(new \ReflectionFunction($callable))->isStatic()
+                    ? $callable->call($this->parent->getModel(), $this->value)
+                    : $callable($this->value);
             });
         }
 

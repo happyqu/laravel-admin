@@ -41,6 +41,10 @@ class DateRange extends Field
      */
     public function prepare($value)
     {
+        if (is_array($value)) {
+            return array_map(static fn ($date) => $date === '' ? null : $date, $value);
+        }
+
         if ($value === '') {
             $value = null;
         }

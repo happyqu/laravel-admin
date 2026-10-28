@@ -8,6 +8,7 @@ use Encore\Admin\Grid\Tools\Selector;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
 use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\MySqlConnection;
 use Illuminate\Foundation\Application;
@@ -34,6 +35,7 @@ class QueryBehaviorTest extends TestCase
         $app->register(\Illuminate\Translation\TranslationServiceProvider::class);
         $app->register(\Illuminate\Routing\RoutingServiceProvider::class);
         $app->register(\Illuminate\View\ViewServiceProvider::class);
+        $app['view']->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
         Facade::clearResolvedInstances();
         Facade::setFacadeApplication($app);
         $this->request([]);
@@ -194,6 +196,74 @@ class QueryBehaviorTest extends TestCase
         $this->assertSame($sql, $grid->model()->getQueryBuilder()->toSql());
     }
 
+    public function test_self_relation_sort_aliases_the_related_side_for_belongs_to_and_has_one(): void
+    {
+        foreach (['managerByCode' => 'code', 'report' => 'manager_code'] as $relation => $relatedKey) {
+            $grid = new Grid(new ReviewChild());
+            $column = $grid->{$relation}()->title()->sortable();
+            $this->request(['_sort' => ['column' => $column->getName(), 'type' => 'asc']]);
+            $query = $grid->model()->getQueryBuilder();
+            $alias = 'admin_sort_'.substr(sha1($relation), 0, 12);
+            $sql = $query->toSql();
+            $parentKey = $relation === 'managerByCode' ? 'manager_code' : 'code';
+            $this->assertStringContainsString('left join `children` as `'.$alias.'` on `children`.`'.$parentKey.'` = `'.$alias.'`.`'.$relatedKey.'`', $sql);
+            $this->assertStringContainsString('order by `'.$alias.'`.`title` asc', $sql);
+            $this->assertStringContainsString('select `children`.*', $sql);
+            $this->assertSame($sql, $grid->model()->getQueryBuilder()->toSql());
+            $this->assertSame([], $query->getBindings());
+        }
+    }
+
+    public function test_dynamic_attribute_accessors_are_columns_rather_than_relations(): void
+    {
+        $grid = new Grid(new ReviewChild());
+        $this->assertSame('displayName', $grid->displayName()->getName());
+        $this->assertSame('display_name', $grid->display_name()->getName());
+    }
+
+    public function test_named_range_filters_render_and_accept_their_own_namespace(): void
+    {
+        $filter = new Grid\Filter(new GridModel(new ReviewChild()));
+        $filter->setName('comments');
+        $between = $filter->between('created_at');
+        $html = $between->render()->render();
+        $this->assertStringContainsString('name="comments_created_at[start]"', $html);
+        $this->assertStringContainsString('name="comments_created_at[end]"', $html);
+        $this->request(['comments_created_at' => ['start' => '2026-01-01', 'end' => '2026-10-01']]);
+        $this->assertContains(['whereBetween' => ['created_at', ['start' => '2026-01-01', 'end' => '2026-10-01']]], $filter->conditions());
+    }
+
+    public function test_grid_links_reject_dangerous_urls_from_values_strings_and_callbacks(): void
+    {
+        $grid = new Grid(new ReviewChild());
+        $column = new Grid\Column('url', 'URL');
+        $row = new ReviewChild();
+        foreach (['javascript:alert(1)', 'JaVaScRiPt:alert(1)', "java\nscript:alert(1)", "java\tscript:alert(1)", 'data:text/html,<script>alert(1)</script>', 'vbscript:msgbox(1)'] as $url) {
+            $link = new Grid\Displayers\Link($url, $grid, $column, $row);
+            $this->assertSame(e($url), $link->display('', '_self'));
+            $link = new Grid\Displayers\Link('Click', $grid, $column, $row);
+            $this->assertSame('Click', $link->display($url, '_self'));
+            $this->assertSame('Click', $link->display(function () use ($url) { return $url; }, '_self'));
+        }
+        foreach (['https://example.com/?a=1&b=2', 'http://example.com', 'mailto:a@example.com', 'tel:+123', '/admin/users', '../users', '#details', '//example.com'] as $url) {
+            $link = new Grid\Displayers\Link('<Click>', $grid, $column, $row);
+            $this->assertSame("<a href='".e($url)."' target='_self'>&lt;Click&gt;</a>", $link->display($url, '_self'));
+        }
+    }
+
+    public function test_repeat_displayer_supports_strings_and_model_bound_closures(): void
+    {
+        $row = (new ReviewChild())->forceFill(['symbol' => '#']);
+        Grid\Column::setOriginalGridModels(collect([$row]));
+        foreach (['*', function ($count) { return $this->symbol.$count; }, static fn ($count) => 'n'.$count] as $index => $input) {
+            $column = (new Grid\Column('count', 'Count'))->repeat($input, ',');
+            $expected = ['*,*,*', '#3,#3,#3', 'n3,n3,n3'][$index];
+            $this->assertSame([['count' => $expected]], $column->fill([['count' => 3]]));
+        }
+        $column = (new Grid\Column('count', 'Count'))->repeat('*');
+        $this->assertSame([['count' => '']], $column->fill([['count' => 0]]));
+    }
+
     public function test_editable_attributes_preserve_quotes_and_ampersands(): void
     {
         $grid = new Grid(new ReviewChild());
@@ -232,4 +302,7 @@ class ReviewChild extends Model
 {
     protected $table = 'children';
     public function parentByCode() { return $this->belongsTo(ReviewParent::class, 'parent_code', 'code'); }
+    public function managerByCode() { return $this->belongsTo(self::class, 'manager_code', 'code'); }
+    public function report() { return $this->hasOne(self::class, 'manager_code', 'code'); }
+    protected function displayName(): Attribute { return Attribute::make(get: fn () => 'Display name'); }
 }

@@ -237,17 +237,23 @@ EOT;
         }
 
         $this->options = function ($value) use ($model, $idField, $textField) {
-            if (empty($value)) {
+            if ($value instanceof Arrayable) {
+                $value = $value->toArray();
+            }
+
+            if ($value === null || $value === '' || $value === []) {
                 return [];
             }
 
             $resources = [];
 
             if (is_array($value)) {
-                if (Arr::isAssoc($value)) {
+                if (array_key_exists($idField, $value) && !is_array($value[$idField])) {
                     $resources[] = Arr::get($value, $idField);
+                } elseif (is_array(reset($value)) || reset($value) instanceof Model) {
+                    $resources = collect($value)->pluck($idField)->all();
                 } else {
-                    $resources = array_column($value, $idField);
+                    $resources = array_values($value);
                 }
             } else {
                 $resources[] = $value;

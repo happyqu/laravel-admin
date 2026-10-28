@@ -63,6 +63,40 @@ class ComplexFieldsTest extends TestCase
         })->setForm($this->form);
     }
 
+    public function test_model_options_accept_id_lists_and_related_records(): void
+    {
+        $field = new class('choices') extends \Encore\Admin\Form\Field\MultipleSelect {
+            public function optionsFor($value) { return ($this->options)($value); }
+        };
+        $field->model(ChoiceLookupModel::class);
+        foreach ([[1, 2], [4 => 1, 8 => 2], [['id' => 1], ['id' => 2]], collect([['id' => 1], ['id' => 2]])] as $value) {
+            $this->assertSame([1 => 'Choice 1', 2 => 'Choice 2'], $field->optionsFor($value));
+        }
+        $this->assertSame([1 => 'Choice 1'], $field->optionsFor(['id' => 1, 'name' => 'Stored label']));
+        $this->assertSame([0 => 'Choice 0'], $field->optionsFor(0));
+        $this->assertSame([], $field->optionsFor([]));
+    }
+
+    public function test_date_ranges_normalize_empty_dates_on_insert_and_update(): void
+    {
+        $form = new class extends Form {
+            public $testFields;
+            public function __construct() { $this->testFields = collect(); }
+            public function fields() { return $this->testFields; }
+            public function insertData($input) { return $this->prepareInsert($input); }
+            public function updateData($input) { return $this->prepareUpdate($input); }
+        };
+        foreach ([\Encore\Admin\Form\Field\DateRange::class, \Encore\Admin\Form\Field\DatetimeRange::class,
+            \Encore\Admin\Form\Field\TimeRange::class] as $class) {
+            $form->testFields = collect([new $class('starts_at', ['ends_at'])]);
+            foreach ([['starts_at' => '', 'ends_at' => ''], ['starts_at' => '2026-10-28', 'ends_at' => '']] as $input) {
+                $expected = array_map(static fn ($date) => $date === '' ? null : $date, $input);
+                $this->assertSame($expected, $form->insertData($input));
+                $this->assertSame($expected, $form->updateData($input));
+            }
+        }
+    }
+
     public function test_nested_text_and_array_fields_keep_all_validation_input(): void
     {
         $field = $this->hasMany(function ($form) {
@@ -402,4 +436,12 @@ class ValidationOnlyFile extends \Encore\Admin\Form\Field\File
 class ValidationOnlyMultipleFile extends \Encore\Admin\Form\Field\MultipleFile
 {
     protected function initStorage() {}
+}
+
+class ChoiceLookupModel extends Model
+{
+    public static function find($ids)
+    {
+        return collect($ids)->map(static fn ($id) => (new static())->forceFill(['id' => $id, 'name' => 'Choice '.$id]));
+    }
 }

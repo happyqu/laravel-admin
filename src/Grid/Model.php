@@ -617,6 +617,16 @@ class Model
 
         if ($this->hasEagerLoadedRelation($relationName)) {
             $relation = $this->originalModel->$relationName();
+            $join = $this->joinParameters($relation);
+            $relatedTable = $relation->getRelated()->getTable();
+
+            if ($relatedTable === $this->originalModel->getTable()) {
+                $alias = 'admin_sort_'.substr(sha1($relationName), 0, 12);
+                $join[0] = $relatedTable.' as '.$alias;
+                $join[3] = $alias.'.'.($relation instanceof BelongsTo
+                    ? $relation->getOwnerKeyName() : $relation->getForeignKeyName());
+                $relatedTable = $alias;
+            }
 
             $this->queries->push([
                 'method'    => 'select',
@@ -625,7 +635,7 @@ class Model
 
             $this->queries->push([
                 'method'    => 'leftJoin',
-                'arguments' => $this->joinParameters($relation),
+                'arguments' => $join,
             ]);
 
             $this->resetOrderBy();
@@ -633,7 +643,7 @@ class Model
             $this->queries->push([
                 'method'    => 'orderBy',
                 'arguments' => [
-                    $relation->getRelated()->getTable().'.'.$relationColumn,
+                    $relatedTable.'.'.$relationColumn,
                     $this->sort['type'],
                 ],
             ]);

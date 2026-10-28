@@ -408,7 +408,7 @@ class Show implements Renderable
             return false;
         }
 
-        if ($this->model->hasGetMutator($method)) {
+        if ($this->model->hasGetMutator($method) || $this->model->hasAttributeGetMutator($method)) {
             return $this->addField($method, $label);
         }
 
@@ -514,12 +514,10 @@ class Show implements Renderable
             call_user_func($this->builder, $this);
         }
 
-        if ($this->fields->isEmpty()) {
-            $this->all();
-        }
-
         if (is_array($this->builder)) {
             $this->fields($this->builder);
+        } elseif ($this->fields->isEmpty()) {
+            $this->all();
         }
 
         $this->fields->each->setValue($this->model);

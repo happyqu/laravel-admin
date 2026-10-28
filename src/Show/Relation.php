@@ -110,6 +110,10 @@ class Relation extends Field
             $renderable = new Show($model, $this->builder);
 
             $renderable->panel()->title($this->title);
+            // A related model has no resource route until the builder supplies one.
+            $renderable->panel()->tools(function (Tools $tools) {
+                $tools->disableEdit()->disableDelete();
+            });
         }
 
         if ($relation    instanceof HasMany

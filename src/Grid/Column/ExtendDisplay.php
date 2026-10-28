@@ -3,6 +3,7 @@
 namespace Encore\Admin\Grid\Column;
 
 use Carbon\Carbon;
+use Closure;
 use Encore\Admin\Grid\Column;
 use Encore\Admin\Grid\Displayers;
 use Encore\Admin\Grid\Model;
@@ -165,7 +166,10 @@ trait ExtendDisplay
 
         if ($input instanceof Closure) {
             return $this->display(function ($value) use ($input, $seperator) {
-                return join($seperator, array_fill(0, (int) $value, $input->call($this, [$value])));
+                $text = (new \ReflectionFunction($input))->isStatic()
+                    ? $input($value) : $input->call($this, $value);
+
+                return join($seperator, array_fill(0, max(0, (int) $value), $text));
             });
         }
 
