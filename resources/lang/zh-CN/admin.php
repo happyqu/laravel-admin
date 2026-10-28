@@ -111,7 +111,7 @@ return [
     ],
     'grid_items_selected'    => '已选择 {n} 项',
     'too_many_attempts'      => '登录尝试次数过多，请在 {seconds} 秒后重试。',
-    'action_failed'          => '操作未能完成。',
+    'action_failed'          => '操作失败！',
     'action_context_invalid' => '此操作来自旧页面或凭据无效，请刷新来源页面后重新打开操作。',
     'action_open_required'   => '请先打开并确认操作，再提交。',
     'action_record_changed'  => '记录已发生变化，请核对最新记录后重新打开操作，已填写的内容会保留。',

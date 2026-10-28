@@ -76,6 +76,129 @@
         return $(node).is('input') ? node : $(node).find('input').first()[0];
     }
 
+    // Bootstrap datetimepicker-style drill-up navigation, backed by Flatpickr's date handling.
+    function calendarNavigation(instance) {
+        if (instance.config.noCalendar || instance.config.showMonths !== 1) return;
+        var calendar = instance.calendarContainer;
+        var mode = 'days', viewYear = instance.currentYear, firstYear = viewYear - 5;
+        calendar.classList.add('admin-datepicker-tiered');
+        var header = document.createElement('div');
+        header.className = 'admin-datepicker-navigation';
+        function button(className, label) {
+            var el = document.createElement('button');
+            el.type = 'button'; el.className = className; el.textContent = label;
+            return el;
+        }
+        var prev = button('admin-datepicker-prev', '');
+        var title = button('admin-datepicker-title', '');
+        var next = button('admin-datepicker-next', '');
+        prev.innerHTML = instance.config.prevArrow;
+        next.innerHTML = instance.config.nextArrow;
+        header.appendChild(prev); header.appendChild(title); header.appendChild(next);
+        calendar.insertBefore(header, instance.monthNav);
+        var panel = document.createElement('div');
+        panel.className = 'admin-datepicker-periods';
+        panel.id = 'admin-datepicker-periods-' + (++nextId);
+        panel.setAttribute('role', 'group');
+        title.setAttribute('aria-controls', panel.id);
+        calendar.insertBefore(panel, instance.innerContainer);
+        var numericMonths = /月$/.test(instance.l10n.months.longhand[0]);
+        function allowed(year, month) {
+            var min = instance.config.minDate, max = instance.config.maxDate;
+            var start = new Date(year, month === undefined ? 0 : month, 1);
+            var end = new Date(year, month === undefined ? 12 : month + 1, 0, 23, 59, 59, 999);
+            return year >= 1 && year <= 9999 && !(min && end < min) && !(max && start > max);
+        }
+        function canMove(step) {
+            if (mode === 'days') {
+                var date = new Date(instance.currentYear, instance.currentMonth + step, 1);
+                return allowed(date.getFullYear(), date.getMonth());
+            }
+            if (mode === 'months') return allowed(viewYear + step);
+            var start = firstYear + step * 12;
+            for (var year = start; year < start + 12; year++) if (allowed(year)) return true;
+            return false;
+        }
+        function render() {
+            calendar.setAttribute('data-admin-calendar-view', mode);
+            panel.hidden = mode === 'days';
+            title.setAttribute('aria-expanded', String(mode !== 'days'));
+            title.textContent = mode === 'days'
+                ? (numericMonths ? (instance.currentMonth + 1) + '月' : instance.l10n.months.longhand[instance.currentMonth]) + ' ' + instance.currentYear
+                : mode === 'months' ? String(viewYear) : firstYear + '-' + (firstYear + 11);
+            panel.setAttribute('aria-label', mode === 'months' ? instance.l10n.monthAriaLabel : instance.l10n.yearAriaLabel);
+            prev.setAttribute('aria-label', mode === 'days' ? 'Previous month' : mode === 'months' ? 'Previous year' : 'Previous years');
+            next.setAttribute('aria-label', mode === 'days' ? 'Next month' : mode === 'months' ? 'Next year' : 'Next years');
+            prev.disabled = !canMove(-1); next.disabled = !canMove(1);
+            panel.textContent = '';
+            if (mode === 'days') return;
+            for (var index = 0; index < 12; index++) {
+                (function (value) {
+                    var monthView = mode === 'months';
+                    var year = monthView ? viewYear : firstYear + value;
+                    var item = button('admin-datepicker-period', monthView
+                        ? (numericMonths ? (value + 1) + '月' : instance.l10n.months.shorthand[value]) : String(year));
+                    item.disabled = !allowed(year, monthView ? value : undefined);
+                    var selected = year === instance.currentYear && (!monthView || value === instance.currentMonth);
+                    item.setAttribute('aria-pressed', String(selected));
+                    item.addEventListener('click', function () {
+                        if (monthView) {
+                            instance.jumpToDate(new Date(viewYear, value, 1), true);
+                            mode = 'days';
+                        } else {
+                            viewYear = year;
+                            mode = 'months';
+                        }
+                        render(); title.focus();
+                    });
+                    panel.appendChild(item);
+                }(index));
+            }
+        }
+        title.addEventListener('click', function () {
+            if (mode === 'days') { mode = 'months'; viewYear = instance.currentYear; }
+            else if (mode === 'months') { mode = 'years'; firstYear = viewYear - 5; }
+            render();
+        });
+        function move(step) {
+            if (!canMove(step)) return;
+            if (mode === 'days') instance.changeMonth(step);
+            else if (mode === 'months') viewYear += step;
+            else firstYear += step * 12;
+            render();
+        }
+        prev.addEventListener('click', function () { move(-1); });
+        next.addEventListener('click', function () { move(1); });
+        header.addEventListener('keydown', function (event) {
+            // Keep Flatpickr's day-grid keyboard handler away from the navigation buttons.
+            event.stopPropagation();
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                if (mode === 'days') instance.close();
+                else { mode = mode === 'years' ? 'months' : 'days'; render(); title.focus(); }
+            }
+        });
+        panel.addEventListener('keydown', function (event) {
+            event.stopPropagation();
+            if (event.key === 'Escape') {
+                event.preventDefault(); mode = mode === 'years' ? 'months' : 'days'; render(); title.focus(); return;
+            }
+            var offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -4, ArrowDown: 4 }[event.key];
+            if (!offset && event.key !== 'Home' && event.key !== 'End') return;
+            event.preventDefault();
+            var items = Array.from(panel.children), index = items.indexOf(document.activeElement);
+            var target = event.key === 'Home' ? 0 : event.key === 'End' ? 11 : index + offset;
+            while (target >= 0 && target < 12 && items[target].disabled) target += offset < 0 || event.key === 'End' ? -1 : 1;
+            if (items[target]) items[target].focus();
+        });
+        instance.config.onClose.push(function () { mode = 'days'; render(); });
+        instance.config.onOpen.push(function () { mode = 'days'; render(); });
+        instance.config.onMonthChange.push(render);
+        instance.config.onYearChange.push(render);
+        instance.config.onValueUpdate.push(render);
+        render();
+    }
+
     function init(node, supplied) {
         var input = inputOf(node);
         if (!input) return null;
@@ -139,6 +262,7 @@
                 if (!invalid) (options.errorHandler || console.warn)(error);
             },
             minDate: baseMin || undefined, maxDate: baseMax || undefined,
+            monthSelectorType: 'static',
             parseDate: function (text, format) {
                 var result = parseInput(text, format);
                 if (!result && text) {
@@ -167,6 +291,7 @@
                 parseRejected = false;
                 var calendar = instance.calendarContainer;
                 calendar.classList.add('admin-datepicker');
+                calendarNavigation(instance);
                 // Bootstrap dropdowns and X-Editable must not treat calendar interactions as outside clicks.
                 calendar.addEventListener('click', function (event) { event.stopPropagation(); });
                 if (options.showClear || options.showTodayButton || options.showClose || options.mode === 'multiple') {

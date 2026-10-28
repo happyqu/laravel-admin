@@ -50,6 +50,86 @@ test('date formatting preserves bracket literals and rejects unsupported tokens 
     } finally { w.finish(); }
 });
 
+test('calendar drills up from days to months and years, then returns without changing the saved date', () => {
+    const w = page('<input id="date" value="2026-10-15">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'YYYY-MM-DD', locale: 'zh-CN' });
+        p.show();
+        const calendar = p.instance.calendarContainer;
+        const title = calendar.querySelector('.admin-datepicker-title');
+        const panel = calendar.querySelector('.admin-datepicker-periods');
+        const next = calendar.querySelector('.admin-datepicker-next');
+        const prev = calendar.querySelector('.admin-datepicker-prev');
+        const view = () => calendar.getAttribute('data-admin-calendar-view');
+        assert.equal(title.textContent, '10月 2026');
+        next.click();
+        assert.equal(title.textContent, '11月 2026');
+        prev.click();
+        title.click();
+        assert.equal(view(), 'months');
+        assert.equal(title.textContent, '2026');
+        assert.equal(panel.children.length, 12);
+        assert.equal(panel.children[9].textContent, '10月');
+        assert.equal(panel.children[9].getAttribute('aria-pressed'), 'true');
+        next.click();
+        assert.equal(title.textContent, '2027');
+        prev.click();
+        title.click();
+        assert.equal(view(), 'years');
+        assert.equal(title.textContent, '2021-2032');
+        assert.equal(panel.children[5].textContent, '2026');
+        next.click();
+        assert.equal(title.textContent, '2033-2044');
+        prev.click();
+        panel.children[6].click();
+        assert.equal(view(), 'months');
+        assert.equal(title.textContent, '2027');
+        panel.children[1].click();
+        assert.equal(view(), 'days');
+        assert.equal(title.textContent, '2月 2027');
+        assert.equal(p.input.value, '2026-10-15');
+        assert.equal(p.instance.isOpen, true);
+        const day = p.instance.daysContainer.querySelector('.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay)');
+        day.click();
+        assert.equal(p.input.value.startsWith('2027-02-'), true);
+    } finally { w.finish(); }
+});
+
+test('calendar month and year panels respect bounds, keyboard navigation and reset on reopening', () => {
+    const w = page('<input id="date" value="2026-07-15">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {
+            format: 'YYYY-MM-DD', minDate: '2026-03-10', maxDate: '2026-10-20',
+        });
+        p.show();
+        const calendar = p.instance.calendarContainer;
+        const title = calendar.querySelector('.admin-datepicker-title');
+        const panel = calendar.querySelector('.admin-datepicker-periods');
+        title.click();
+        assert.equal(panel.children[1].disabled, true);
+        assert.equal(panel.children[2].disabled, false);
+        assert.equal(panel.children[10].disabled, true);
+        assert.equal(calendar.querySelector('.admin-datepicker-prev').disabled, true);
+        assert.equal(calendar.querySelector('.admin-datepicker-next').disabled, true);
+        panel.children[6].focus();
+        panel.children[6].dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        assert.equal(w.document.activeElement, panel.children[7]);
+        title.click();
+        assert.equal(panel.children[4].disabled, true);
+        assert.equal(panel.children[5].disabled, false);
+        panel.children[5].dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert.equal(calendar.getAttribute('data-admin-calendar-view'), 'months');
+        title.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert.equal(calendar.getAttribute('data-admin-calendar-view'), 'days');
+        assert.equal(p.instance.isOpen, true);
+        title.click();
+        p.hide();
+        p.show();
+        assert.equal(panel.hidden, true);
+        assert.equal(calendar.getAttribute('data-admin-calendar-view'), 'days');
+    } finally { w.finish(); }
+});
+
 test('locale aliases and existing multiple-date format options are honored', () => {
     const w = page();
     try {

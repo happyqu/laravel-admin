@@ -17,8 +17,8 @@
 .admin-datepicker.arrowTop:before { border-bottom-color: #dce3eb; }
 .admin-datepicker.arrowBottom:before { border-top-color: #dce3eb; }
 
-.admin-datepicker .flatpickr-months { position: relative; height: 36px; margin-bottom: 6px; }
-.admin-datepicker .flatpickr-months .flatpickr-month { height: 36px; color: #34465a; background: transparent; }
+.admin-datepicker .flatpickr-months { position: relative; z-index: 2; height: 36px; margin-bottom: 6px; }
+.admin-datepicker .flatpickr-months .flatpickr-month { height: 36px; overflow: visible; color: #34465a; background: transparent; }
 .admin-datepicker .flatpickr-current-month {
     display: flex;
     align-items: center;
@@ -32,16 +32,39 @@
     font-size: 14px;
     font-weight: 600;
 }
-.admin-datepicker .flatpickr-current-month .flatpickr-monthDropdown-months {
-    height: 28px;
-    padding: 2px 3px;
-    margin: 0;
-    color: inherit;
-    background: transparent;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 600;
+/* The single-month picker uses the same day / month / year navigation as Bootstrap datetimepicker. */
+.admin-datepicker-tiered > .flatpickr-months { display: none; }
+.admin-datepicker-navigation { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 280px; height: 36px; margin-bottom: 6px; }
+.admin-datepicker-navigation button {
+    display: flex; align-items: center; justify-content: center; height: 32px;
+    padding: 0; border: 0; border-radius: 4px; color: #34465a; background: transparent;
+    font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
 }
+.admin-datepicker-navigation .admin-datepicker-title { flex: 1; }
+.admin-datepicker-navigation .admin-datepicker-prev,
+.admin-datepicker-navigation .admin-datepicker-next { flex: 0 0 28px; }
+.admin-datepicker-navigation svg { width: 12px; height: 12px; fill: currentColor; }
+.admin-datepicker-navigation button:hover,
+.admin-datepicker .admin-datepicker-period:hover { background: #edf3f8; }
+.admin-datepicker-navigation button:disabled,
+.admin-datepicker .admin-datepicker-period:disabled { color: #bdc6d0; background: transparent; cursor: default; }
+.admin-datepicker-periods {
+    display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr);
+    gap: 8px; box-sizing: border-box; width: 100%; min-width: 280px; height: 250px; padding: 8px 0;
+}
+.admin-datepicker-periods[hidden] { display: none; }
+.admin-datepicker[data-admin-calendar-view="months"] > .flatpickr-innerContainer,
+.admin-datepicker[data-admin-calendar-view="years"] > .flatpickr-innerContainer { display: none; }
+.admin-datepicker .admin-datepicker-period {
+    align-self: center; width: 100%; height: 56px; padding: 0 2px;
+    border: 0; border-radius: 5px; color: #435366; background: transparent;
+    font-family: inherit; font-size: 14px; line-height: 1.4; cursor: pointer;
+}
+.admin-datepicker .admin-datepicker-period[aria-pressed="true"] {
+    color: #fff; background: linear-gradient(150deg, #008fc5, #0646ce);
+}
+.admin-datepicker-navigation button:focus-visible,
+.admin-datepicker .admin-datepicker-period:focus-visible { outline: 2px solid #3c8dbc; outline-offset: -2px; }
 .admin-datepicker .flatpickr-current-month .numInputWrapper { width: 64px; border-radius: 4px; }
 .admin-datepicker .flatpickr-current-month input.cur-year {
     height: 28px;
