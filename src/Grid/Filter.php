@@ -320,8 +320,10 @@ class Filter implements Renderable
         $this->removeIDFilterIfNeeded();
 
         foreach ($this->filters() as $filter) {
-            if (in_array($column = $filter->getColumn(), $this->layoutOnlyFilterColumns)) {
-                $filter->default(Arr::get($params, $column));
+            if (in_array($column = $filter->getOriginalColumn(), $this->layoutOnlyFilterColumns)) {
+                if (Arr::has($params, $column)) {
+                    $filter->default(Arr::get($params, $column));
+                }
             } else {
                 $conditions[] = $filter->condition($params);
             }
@@ -381,7 +383,7 @@ class Filter implements Renderable
 
         if ($this->thisFilterLayoutOnly) {
             $this->thisFilterLayoutOnly = false;
-            $this->layoutOnlyFilterColumns[] = $filter->getColumn();
+            $this->layoutOnlyFilterColumns[] = $filter->getOriginalColumn();
         }
 
         return $this->filters[] = $filter;

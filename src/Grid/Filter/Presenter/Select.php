@@ -5,7 +5,6 @@ namespace Encore\Admin\Grid\Filter\Presenter;
 use Encore\Admin\Facades\Admin;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Arr;
 
 class Select extends Presenter
 {
@@ -119,17 +118,23 @@ SCRIPT;
         }
 
         $this->options = function ($value) use ($model, $idField, $textField) {
-            if (empty($value)) {
+            if ($value instanceof Arrayable) {
+                $value = $value->toArray();
+            }
+
+            if ($value === null || $value === '' || $value === []) {
                 return [];
             }
 
             $resources = [];
 
             if (is_array($value)) {
-                if (Arr::isAssoc($value)) {
-                    $resources[] = Arr::get($value, $idField);
+                if (array_key_exists($idField, $value) && !is_array($value[$idField])) {
+                    $resources[] = $value[$idField];
+                } elseif (is_array(reset($value)) || reset($value) instanceof Model) {
+                    $resources = collect($value)->pluck($idField)->all();
                 } else {
-                    $resources = array_column($value, $idField);
+                    $resources = array_values($value);
                 }
             } else {
                 $resources[] = $value;
@@ -170,7 +175,7 @@ SCRIPT;
         $ajaxOptions = json_encode(array_merge($ajaxOptions, $options), JSON_UNESCAPED_UNICODE);
 
         $values = (array) $this->filter->getValue();
-        $values = array_filter($values);
+        $values = array_values(array_filter($values, static fn ($value) => is_scalar($value) && $value !== ''));
         $values = json_encode($values);
 
         $this->script = <<<EOT
@@ -233,10 +238,7 @@ $(".{$this->getElementClass()}").select2({
     },
     cache: true
   },
-  $configs,
-  escapeMarkup: function (markup) {
-      return markup;
-  }
+  $configs
 });
 
 EOT;
@@ -274,11 +276,12 @@ EOT;
     public function load($target, $resourceUrl, $idField = 'id', $textField = 'text'): self
     {
         $column = $this->filter->getColumn();
+        $event = 'change.adminPage.filterCascade'.md5($this->getTargetClass($target));
 
         $script = <<<EOT
-$(document).off('change', ".{$this->getClass($column)}");
-$(document).on('change.adminPage', ".{$this->getClass($column)}", function () {
-    var target = $(this).closest('form').find(".{$this->getClass($target)}");
+$(document).off('{$event}', ".{$this->getClass($column)}");
+$(document).on('{$event}', ".{$this->getClass($column)}", function () {
+    var target = $(this).closest('form').find(".{$this->getTargetClass($target)}");
     $.get("$resourceUrl",{q : this.value}, function (data) {
         target.find("option").remove();
         $.each(data, function (i, item) {
@@ -308,5 +311,15 @@ EOT;
     protected function getClass($target): string
     {
         return str_replace('.', '_', $target);
+    }
+
+    protected function getTargetClass($target): string
+    {
+        $prefix = $this->filter->getParent()?->getName();
+        if ($prefix && !str_starts_with($target, $prefix.'_')) {
+            $target = $prefix.'_'.$target;
+        }
+
+        return $this->getClass($target);
     }
 }

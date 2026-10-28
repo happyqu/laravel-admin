@@ -95,23 +95,26 @@ SCRIPT;
         $this->addScript();
 
         $value = $this->getFilterValue();
-
-        $active = empty($value) ? '' : 'text-yellow';
+        $value = is_scalar($value) ? (string) $value : '';
+        $active = $value === '' ? '' : 'text-yellow';
+        $value = e($value);
+        $column = e($this->getColumnName());
+        $action = e($this->getFormAction());
 
         return <<<EOT
 <span class="dropdown">
-    <form action="{$this->getFormAction()}" style="display: inline-block;">
+    <form action="{$action}" style="display: inline-block;">
     <a href="javascript:void(0);" class="dropdown-toggle {$active}" data-toggle="dropdown">
         <i class="fa fa-filter"></i>
     </a>
     <ul class="dropdown-menu" role="menu" style="padding: 10px;box-shadow: 0 2px 3px 0 rgba(0,0,0,.2);left: -70px;border-radius: 0;">
         <li>
-            <input type="text" name="{$this->getColumnName()}" value="{$this->getFilterValue()}" class="form-control input-sm {$this->class}" autocomplete="off"/>
+            <input type="text" name="{$column}" value="{$value}" class="form-control input-sm {$this->class}" autocomplete="off"/>
         </li>
         <li class="divider"></li>
         <li class="text-right">
             <button class="btn btn-sm btn-flat btn-primary column-filter-submit pull-left" data-loading-text="{$this->trans('search')}..."><i class="fa fa-search"></i>&nbsp;&nbsp;{$this->trans('search')}</button>
-            <span><a href="{$this->getFormAction()}" class="btn btn-sm btn-default btn-flat column-filter-all"><i class="fa fa-undo"></i></a></span>
+            <span><a href="{$action}" class="btn btn-sm btn-default btn-flat column-filter-all"><i class="fa fa-undo"></i></a></span>
         </li>
     </ul>
     </form>

@@ -177,6 +177,11 @@ abstract class AbstractFilter
         $this->parent = $filter;
     }
 
+    public function getParent(): ?Filter
+    {
+        return $this->parent;
+    }
+
     /**
      * Get siblings of current filter.
      *
@@ -413,7 +418,14 @@ abstract class AbstractFilter
      */
     public function getId()
     {
-        return $this->id;
+        $prefix = $this->parent ? $this->parent->getName() : '';
+        if ($prefix === '') {
+            return $this->id;
+        }
+
+        return is_array($this->id)
+            ? array_map(static fn ($id) => $prefix.'_'.$id, $this->id)
+            : $prefix.'_'.$this->id;
     }
 
     /**
@@ -442,6 +454,11 @@ abstract class AbstractFilter
         return $parentName ? "{$parentName}_{$this->column}" : $this->column;
     }
 
+    public function getOriginalColumn()
+    {
+        return $this->column;
+    }
+
     /**
      * Get value of current filter.
      *
@@ -449,7 +466,7 @@ abstract class AbstractFilter
      */
     public function getValue()
     {
-        return $this->value;
+        return $this->value ?? $this->defaultValue;
     }
 
     /**
@@ -479,9 +496,10 @@ abstract class AbstractFilter
 
         $relation = substr($this->column, 0, strrpos($this->column, '.'));
         $args[0] = last(explode('.', $this->column));
+        $query = $this->query;
 
-        return ['whereHas' => [$relation, function ($relation) use ($args) {
-            call_user_func_array([$relation, $this->query], $args);
+        return ['whereHas' => [$relation, function ($relation) use ($args, $query) {
+            call_user_func_array([$relation, $query], $args);
         }]];
     }
 
@@ -493,11 +511,11 @@ abstract class AbstractFilter
     protected function variables()
     {
         return array_merge([
-            'id'        => $this->id,
-            'column'    => $this->column,
+            'id'        => $this->getId(),
+            'column'    => $this->getColumn(),
             'name'      => $this->formatName($this->column),
             'label'     => $this->label,
-            'value'     => $this->value ?: $this->defaultValue,
+            'value'     => $this->getValue(),
             'presenter' => $this->presenter(),
         ], $this->presenter()->variables());
     }

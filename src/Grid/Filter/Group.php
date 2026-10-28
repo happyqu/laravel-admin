@@ -273,11 +273,14 @@ class Group extends AbstractFilter
 
         $this->value = $value;
 
-        $group = Arr::get($inputs, "{$this->id}_group");
+        $group = Arr::get($inputs, "{$this->id}_group", 0);
 
-        call_user_func($this->builder, $this);
+        if ($this->builder) {
+            $this->group = new Collection();
+            call_user_func($this->builder, $this);
+        }
 
-        if ($query = $this->group->get($group)) {
+        if ($query = $this->group->get($this->groupIndex($group))) {
             return $this->buildCondition(...$query['condition']);
         }
     }
@@ -287,10 +290,13 @@ class Group extends AbstractFilter
      */
     protected function injectScript()
     {
+        $this->name = $this->getId().'-filter-group';
         $script = <<<SCRIPT
-$(".{$this->name} li a").click(function(){
-    $(".{$this->name}-label").text($(this).text());
-    $(".{$this->name}-operation").val($(this).data('index'));
+$(".{$this->name} li a").off('click.adminFilterGroup').on('click.adminFilterGroup', function(event){
+    event.preventDefault();
+    var root = $(this).closest('.input-group');
+    root.find(".{$this->name}-label").text($(this).text());
+    root.find(".{$this->name}-operation").val($(this).data('index'));
 });
 SCRIPT;
 
@@ -302,14 +308,26 @@ SCRIPT;
      */
     public function variables()
     {
-        $select = request("{$this->id}_group");
+        $select = $this->groupIndex(request($this->getId().'_group', 0));
 
         $default = $this->group->get($select) ?: $this->group->first();
 
         return array_merge(parent::variables(), [
             'group_name' => $this->name,
+            'selected_group' => $select,
             'default'    => $default,
         ]);
+    }
+
+    protected function groupIndex($value): int
+    {
+        if ((!is_string($value) && !is_int($value)) || !ctype_digit((string) $value)) {
+            return 0;
+        }
+
+        $index = (int) $value;
+
+        return $this->group->has($index) ? $index : 0;
     }
 
     /**

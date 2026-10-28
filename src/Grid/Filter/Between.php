@@ -12,6 +12,8 @@ class Between extends AbstractFilter
      */
     protected $view = 'admin::filter.between';
 
+    protected $datetimeOptions = [];
+
     /**
      * Format id.
      *
@@ -57,15 +59,16 @@ class Between extends AbstractFilter
             return;
         }
 
-        $this->value = Arr::get($inputs, $this->column);
+        $input = Arr::get($inputs, $this->column);
 
-        if (!is_array($this->value)) {
+        if (!is_array($input)) {
             return;
         }
 
-        $value = array_filter($this->value, function ($val) {
-            return $val !== '';
-        });
+        $value = $this->value = array_filter([
+            'start' => $input['start'] ?? null,
+            'end' => $input['end'] ?? null,
+        ], static fn ($bound) => is_scalar($bound) && $bound !== '');
 
         if (empty($value)) {
             return;
@@ -79,9 +82,13 @@ class Between extends AbstractFilter
             return $this->buildCondition($this->column, '>=', $value['start']);
         }
 
+        $previous = $this->query;
         $this->query = 'whereBetween';
-
-        return $this->buildCondition($this->column, $this->value);
+        try {
+            return $this->buildCondition($this->column, array_values($value));
+        } finally {
+            $this->query = $previous;
+        }
     }
 
     /**
@@ -93,7 +100,7 @@ class Between extends AbstractFilter
     {
         $this->view = 'admin::filter.betweenDatetime';
 
-        $this->setupDatetime($options);
+        $this->datetimeOptions = $options;
 
         return $this;
     }
@@ -108,18 +115,28 @@ class Between extends AbstractFilter
 
         $startOptions = json_encode($options);
         $endOptions = json_encode($options + ['useCurrent' => false]);
+        $id = $this->getId();
 
         $script = <<<EOT
-            $('#{$this->id['start']}').datetimepicker($startOptions);
-            $('#{$this->id['end']}').datetimepicker($endOptions);
-            $("#{$this->id['start']}").on("dp.change", function (e) {
-                $('#{$this->id['end']}').data("DateTimePicker").minDate(e.date);
+            $('#{$id['start']}').datetimepicker($startOptions);
+            $('#{$id['end']}').datetimepicker($endOptions);
+            $("#{$id['start']}").on("dp.change", function (e) {
+                $('#{$id['end']}').data("DateTimePicker").minDate(e.date);
             });
-            $("#{$this->id['end']}").on("dp.change", function (e) {
-                $('#{$this->id['start']}').data("DateTimePicker").maxDate(e.date);
+            $("#{$id['end']}").on("dp.change", function (e) {
+                $('#{$id['start']}').data("DateTimePicker").maxDate(e.date);
             });
 EOT;
 
         Admin::script($script);
+    }
+
+    public function render()
+    {
+        if ($this->view === 'admin::filter.betweenDatetime') {
+            $this->setupDatetime($this->datetimeOptions);
+        }
+
+        return parent::render();
     }
 }

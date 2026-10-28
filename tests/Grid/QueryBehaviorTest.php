@@ -230,7 +230,9 @@ class QueryBehaviorTest extends TestCase
         $this->assertStringContainsString('name="comments_created_at[start]"', $html);
         $this->assertStringContainsString('name="comments_created_at[end]"', $html);
         $this->request(['comments_created_at' => ['start' => '2026-01-01', 'end' => '2026-10-01']]);
-        $this->assertContains(['whereBetween' => ['created_at', ['start' => '2026-01-01', 'end' => '2026-10-01']]], $filter->conditions());
+        $query = $filter->getModel()->getQueryBuilder();
+        $this->assertStringContainsString('`created_at` between ? and ?', $query->toSql());
+        $this->assertSame(['2026-01-01', '2026-10-01'], $query->getBindings());
     }
 
     public function test_grid_links_reject_dangerous_urls_from_values_strings_and_callbacks(): void
