@@ -3,9 +3,9 @@
 namespace Encore\Admin\Grid\Tools;
 
 use Encore\Admin\Grid;
-use Illuminate\Contracts\Support\Renderable;
+use Encore\Admin\Widgets\Tool;
 
-abstract class AbstractTool implements Renderable
+abstract class AbstractTool extends Tool
 {
     /**
      * @var Grid
@@ -50,7 +50,12 @@ abstract class AbstractTool implements Renderable
     {
         $this->grid = $grid;
 
-        return $this;
+        return parent::setGrid($grid);
+    }
+
+    public function renderAuthorized()
+    {
+        return $this->allowed() ? parent::renderAuthorized() : '';
     }
 
     /**
@@ -62,15 +67,10 @@ abstract class AbstractTool implements Renderable
     }
 
     /**
-     * {@inheritdoc}
-     */
-    abstract public function render();
-
-    /**
      * @return string
      */
     public function __toString()
     {
-        return $this->render();
+        return (string) $this->renderAuthorized();
     }
 }

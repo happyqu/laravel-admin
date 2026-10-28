@@ -42,6 +42,8 @@ class Context
         $ticket = ['action' => $descriptor['class'], 'parameters' => $descriptor['parameters'],
             'record' => $descriptor['record'], 'keys' => array_map('strval', $action->contextKeys()),
             'source' => $source, 'mode' => $action->interaction()];
+        $ticket['authorization_version'] = (string) config('admin.actions.authorization_version', '1');
+        if ($rules = $action->authorizationConfiguration()) $ticket['authorization'] = $rules;
         if ($descriptor['state']) $ticket['options'] = $descriptor['state'];
         if ($versions = $this->versions($model)) $ticket['versions'] = $versions;
         $hash = hash('sha256', json_encode($ticket, JSON_THROW_ON_ERROR));
@@ -61,6 +63,7 @@ class Context
         abort_unless(is_subclass_of($class, Action::class), 400);
         $action = app($class);
         $action->restoreContext($ticket['options'] ?? []);
+        $action->restoreAuthorizationConfiguration($ticket['authorization'] ?? []);
         $batch = $action instanceof BatchAction;
         $keys = !$loading && !empty($ticket['loaded']) ? $ticket['keys'] : $request->input('_key', []);
         $keys = is_array($keys) ? array_values($keys) : [$keys];
@@ -121,7 +124,11 @@ class Context
     private function read($token): array
     {
         abort_unless(Admin::user(), 401);
-        return ContextToken::decode($token);
+        $ticket = ContextToken::decode($token);
+        if (($ticket['authorization_version'] ?? '1') !== (string) config('admin.actions.authorization_version', '1')) {
+            ContextToken::fail('action_context_invalid');
+        }
+        return $ticket;
     }
 
     private function executionKey(array $ticket): string

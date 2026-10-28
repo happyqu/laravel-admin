@@ -90,6 +90,10 @@ abstract class BatchAction extends GridAction
      */
     public function render()
     {
+        if (!$this->passesAuthorizationForRendering()) {
+            return $this->renderAuthorizationDenied();
+        }
+
         $this->addScript();
         $this->attribute('data-admin-selection', $this->parent->getGridRowName().'-checkbox');
 

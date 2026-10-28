@@ -126,6 +126,10 @@ abstract class RowAction extends GridAction
      */
     public function render()
     {
+        if (!$this->passesAuthorizationForRendering()) {
+            return $this->renderAuthorizationDenied();
+        }
+
         if ($href = $this->href()) {
             return "<a href='".e($href)."'>".e($this->name()).'</a>';
         }

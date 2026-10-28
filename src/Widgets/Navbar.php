@@ -81,6 +81,10 @@ class Navbar implements Renderable
         }
 
         return $elements->map(function ($element) {
+            if ($element instanceof Tool) {
+                return $element->renderAuthorized();
+            }
+
             if ($element instanceof Htmlable) {
                 return $element->toHtml();
             }

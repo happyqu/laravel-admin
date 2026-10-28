@@ -500,13 +500,13 @@ class Column
     /**
      * Display column using a grid row action.
      *
-     * @param string $action
+     * @param string|RowAction $action
      *
      * @return $this
      */
     public function action($action)
     {
-        if (!is_subclass_of($action, RowAction::class)) {
+        if (!$action instanceof RowAction && !is_subclass_of($action, RowAction::class)) {
             throw new \InvalidArgumentException("Action class [$action] must be sub-class of [Encore\Admin\Actions\GridAction]");
         }
 
@@ -514,7 +514,7 @@ class Column
 
         return $this->display(function ($_, $column) use ($action, $grid) {
             /** @var RowAction $action */
-            $action = new $action();
+            $action = $action instanceof RowAction ? clone $action : new $action();
 
             return $action
                 ->asColumn()

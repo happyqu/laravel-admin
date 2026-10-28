@@ -312,6 +312,10 @@ HTML;
     protected function renderCustomTools($tools)
     {
         return $tools->map(function ($tool) {
+            if ($tool instanceof \Encore\Admin\Widgets\Tool) {
+                return $tool->renderAuthorized();
+            }
+
             if ($tool instanceof Renderable) {
                 return $tool->render();
             }

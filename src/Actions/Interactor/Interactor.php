@@ -32,6 +32,14 @@ abstract class Interactor
         $this->action = $action;
     }
 
+    /** Keep row-specific dialogs attached to the cloned action used by a Grid column. */
+    public function copyFor(Action $action): static
+    {
+        $copy = clone $this;
+        $copy->action = $action;
+        return $copy;
+    }
+
     /**
      * @return mixed
      */

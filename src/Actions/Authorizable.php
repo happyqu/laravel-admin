@@ -11,6 +11,23 @@ use Illuminate\Database\Eloquent\Model;
  */
 trait Authorizable
 {
+    use \Encore\Admin\Support\Authorization;
+
+    public function passesAuthorizationForRendering(): bool
+    {
+        if ($this instanceof BatchAction) {
+            // The eventual selection is not known yet; do not authorize unrelated visible rows.
+            $user = Admin::user();
+            return $user && $this->passesConfiguredAuthorization($user, null, true);
+        }
+        return $this->passesAuthorization($this instanceof RowAction ? $this->getRow() : $this->contextModel());
+    }
+
+    protected function renderAuthorizationDenied(): string
+    {
+        return $this->authorizationDeniedHtml($this->name());
+    }
+
     /**
      * @param Model $model
      *
@@ -18,8 +35,13 @@ trait Authorizable
      */
     public function passesAuthorization($model = null)
     {
+        $user = Admin::user();
+        if (!$user || !$this->passesConfiguredAuthorization($user, $model)) {
+            return false;
+        }
+
         if (method_exists($this, 'authorize')) {
-            if ($this->authorize(Admin::user(), $model) != true) {
+            if ($this->authorize($user, $model) != true) {
                 return false;
             }
         }
@@ -27,7 +49,7 @@ trait Authorizable
         if ($model instanceof Collection) {
             foreach ($model as $record) {
                 if ($record && method_exists($record, 'actionAuthorize')
-                    && $record->actionAuthorize(Admin::user(), get_called_class()) != true) {
+                    && $record->actionAuthorize($user, get_called_class()) != true) {
                     return false;
                 }
             }
@@ -35,7 +57,7 @@ trait Authorizable
         }
 
         if ($model && method_exists($model, 'actionAuthorize')) {
-            return $model->actionAuthorize(Admin::user(), get_called_class()) == true;
+            return $model->actionAuthorize($user, get_called_class()) == true;
         }
 
         return true;

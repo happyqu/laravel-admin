@@ -422,6 +422,11 @@ return [
     */
     'grid_action_class' => \Encore\Admin\Grid\Displayers\DropdownActions::class,
 
+    // Bump when deploying stricter button authorization to invalidate previously issued tickets.
+    'actions' => [
+        'authorization_version' => '1',
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Extension Directory

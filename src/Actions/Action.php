@@ -99,6 +99,15 @@ abstract class Action implements Renderable
         $this->initInteractor();
     }
 
+    public function __clone()
+    {
+        $this->response = null;
+        $this->resolvedModel = null;
+        if ($this->interactor) {
+            $this->interactor = $this->interactor->copyFor($this);
+        }
+    }
+
     /**
      * @throws \Exception
      */
@@ -409,6 +418,10 @@ abstract class Action implements Renderable
      */
     public function render()
     {
+        if (!$this->passesAuthorizationForRendering()) {
+            return $this->renderAuthorizationDenied();
+        }
+
         $content = $this->html();
         if (!$content) {
             return $content;

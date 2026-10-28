@@ -77,6 +77,10 @@ class Tools implements Renderable
      */
     public function prepend($tool)
     {
+        if ($tool instanceof GridAction) {
+            $tool->setGrid($this->grid);
+        }
+
         $this->tools->prepend($tool);
 
         return $this;
@@ -145,11 +149,16 @@ class Tools implements Renderable
     {
         return $this->tools->map(function ($tool) {
             if ($tool instanceof AbstractTool) {
+                $tool->setGrid($this->grid);
                 if (!$tool->allowed()) {
                     return '';
                 }
 
-                return $tool->setGrid($this->grid)->render();
+                return $tool->renderAuthorized();
+            }
+
+            if ($tool instanceof \Encore\Admin\Widgets\Tool) {
+                return $tool->setGrid($this->grid)->renderAuthorized();
             }
 
             if ($tool instanceof Renderable) {

@@ -49,7 +49,9 @@ class Footer extends AbstractTool
             return '';
         }
 
-        if ($content instanceof Renderable) {
+        if ($content instanceof \Encore\Admin\Widgets\Tool) {
+            $content = $content->setGrid($this->grid)->renderAuthorized();
+        } elseif ($content instanceof Renderable) {
             $content = $content->render();
         }
 
