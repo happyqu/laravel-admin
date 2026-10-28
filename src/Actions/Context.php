@@ -25,7 +25,8 @@ class Context
             $response = $callback();
             if ($response instanceof \Illuminate\Http\JsonResponse && ($response->getData(true)['status'] ?? false) === true
                 && $ticket['mode'] !== 'direct') {
-                \Illuminate\Support\Facades\Cache::put($key.':completed', true, 7200);
+                // Tickets remain valid for the login session, so completion cannot expire sooner.
+                \Illuminate\Support\Facades\Cache::forever($key.':completed', true);
             }
             return $response;
         } finally {
@@ -89,6 +90,11 @@ class Context
         if ($keys) $values['_key'] = $batch ? $keys : $keys[0];
         $clean = \Encore\Admin\Form\SubmissionInput::replace($request, $values, $request->allFiles());
         $clean->attributes->set('_admin_component_source', $ticket['source']);
+        $trusted = $ticket['parameters'];
+        $trusted['_action_token'] = $token;
+        if ($keys) $trusted['_key'] = $batch ? $keys : $keys[0];
+        if (is_string($request->input('_token'))) $trusted['_token'] = $request->input('_token');
+        $clean->attributes->set('_admin_action_parameters', $trusted);
 
         return [$action, $model, $token, $keys];
     }
@@ -109,7 +115,7 @@ class Context
 
     public function forget(string $token): void
     {
-        \Illuminate\Support\Facades\Cache::put($this->executionKey($this->read($token)).':completed', true, 7200);
+        \Illuminate\Support\Facades\Cache::forever($this->executionKey($this->read($token)).':completed', true);
     }
 
     private function read($token): array

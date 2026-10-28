@@ -409,6 +409,27 @@ EOT;
             throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Invalid file key.']);
         }
 
+        $this->destroyFile($path);
+
+        unset($files[$key]);
+
+        return $files;
+    }
+
+    /** Remove files when their owning form record is deleted, including pathColumn relations. */
+    public function destroyAll(): void
+    {
+        foreach ($this->original() as $file) {
+            $path = $this->pathColumn ? Arr::get($file, $this->pathColumn) : $file;
+            if (!is_string($path)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Invalid file path.']);
+            }
+            $this->destroyFile($path);
+        }
+    }
+
+    protected function destroyFile(string $path): void
+    {
         if (!$this->retainable && $this->storage->exists($path)) {
             /* If this field class is using ImageField trait i.e MultipleImage field,
             we loop through the thumbnails to delete them as well. */
@@ -420,10 +441,6 @@ EOT;
             }
             $this->deleteStoredFile($path);
         }
-
-        unset($files[$key]);
-
-        return $files;
     }
 
     /**
@@ -442,9 +459,7 @@ EOT;
             throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Invalid file key.']);
         }
 
-        if (!$this->retainable && $this->storage->exists($path)) {
-            $this->deleteStoredFile($path);
-        }
+        $this->destroyFile($path);
 
         $files[$key][Form::REMOVE_FLAG_NAME] = 1;
 

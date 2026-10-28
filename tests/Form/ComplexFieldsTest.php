@@ -277,6 +277,9 @@ class ComplexFieldsTest extends TestCase
             'locked' => $upload, 'extra' => $upload,
             'children' => ['new_1' => ['locked' => $upload, 'extra' => $upload]],
         ]]]);
+        $request->attributes->set('_admin_action_parameters', [
+            '_action_token' => 'signed-ticket', '_class' => 'TrustedController', '_cb' => 'save', '_key' => '7',
+        ]);
         $action->validate($request);
         $this->assertSame(['new_1' => [
             'title' => 'Valid', 'children' => ['new_1' => ['name' => 'Child']],

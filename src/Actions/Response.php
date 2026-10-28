@@ -122,6 +122,8 @@ class Response
      */
     public function error(string $message = '')
     {
+        $this->status = false;
+
         return $this->show('error', $message);
     }
 

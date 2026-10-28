@@ -52,9 +52,12 @@ class FormSubmission
         }
         $request->setRouteResolver(static fn () => $route);
         $user = Admin::user();
+        $request->setUserResolver(static fn () => $user);
+        static::authorizePolicies($request, $route, $user);
         if ($user->isRole('administrator')) {
             return;
         }
+        $hasPermissionMiddleware = false;
         foreach ($route->gatherMiddleware() as $middleware) {
             if (!is_string($middleware) || !Str::startsWith($middleware, 'admin.permission:')) {
                 continue;
@@ -69,10 +72,59 @@ class FormSubmission
                 default => false,
             };
             abort_unless($allowed, 403);
-            return;
+            $hasPermissionMiddleware = true;
         }
-        if (config('admin.check_route_permission') !== false) {
+        if (!$hasPermissionMiddleware && config('admin.check_route_permission') !== false) {
             abort_unless($user->allPermissions()->contains(static fn ($permission) => $permission->shouldPassThrough($request)), 403);
+        }
+    }
+
+    /** Recheck Laravel policy middleware using the source route and its bound models. */
+    private static function authorizePolicies(Request $request, $route, $user): void
+    {
+        $router = app('router');
+        $policies = [];
+        foreach ($router->resolveMiddleware($route->gatherMiddleware(), $route->excludedMiddleware()) as $middleware) {
+            if (!is_string($middleware)) continue;
+            [$class, $parameters] = array_pad(explode(':', $middleware, 2), 2, '');
+            if ($class === 'can' || is_a($class, \Illuminate\Auth\Middleware\Authorize::class, true)) {
+                $policies[] = explode(',', $parameters);
+            }
+        }
+        if (!$policies) return;
+
+        $original = app('request');
+        $originalRoute = $router->current();
+        $originalRouterRequest = $router->getCurrentRequest();
+        $routeClass = \Illuminate\Routing\Route::class;
+        $hadRouteBinding = app()->bound($routeClass);
+        $originalRouteBinding = $hadRouteBinding ? app($routeClass) : null;
+        // Router has no public context setter; update its context without dispatching the source action.
+        $setRouterContext = \Closure::bind(function ($route, $request) {
+            $this->current = $route;
+            $this->currentRequest = $request;
+        }, $router, \Illuminate\Routing\Router::class);
+        try {
+            app()->instance('request', $request);
+            \Illuminate\Support\Facades\Facade::clearResolvedInstance('request');
+            $setRouterContext($route, $request);
+            app()->instance($routeClass, $route);
+            $router->substituteBindings($route);
+            $router->substituteImplicitBindings($route);
+            $gate = app(\Illuminate\Contracts\Auth\Access\Gate::class)->forUser($user);
+            $authorize = new \Illuminate\Auth\Middleware\Authorize($gate);
+            foreach ($policies as $parameters) {
+                $authorize->handle($request, static fn () => null, ...$parameters);
+            }
+        } finally {
+            $setRouterContext($originalRoute, $originalRouterRequest);
+            if ($hadRouteBinding) {
+                app()->instance($routeClass, $originalRouteBinding);
+            } else {
+                app()->forgetInstance($routeClass);
+            }
+            app()->instance('request', $original);
+            \Illuminate\Support\Facades\Facade::clearResolvedInstance('request');
         }
     }
 

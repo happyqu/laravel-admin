@@ -273,10 +273,37 @@ trait ModelTree
      */
     public static function saveOrder($tree = [], $parentId = 0)
     {
-        if ($parentId === 0) {
-            static::setBranchOrder($tree);
+        if (!is_array($tree)) {
+            throw new \InvalidArgumentException('Invalid tree order payload.');
         }
 
+        $seen = [(string) $parentId => true];
+        static::validateTreeOrder($tree, $seen);
+        static::setBranchOrder($tree);
+        static::saveTreeOrder($tree, $parentId);
+    }
+
+    /** Validate the entire submission before changing the first node. */
+    protected static function validateTreeOrder(array $tree, array &$seen): void
+    {
+        foreach ($tree as $branch) {
+            if (!is_array($branch) || !isset($branch['id'])
+                || (!is_string($branch['id']) && !is_int($branch['id'])) || $branch['id'] === ''
+                || isset($seen[(string) $branch['id']])) {
+                throw new \InvalidArgumentException('Invalid or duplicate tree node.');
+            }
+            $seen[(string) $branch['id']] = true;
+            if (array_key_exists('children', $branch)) {
+                if (!is_array($branch['children'])) {
+                    throw new \InvalidArgumentException('Invalid tree children.');
+                }
+                static::validateTreeOrder($branch['children'], $seen);
+            }
+        }
+    }
+
+    protected static function saveTreeOrder(array $tree, $parentId): void
+    {
         foreach ($tree as $branch) {
             if (!is_array($branch) || !isset($branch['id'])) {
                 throw new \InvalidArgumentException('Invalid tree order payload.');
@@ -289,7 +316,7 @@ trait ModelTree
             $node->save();
 
             if (isset($branch['children']) && is_array($branch['children'])) {
-                static::saveOrder($branch['children'], $branch['id']);
+                static::saveTreeOrder($branch['children'], $branch['id']);
             }
         }
     }

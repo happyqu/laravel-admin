@@ -319,9 +319,7 @@ class Form implements Renderable
         })->each(function ($file) use ($data) {
             $file->setOriginal($data);
             if ($file instanceof Field\MultipleFile) {
-                foreach (array_keys($file->original()) as $key) {
-                    $file->destroy($key);
-                }
+                $file->destroyAll();
             } else {
                 $file->destroy();
             }

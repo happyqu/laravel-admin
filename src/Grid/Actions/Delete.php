@@ -31,7 +31,9 @@ class Delete extends RowAction
 
         try {
             DB::transaction(function () use ($model) {
-                $model->delete();
+                if ($model->delete() === false) {
+                    throw new \RuntimeException('Model deletion was cancelled.');
+                }
             });
         } catch (\Exception $exception) {
             return $this->response()->error("{$trans['failed']} : {$exception->getMessage()}");

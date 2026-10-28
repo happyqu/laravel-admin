@@ -44,6 +44,7 @@ class DeleteConfirmationTest extends TestCase
         $this->app->register(\Illuminate\Events\EventServiceProvider::class);
         $this->app->register(\Illuminate\Routing\RoutingServiceProvider::class);
         $this->app->register(\Illuminate\Translation\TranslationServiceProvider::class);
+        $this->app->register(\Illuminate\Validation\ValidationServiceProvider::class);
         $this->app->register(\Illuminate\View\ViewServiceProvider::class);
         $this->app->register(\Illuminate\Cache\CacheServiceProvider::class);
         $this->app['router']->get('admin/users', fn () => '')->middleware('admin.permission:check,view-users');
@@ -282,6 +283,84 @@ class DeleteConfirmationTest extends TestCase
         $this->assertSame(1, $calls);
     }
 
+    public function test_completed_tickets_cannot_be_replayed_after_two_hours(): void
+    {
+        [, $token] = $this->render();
+        $context = $this->app[Context::class];
+        $request = Request::create('/execute', 'POST', ['_action_token' => $token]);
+        $calls = 0;
+        $run = function () use (&$calls) { $calls++; return response()->json(['status' => true]); };
+        $context->execute($request, $run);
+        try {
+            \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::now()->addHours(3));
+            try {
+                $context->execute($request, $run);
+                $this->fail('Completed ticket was replayed.');
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+                $this->assertSame(409, $exception->getStatusCode());
+            }
+            $this->assertSame(1, $calls);
+        } finally {
+            \Illuminate\Support\Carbon::setTestNow();
+        }
+    }
+
+    public function test_business_errors_allow_a_retry_without_consuming_the_form_ticket(): void
+    {
+        $this->app['view']->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
+        RetryableFormAction::$reject = true;
+        $context = $this->app[Context::class];
+        $token = $context->register(new RetryableFormAction());
+        $controller = new \Encore\Admin\Controllers\HandleController();
+        $loaded = $controller->loadAction(Request::create('/load', 'POST', ['_action_token' => $token]))->getData(true);
+        $request = Request::create('/execute', 'POST', ['_action_token' => $loaded['ticket'], 'name' => 'Alice']);
+        $response = $controller->handleAction($request)->getData(true);
+        $this->assertFalse($response['status']);
+        $this->assertSame('error', $response['toastr']['type']);
+        RetryableFormAction::$reject = false;
+        $this->assertTrue($controller->handleAction($request)->getData(true)['status']);
+        try {
+            $controller->handleAction($request);
+            $this->fail('Successful retry was executed twice.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+    }
+
+    public function test_form_handlers_only_receive_declared_fields_and_signed_parameters(): void
+    {
+        $this->app['view']->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
+        RetryableFormAction::$reject = true;
+        $context = $this->app[Context::class];
+        $token = $context->register(new RetryableFormAction());
+        $controller = new \Encore\Admin\Controllers\HandleController();
+        $loaded = $controller->loadAction(Request::create('/load', 'POST', ['_action_token' => $token]))->getData(true);
+        $file = new \Illuminate\Http\UploadedFile(__FILE__, 'extra.php', null, null, true);
+        $request = Request::create('/execute', 'POST', [
+            '_action_token' => $loaded['ticket'], 'name' => 'Alice', 'is_admin' => 1, '_cb' => 'forged',
+        ], [], ['unexpected' => $file, '_cb' => $file]);
+        $controller->handleAction($request);
+        $this->assertSame('Alice', RetryableFormAction::$input['name']);
+        $this->assertSame('trusted-callback', RetryableFormAction::$input['_cb']);
+        $this->assertSame('signed-option', RetryableFormAction::$input['option']);
+        $this->assertSame($loaded['ticket'], RetryableFormAction::$input['_action_token']);
+        $this->assertArrayNotHasKey('is_admin', RetryableFormAction::$input);
+        $this->assertArrayNotHasKey('unexpected', RetryableFormAction::$input);
+    }
+
+    public function test_a_cancelled_model_deletion_returns_an_error(): void
+    {
+        $database = $this->createMock(\Illuminate\Database\DatabaseManager::class);
+        $database->method('__call')->with('transaction', $this->anything())
+            ->willReturnCallback(static fn ($method, $arguments) => $arguments[0]());
+        \Illuminate\Support\Facades\DB::swap($database);
+        $model = new class extends Model { public function delete() { return false; } };
+        $response = (new ConfirmationDelete())->handle($model)->send()->getData(true);
+        $this->assertFalse($response['status']);
+        $this->assertSame('error', $response['swal']['type']);
+        $this->assertSame([], $response['then']);
+    }
+
     public function test_explicit_options_and_total_payload_have_size_limits(): void
     {
         $action = (new ConfirmationImportRow())->setRow($this->row);
@@ -346,5 +425,18 @@ class ConfirmationImportRow extends \Encore\Admin\Actions\RowAction
         $this->text('id', 'ID')->value($this->getRow()->getKey())->readonly();
         $this->text('sample', 'Sample')->value(implode(',', $this->headerList))->readonly();
         $this->text('name', 'Name')->rules('required');
+    }
+}
+
+class RetryableFormAction extends Action
+{
+    public static bool $reject = true;
+    public static array $input = [];
+    public function parameters() { return ['_cb' => 'trusted-callback', 'option' => 'signed-option']; }
+    public function form() { $this->text('name')->rules('required'); }
+    public function handle(Request $request)
+    {
+        static::$input = $request->all();
+        return static::$reject ? $this->response()->error('Rejected') : $this->response()->success('Saved');
     }
 }

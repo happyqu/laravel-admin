@@ -67,18 +67,22 @@ class Permission extends Model
             return true;
         }
 
-        $method = $this->http_method;
-
-        $matches = array_map(function ($path) use ($method) {
-            $path = trim(config('admin.route.prefix'), '/').$path;
+        $matches = [];
+        $prefix = trim(config('admin.route.prefix'), '/');
+        foreach (explode("\n", $this->http_path) as $path) {
+            $method = $this->http_method;
+            $path = trim($path);
 
             if (Str::contains($path, ':')) {
-                list($method, $path) = explode(':', $path);
+                list($method, $path) = explode(':', $path, 2);
                 $method = explode(',', $method);
             }
 
-            return compact('method', 'path');
-        }, explode("\n", $this->http_path));
+            if ($path === '*' && $prefix !== '') {
+                $matches[] = ['method' => $method, 'path' => $prefix];
+            }
+            $matches[] = ['method' => $method, 'path' => $prefix.'/'.ltrim($path, '/')];
+        }
 
         foreach ($matches as $match) {
             if ($this->matchRequest($match, $request)) {
@@ -122,7 +126,7 @@ class Permission extends Model
         }
 
         $method = collect($match['method'])->filter()->map(function ($method) {
-            return strtoupper($method);
+            return strtoupper(trim($method));
         });
 
         return $method->isEmpty() || $method->contains($request->method());
