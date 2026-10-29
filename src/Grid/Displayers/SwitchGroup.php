@@ -34,7 +34,7 @@ class SwitchGroup extends SwitchDisplay
             'resource' => $this->getResource(),
             'name'     => $this->getPayloadName($name),
             'states'   => $this->states,
-            'checked'  => $this->states['on']['value'] == $this->getAttribute($name) ? 'checked' : '',
+            'checked'  => $this->switchState($this->getAttribute($name)) === 'on' ? 'checked' : '',
             'label'    => $label,
         ]);
     }

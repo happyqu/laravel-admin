@@ -3,17 +3,11 @@
 namespace Encore\Admin\Grid\Displayers;
 
 use Encore\Admin\Admin;
-use Illuminate\Support\Arr;
+use Encore\Admin\Support\HasSwitchStates;
 
 class SwitchDisplay extends AbstractDisplayer
 {
-    /**
-     * @var array
-     */
-    protected $states = [
-        'on'  => ['value' => 1, 'text' => 'ON', 'color' => 'primary'],
-        'off' => ['value' => 0, 'text' => 'OFF', 'color' => 'default'],
-    ];
+    use HasSwitchStates;
 
     protected function overrideStates($states)
     {
@@ -21,9 +15,7 @@ class SwitchDisplay extends AbstractDisplayer
             return;
         }
 
-        foreach (Arr::dot($states) as $key => $state) {
-            Arr::set($this->states, $key, $state);
-        }
+        $this->states($states);
     }
 
     public function display($states = [])
@@ -36,7 +28,7 @@ class SwitchDisplay extends AbstractDisplayer
             'resource' => $this->getResource(),
             'name'     => $this->getPayloadName(),
             'states'   => $this->states,
-            'checked'  => $this->states['on']['value'] == $this->getValue() ? 'checked' : '',
+            'checked'  => $this->switchState($this->getValue()) === 'on' ? 'checked' : '',
         ]);
     }
 }
