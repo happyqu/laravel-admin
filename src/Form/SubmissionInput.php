@@ -9,11 +9,13 @@ use Symfony\Component\HttpFoundation\InputBag;
 class SubmissionInput
 {
     /** Allow only writable fields, including the definitions inside nested editors. */
-    public static function onlyFields(array $values, iterable $fields): array
+    public static function onlyFields(array $values, iterable $fields, ?array $context = null): array
     {
+        $fields = collect($fields)->all();
+        $context ??= Cascade::context($fields, $values);
         $allowed = [];
         foreach ($fields as $field) {
-            if (!$field->isWritable()) {
+            if (!$field->isWritable() || !$field->isCascadeActive($context)) {
                 continue;
             }
             foreach ((array) $field->column() as $column) {

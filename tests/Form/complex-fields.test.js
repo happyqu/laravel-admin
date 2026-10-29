@@ -156,7 +156,8 @@ test('checkbox buttons toggle once with multiple fields and support new nested r
 });
 
 test('array cascade initial values and clearing a multiSelect do not throw', () => {
-    const w = page('<select class="choices" multiple><option value="x" selected>X</option></select><div class="cascade-group cascade-choices-78 hide"></div>');
+    const groupClass = JSON.parse(scripts.cascade.match(/var cascade_groups = (\[.*\]);/)[1])[0].class;
+    const w = page('<select class="choices" multiple><option value="x" selected>X</option></select><div class="cascade-group ' + groupClass + ' hide"></div>');
     try {
         w.eval(scripts.cascade);
         assert.equal(w.$('.cascade-group').hasClass('hide'), false);
@@ -169,7 +170,7 @@ for (const operator of ['in', 'notIn', 'has', 'oneIn', 'oneNotIn']) {
     test('numeric cascade values match DOM string values for ' + operator, () => {
         for (const value of [0, 1, 3]) {
             const multiple = !['in', 'notIn'].includes(operator);
-            const groupClass = operator === 'has' ? 'cascade-status-31' : 'cascade-status-302d31';
+            const groupClass = JSON.parse(scripts['cascade-' + operator + '-' + value].match(/var cascade_groups = (\[.*\]);/)[1])[0].class;
             const w = page(`<select class="status" ${multiple ? 'multiple' : ''}><option value="${value}" selected>Value</option></select>
                 <div class="cascade-group ${groupClass}"><input name="dependent" value="kept"></div>`);
             try {

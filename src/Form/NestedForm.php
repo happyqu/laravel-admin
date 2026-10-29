@@ -68,6 +68,14 @@ class NestedForm
      */
     protected $key;
 
+    protected string $templateKey = self::DEFAULT_KEY_NAME;
+
+    public function templateKey(string $key): self
+    {
+        $this->templateKey = $key;
+        return $this;
+    }
+
     /**
      * @var string
      */
@@ -126,6 +134,11 @@ class NestedForm
         return $this->model;
     }
 
+    public function isNew(): bool
+    {
+        return !$this->model || in_array($this->model->getAttributes()[$this->model->getKeyName()] ?? null, [null, ''], true);
+    }
+
     /**
      * Get the value of the model's primary key.
      *
@@ -145,7 +158,7 @@ class NestedForm
             return $key;
         }
 
-        return 'new_'.static::DEFAULT_KEY_NAME;
+        return 'new_'.$this->templateKey;
     }
 
     /**
@@ -400,16 +413,12 @@ class NestedForm
 
         /* @var Field $field */
         foreach ($this->fields() as $field) {
-
+            $scriptCount = count(Admin::$script);
             //when field render, will push $script to Admin
             $html .= $field->render();
 
-            /*
-             * Get and remove the last script of Admin::$script stack.
-             */
-            if ($field->getScript()) {
-                $scripts[] = array_pop(Admin::$script);
-            }
+            // Composite fields can register several child initializers.
+            $scripts = array_merge($scripts, array_splice(Admin::$script, $scriptCount));
         }
 
         return [$html, implode("\r\n", $scripts)];
@@ -431,17 +440,20 @@ class NestedForm
         $elementName = $elementClass = $errorKey = [];
 
         $key = $this->getKey();
+        $path = trim(str_replace(['[', ']'], ['.', ''], $this->relationName), '.');
+        $classPrefix = preg_replace('/[^a-zA-Z0-9_-]/', '_', $this->relationName);
 
         if (is_array($column)) {
             foreach ($column as $k => $name) {
-                $errorKey[$k] = sprintf('%s.%s.%s', $this->relationName, $key, $name);
+                $errorKey[$k] = sprintf('%s.%s.%s', $path, $key, $name);
                 $elementName[$k] = sprintf('%s[%s][%s]', $this->relationName, $key, $name);
-                $elementClass[$k] = [$this->relationName, $name];
+                $elementClass[$k] = preg_replace('/[^a-zA-Z0-9_-]/', '_',
+                    ($this->elementScope ? $this->elementScope.'-' : '').$this->relationName.'-'.$key.'-'.$name);
             }
         } else {
-            $errorKey = sprintf('%s.%s.%s', $this->relationName, $key, $column);
+            $errorKey = sprintf('%s.%s.%s', $path, $key, $column);
             $elementName = sprintf('%s[%s][%s]', $this->relationName, $key, $column);
-            $elementClass = [$this->relationName, $column];
+            $elementClass = [$classPrefix, $column];
         }
 
         return $field->setErrorKey($errorKey)
@@ -473,7 +485,8 @@ class NestedForm
 
             $field = $this->formatField($field);
             if ($this->elementScope !== null) {
-                $field->scopeElement($this->elementScope.'-'.$this->relationName, (string) $this->getKey());
+                $scope = preg_replace('/[^a-zA-Z0-9_-]/', '_', $this->elementScope.'-'.$this->relationName);
+                $field->scopeElement($scope.'-'.$this->getKey());
             }
 
             $this->pushField($field);

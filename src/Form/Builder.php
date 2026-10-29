@@ -660,11 +660,11 @@ SCRIPT;
      */
     protected function addCascadeScript()
     {
+        $runtime = \Encore\Admin\Form\CascadeScript::runtime();
         $script = <<<SCRIPT
 ;(function () {
-    $('form.{$this->formClass}').submit(function () {
-        $(this).find('div.cascade-group.hide :input').attr('disabled', true);
-    });
+    {$runtime}
+    $.admin.cascade.sync($('form.{$this->formClass}'));
 })();
 SCRIPT;
 

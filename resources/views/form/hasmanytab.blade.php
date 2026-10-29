@@ -30,7 +30,7 @@
                 <a href="#{{ $relationName . '_' . $pk }}" data-toggle="tab">
                     {{ $pk }} <i class="fa fa-exclamation-circle text-red hide"></i>
                 </a>
-                @if($options['allowDelete'])
+                @if($options['allowDelete'] || $form->isNew())
                     <i class="close-tab fa fa-times" ></i>
                 @endif
             </li>
@@ -41,7 +41,7 @@
     <div class="tab-content has-many-{{$domName ?? $column}}-forms">
 
         @foreach($forms as $pk => $form)
-            <div class="tab-pane fields-group has-many-{{$domName ?? $column}}-form @if ($form == reset($forms)) active @endif" id="{{ $relationName . '_' . $pk }}">
+            <div class="tab-pane fields-group has-many-{{$domName ?? $column}}-form @if($form->isNew()) new @endif @if ($form == reset($forms)) active @endif" id="{{ $relationName . '_' . $pk }}">
                 @foreach($form->fields() as $field)
                     {!! $field->render() !!}
                 @endforeach
@@ -54,9 +54,7 @@
             <a href="#{{ $relationName . '_new_' . \Encore\Admin\Form\NestedForm::DEFAULT_KEY_NAME }}" data-toggle="tab">
                 &nbsp;New {{ \Encore\Admin\Form\NestedForm::DEFAULT_KEY_NAME }} <i class="fa fa-exclamation-circle text-red hide"></i>
             </a>
-            @if($options['allowDelete'])
-                <i class="close-tab fa fa-times" ></i>
-            @endif
+            <i class="close-tab fa fa-times" ></i>
         </li>
     </template>
     <template class="pane-tpl">

@@ -102,9 +102,7 @@ class ListField extends Field
         }
         $rules[$this->column] = 'array';
 
-        if ($fieldRules) {
-            $rules["{$this->column}.values.*"] = $fieldRules;
-        }
+        $rules["{$this->column}.values.*"] = array_merge((array) $fieldRules, [$this->scalarValueRule()]);
         $attributes["{$this->column}.values.*"] = __('Value');
 
         $rules["{$this->column}.values"] = ['present', 'array'];
@@ -130,6 +128,8 @@ class ListField extends Field
         if (!is_array($value) || !is_array($value['values'] ?? [])) {
             throw \Illuminate\Validation\ValidationException::withMessages([$this->column => 'Invalid list input.']);
         }
+
+        $this->validateScalarValues($value['values'] ?? []);
 
         return array_values($value['values'] ?? []);
     }

@@ -125,6 +125,19 @@ AJAX 请求超过 180 毫秒时显示居中的“加载中”提示，并发请�
 
 ## 表单与动态组件
 
+### 条件联动
+
+`select`、`multipleSelect`、`belongsTo`、`belongsToMany`、`radio`、`radioButton`、`radioCard`、`checkbox`、`checkboxButton`、`checkboxCard` 支持 `when()`。各分支预先渲染，条件切换时同步显示和禁用状态；隐藏分支保留页面输入值，但不参与浏览器校验或提交，重新显示时恢复原有禁用状态。
+
+服务端根据本次提交的控制值判断分支，只校验和处理命中分支的字段；嵌套 `when()` 须同时满足所有上层条件。未命中分支的数据不写入，也不会自动清空数据库旧值。禁用或只读的控制字段使用服务端可信已有值；PATCH 请求省略可编辑控制字段时使用记录已有值，关联控制字段按其关联 ID 判断。完整提交中省略可编辑控制字段、或显式清空多选值时，不会恢复旧选择。多分支共用的字段建议定义在 `when()` 外，避免重复 HTML ID 和组件初始化冲突。
+
+```php
+$form->text('name', '姓名');
+$form->radio('nationality', '国籍')->options([1 => '本国', 2 => '外国'])
+    ->when(1, fn ($form) => $form->text('idcard', '身份证')->rules('required'))
+    ->when(2, fn ($form) => $form->text('passport', '护照')->rules('required'));
+```
+
 ### 日期与时间
 
 日期、日期时间、时间、起止范围、`DateMultiple`、Grid 日期筛选及日期行内编辑统一使用 Flatpickr 4.6.13，不再加载 Moment 或旧 DateTimePicker。空字段默认时间为 `00:00:00`，已有时间值保持原样，也可通过 `defaultHour`、`defaultMinute`、`defaultSeconds` 显式覆盖。PHP 字段接口、字段名和默认提交格式保持一致：

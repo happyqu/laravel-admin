@@ -210,8 +210,9 @@ class Form implements Renderable
         $request = request();
         $values = $request->input();
         $uploads = $request->allFiles();
-        $input = BaseForm\SubmissionInput::onlyFields($values, $this->fields());
-        $files = BaseForm\SubmissionInput::onlyFields($uploads, $this->fields());
+        $context = BaseForm\Cascade::context($this->fields(), $request->all(), $this->data(), $request->isMethod('PATCH'));
+        $input = BaseForm\SubmissionInput::onlyFields($values, $this->fields(), $context);
+        $files = BaseForm\SubmissionInput::onlyFields($uploads, $this->fields(), $context);
         BaseForm\SubmissionInput::replace($request, $input, $files);
 
         return $this;
@@ -461,7 +462,8 @@ class Form implements Renderable
     {
         $this->buildDefinition();
 
-        $failedValidators = BaseForm\SubmissionValidator::failed($this->fields(), $request->all());
+        $context = BaseForm\Cascade::context($this->fields(), $request->all(), $this->data(), $request->isMethod('PATCH'));
+        $failedValidators = BaseForm\SubmissionValidator::failed($this->fields(), $request->all(), null, $context);
 
         $message = $this->mergeValidationMessages($failedValidators);
 
@@ -568,11 +570,11 @@ SCRIPT;
     {
         $id = json_encode($this->attributes['id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
+        $runtime = \Encore\Admin\Form\CascadeScript::runtime();
         $script = <<<SCRIPT
 ;(function () {
-    $(document.getElementById({$id})).submit(function () {
-        $(this).find('div.cascade-group.hide :input').attr('disabled', true);
-    });
+    {$runtime}
+    $.admin.cascade.sync($(document.getElementById({$id})));
 })();
 SCRIPT;
 

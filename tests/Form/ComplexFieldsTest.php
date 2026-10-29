@@ -63,6 +63,80 @@ class ComplexFieldsTest extends TestCase
         })->setForm($this->form);
     }
 
+    public function test_collection_editors_reject_nested_values_without_custom_rules(): void
+    {
+        foreach ([Form\Field\KeyValue::class, ListField::class] as $class) {
+            foreach ([['nested' => 'array'], [], (object) ['nested' => 'object']] as $value) {
+                $field = (new $class('items', ['Items']))->setForm($this->form);
+                $input = ['keys' => ['key'], 'values' => [$value]];
+                $this->assertFalse($field->getValidator(['items' => $input])->passes());
+                try {
+                    $field->prepare($input);
+                    $this->fail('Non-scalar values must also be rejected during preparation.');
+                } catch (ValidationException $exception) {
+                    $this->assertArrayHasKey('items.values.0', $exception->errors());
+                }
+            }
+            $field = (new $class('items', ['Items']))->setForm($this->form);
+            $values = ['text', 0, false, null, ''];
+            $input = ['keys' => ['a', 'b', 'c', 'd', 'e'], 'values' => $values];
+            $this->assertTrue($field->getValidator(['items' => $input])->passes());
+            $this->assertSame($values, array_values($field->prepare($input)));
+            $field->rules('required');
+            $this->assertFalse($field->getValidator(['items' => $input])->passes());
+        }
+    }
+
+    public function test_table_round_trip_normalizes_nested_rows_and_clears_saved_rows(): void
+    {
+        $field = (new Table('parents', ['Parents', function ($form) {
+            $form->table('children', function ($child) { $child->text('name')->rules('required'); });
+        }]))->setForm($this->form);
+        $input = ['_present' => 1, 'new_1' => [
+            'children' => ['_present' => 1, 'new_2' => ['name' => 'Child']],
+        ]];
+        $this->assertTrue($field->getValidator(['parents' => $input])->passes());
+        $stored = [['children' => [['name' => 'Child']]]];
+        $this->assertSame($stored, $field->prepare($input));
+        $field->setOriginal(['parents' => $stored]);
+        $this->assertSame([['children' => []]], $field->prepare([
+            '_present' => 1, 0 => ['children' => ['_present' => 1, 0 => ['_remove_' => 1]]],
+        ]));
+        $this->assertSame([], $field->prepare(['_present' => 1, 0 => ['_remove_' => 1]]));
+        $this->assertSame([], $field->prepare(['_present' => 1]));
+        $this->assertSame([], $field->sanitize(['_present' => 1]));
+        $this->assertTrue($field->getValidator(['parents' => ['_present' => 1]])->passes());
+        $validator = $field->getValidator(['parents' => ['new_1' => ['children' => ['new_2' => ['name' => '']]]]]);
+        $this->assertFalse($validator->passes());
+        $this->assertTrue($validator->errors()->has('parents.new_1.children.new_2.name'));
+    }
+
+    public function test_nested_embeds_uses_dot_paths_for_validation_feedback(): void
+    {
+        app('view')->share('errors', (new \Illuminate\Support\ViewErrorBag())->put('default',
+            new \Illuminate\Support\MessageBag(['profile.nested.day' => 'Invalid nested date'])));
+        $field = (new Embeds('profile', ['Profile', function ($form) {
+            $form->embeds('nested', function ($child) { $child->date('day'); });
+        }]))->setForm($this->form);
+        $this->assertStringContainsString('Invalid nested date', $field->render());
+    }
+
+    public function test_empty_table_marker_survives_filtering_and_updates_the_stored_value(): void
+    {
+        $form = new class extends Form {
+            public $testFields;
+            public function __construct() { $this->testFields = collect(); }
+            public function fields() { return $this->testFields; }
+            public function updateData($input) { return $this->prepareUpdate($input); }
+        };
+        $field = (new Table('rows', ['Rows', function ($row) { $row->text('title'); }]))->setForm($this->form);
+        $field->setOriginal(['rows' => [['title' => 'Saved']]]);
+        $form->testFields->push($field);
+        $input = Form\SubmissionInput::onlyFields(['rows' => ['_present' => 1]], $form->fields());
+        $this->assertSame(['rows' => []], $input);
+        $this->assertSame(['rows' => []], $form->updateData($input));
+    }
+
     public function test_model_options_accept_id_lists_and_related_records(): void
     {
         $field = new class('choices') extends \Encore\Admin\Form\Field\MultipleSelect {
@@ -242,7 +316,7 @@ class ComplexFieldsTest extends TestCase
             }
         }
         $this->assertSame([
-            0 => ['title' => 'Edited'], 3 => ['title' => 'Second'], 'new_1' => ['title' => 'New'],
+            ['title' => 'Edited'], ['title' => 'Second'], ['title' => 'New'],
         ], $field->prepare([
             0 => ['title' => 'Edited'], 3 => ['title' => 'Second'], 'new_1' => ['title' => 'New'],
         ]));

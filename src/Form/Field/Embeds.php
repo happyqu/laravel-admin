@@ -188,6 +188,7 @@ class Embeds extends Field
     protected function buildEmbeddedForm()
     {
         $form = new EmbeddedForm($this->getEmbeddedColumnName());
+        $form->scopeElements($this->elementScope);
 
         if ($this->form instanceof WidgetForm) {
             $form->setParentWidgetForm($this->form);
@@ -233,6 +234,9 @@ class Embeds extends Field
      */
     public function render()
     {
-        return parent::fieldRender(['form' => $this->buildEmbeddedForm()]);
+        $domName = preg_replace('/[^a-zA-Z0-9_-]/', '_',
+            ($this->elementScope ? $this->elementScope.'-' : '').$this->getEmbeddedColumnName());
+
+        return parent::fieldRender(['form' => $this->buildEmbeddedForm(), 'domName' => $domName]);
     }
 }

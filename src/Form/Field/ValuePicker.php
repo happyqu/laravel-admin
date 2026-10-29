@@ -76,7 +76,7 @@ class ValuePicker
     public function mount(Field $field, ?\Closure $callback = null)
     {
         $this->field = $field;
-        $this->modal = sprintf('picker-modal-%s', $field->getElementClassString());
+        $this->modal = 'picker-modal-'.preg_replace('/[^a-zA-Z0-9_-]/', '-', $field->getElementClassString());
 
         $this->addPickBtn($callback);
 

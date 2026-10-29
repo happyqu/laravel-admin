@@ -14,7 +14,13 @@ trait HandleCascadeFields
     {
         $this->pushField($group = new Field\CascadeGroup($dependency));
 
+        $start = count($this->fields());
+
         call_user_func($closure, $this);
+
+        foreach (array_slice(collect($this->fields())->all(), $start) as $field) {
+            $field->addCascadeGroup($group);
+        }
 
         $group->end();
     }

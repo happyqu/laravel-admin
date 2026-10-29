@@ -33,7 +33,21 @@ class CascadeGroup extends Field
      */
     public function dependsOn(Field $field)
     {
-        return $this->dependency['column'] == $field->column();
+        return isset($this->dependency['controller'])
+            ? $this->dependency['controller'] === $field
+            : $this->dependency['column'] == $field->column();
+    }
+
+    public function matchesInput(array $input): bool
+    {
+        $controller = $this->dependency['controller'] ?? null;
+        if (!$controller) {
+            return true;
+        }
+
+        return $controller->isCascadeActive($input)
+            && \Encore\Admin\Form\Cascade::matches($this->dependency['operator'],
+                \Illuminate\Support\Arr::get($input, $this->dependency['column']), $this->dependency['value']);
     }
 
     /**

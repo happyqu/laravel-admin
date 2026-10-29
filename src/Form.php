@@ -453,10 +453,13 @@ class Form implements Renderable
         }
 
         $this->inputs = array_merge($this->removeIgnoredFields($data), $this->inputs);
+        $this->inputs = Form\Cascade::filterInput($this->fields(), $this->inputs, $this->cascadeInputContext($this->inputs));
 
         if (($response = $this->callSaving()) instanceof Response) {
             return $response;
         }
+
+        $this->inputs = Form\Cascade::filterInput($this->fields(), $this->inputs, $this->cascadeInputContext($this->inputs));
 
         $this->relations = $this->getRelationInputs($this->inputs);
 
@@ -902,9 +905,7 @@ class Form implements Renderable
                     $relation = $this->model->$name();
 
                     $data = $prepared[$name];
-                    $first = Arr::first($data);
-
-                    if (is_array($first)) { //relation updated via HasMany field
+                    if ($this->getFieldByColumn($name) instanceof Field\HasMany) {
                         $keyName = $relation->getRelated()->getKeyName();
                         $ids = array_filter(array_column($data, $keyName), static fn ($id) => $id !== null && $id !== '');
                         $children = $ids ? $relation->whereKey($ids)->get()->keyBy($keyName) : collect();
@@ -968,11 +969,13 @@ class Form implements Renderable
      */
     protected function prepareUpdate(array $updates, $oneToOneRelation = false): array
     {
+        $context = $this->cascadeInputContext($updates);
+        $updates = Form\Cascade::filterInput($this->fields(), $updates, $context);
         $prepared = [];
 
         /** @var Field $field */
         foreach ($this->fields() as $field) {
-            if (!$field->isWritable()) {
+            if (!$field->isWritable() || !$field->isCascadeActive($context)) {
                 continue;
             }
             $columns = $field->column();
@@ -1029,6 +1032,8 @@ class Form implements Renderable
      */
     protected function prepareInsert($inserts): array
     {
+        $context = $this->cascadeInputContext($inserts);
+        $inserts = Form\Cascade::filterInput($this->fields(), $inserts, $context);
         if ($this->isHasOneRelation($inserts)) {
             $inserts = Arr::dot($inserts);
         }
@@ -1039,6 +1044,10 @@ class Form implements Renderable
         foreach ($inserts as $column => $value) {
             $field = $indexedFields !== null && is_string($column) && !is_numeric($column)
                 ? ($indexedFields[$column] ?? null) : $this->getFieldByColumn($column);
+            if ($field && !$field->isCascadeActive($context)) {
+                $field = $this->fields()->first(fn ($candidate) => in_array($column, (array) $candidate->column())
+                    && $candidate->isCascadeActive($context));
+            }
             if ($field === null || !$field->isWritable()) {
                 unset($inserts[$column]);
                 continue;
@@ -1269,11 +1278,21 @@ class Form implements Renderable
     public function validationMessages($input)
     {
         $failedValidators = Form\SubmissionValidator::failed($this->fields(), $input,
-            fn ($field) => !$this->partialSubmission || Arr::has($input, $field->column()));
+            fn ($field) => !$this->partialSubmission || Arr::has($input, $field->column()), $this->cascadeInputContext($input));
 
         $message = $this->mergeValidationMessages($failedValidators);
 
         return $message->any() ? $message : false;
+    }
+
+    protected function cascadeInputContext(array $input): array
+    {
+        $input = Form\Cascade::mergeContext($this->inputs, $input);
+        $needsStored = $this->fields()->contains(fn ($field) => method_exists($field, 'hasCascadeConditions')
+            && $field->hasCascadeConditions()
+            && (!$field->isWritable() || ($this->partialSubmission && !Arr::has($input, $field->column()))));
+
+        return Form\Cascade::context($this->fields(), $input, $needsStored ? $this->model()->toArray() : [], $this->partialSubmission);
     }
 
     /**

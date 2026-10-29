@@ -1,15 +1,20 @@
-<div class="{{$viewClass['form-group']}} {!! !$errors->has($errorKey) ? '' : 'has-error' !!}">
+<div class="{{$viewClass['form-group']}} {!! ($errors->has($errorKey) || $errors->has($errorKey.'.*')) ? 'has-error' : '' !!}">
 
     <label for="{{$id}}" class="{{$viewClass['label']}} control-label">{{$label}}</label>
 
     <div class="{{$viewClass['field']}}">
 
         @include('admin::form.error')
+        @foreach($errors->get($errorKey.'.*') as $messages)
+            @foreach($messages as $message)
+                <label class="control-label"><i class="fa fa-times-circle-o"></i> {{$message}}</label><br/>
+            @endforeach
+        @endforeach
 
         <select class="form-control {{$class}}" style="width: 100%;" name="{{$name}}[]" multiple="multiple" data-placeholder="{{ $placeholder }}" {!! $attributes !!} >
 
             @foreach($options as $key => $option)
-                <option value="{{ $keyAsValue ? $key : $option}}" {{ in_array($option, $value) ? 'selected' : '' }}>{{$option}}</option>
+                <option value="{{ $keyAsValue ? $key : $option}}" {{ in_array((string) ($keyAsValue ? $key : $option), $selectedValues, true) ? 'selected' : '' }}>{{$option}}</option>
             @endforeach
 
         </select>

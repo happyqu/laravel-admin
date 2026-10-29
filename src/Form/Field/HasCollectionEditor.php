@@ -4,6 +4,26 @@ namespace Encore\Admin\Form\Field;
 
 trait HasCollectionEditor
 {
+    protected function scalarValueRule(): \Closure
+    {
+        return static function ($attribute, $value, $fail) {
+            if (!is_scalar($value) && $value !== null) {
+                $fail('Expected a scalar value.');
+            }
+        };
+    }
+
+    protected function validateScalarValues(array $values): void
+    {
+        foreach ($values as $key => $value) {
+            if (!is_scalar($value) && $value !== null) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    $this->column.'.values.'.$key => 'Expected a scalar value.',
+                ]);
+            }
+        }
+    }
+
     protected function setupScript()
     {
         $this->script = <<<'JS'

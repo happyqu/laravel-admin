@@ -52,6 +52,14 @@ use Illuminate\Support\Collection;
  */
 class EmbeddedForm
 {
+    protected ?string $elementScope = null;
+
+    public function scopeElements(?string $scope): self
+    {
+        $this->elementScope = $scope;
+        return $this;
+    }
+
     /**
      * @var Form|WidgetForm
      */
@@ -253,22 +261,26 @@ class EmbeddedForm
         $jsonKey = $field->column();
 
         $elementName = $elementClass = $errorKey = [];
+        $path = trim(str_replace(['[', ']'], ['.', ''], $this->column), '.');
+        $classPrefix = preg_replace('/[^a-zA-Z0-9_-]/', '_', ($this->elementScope ? $this->elementScope.'-' : '').$path);
 
         if (is_array($jsonKey)) {
             foreach ($jsonKey as $index => $name) {
                 $elementName[$index] = "{$this->column}[$name]";
-                $errorKey[$index] = "{$this->column}.$name";
-                $elementClass[$index] = "{$this->column}_$name";
+                $errorKey[$index] = "$path.$name";
+                $elementClass[$index] = "{$classPrefix}_$name";
             }
         } else {
             $elementName = "{$this->column}[$jsonKey]";
-            $errorKey = "{$this->column}.$jsonKey";
-            $elementClass = "{$this->column}_$jsonKey";
+            $errorKey = "$path.$jsonKey";
+            $elementClass = "{$classPrefix}_$jsonKey";
         }
 
         $field->setElementName($elementName)
             ->setErrorKey($errorKey)
             ->setElementClass($elementClass);
+
+        $field->scopeElement($classPrefix);
 
         return $field;
     }

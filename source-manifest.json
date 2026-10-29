@@ -6403,8 +6403,8 @@
                 },
                 {
                     "path": "laravel-admin/datepicker.js",
-                    "sha256": "bfd2843027e6325f424a1e1bf9e346f1c33cee5bec12bf6b27d20b88b81a8d06",
-                    "bytes": 28564,
+                    "sha256": "c3c32d3f47b0e3abbb3f5bfb32b958363a95584eeb00ca298831b24328d764a6",
+                    "bytes": 28923,
                     "origin": "happyqu/laravel-admin Flatpickr adapter"
                 },
                 {

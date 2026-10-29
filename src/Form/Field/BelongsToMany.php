@@ -42,7 +42,7 @@ class BelongsToMany extends MultipleSelect
         }
 
         $(this).parents('tr').remove();
-        $("{$this->getElementClassSelector()}").val(selected);
+        $("{$this->getElementClassSelector()}").val(selected).trigger('change');
 
         if (selected.length == 0) {
             var empty = $('.belongstomany-{$this->column()}').find('template.empty').html();

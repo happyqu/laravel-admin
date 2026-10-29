@@ -16,6 +16,26 @@ trait CanCascadeFields
      */
     protected $conditions = [];
 
+    protected $cascadeId;
+
+    public function hasCascadeConditions(): bool
+    {
+        return !empty($this->conditions);
+    }
+
+    public function cascadeStoredValue(array $stored)
+    {
+        if (Arr::has($stored, $this->column())) {
+            // Use each control's own normalization (including relation/pivot IDs).
+            $field = clone $this;
+            $field->setOriginal($stored);
+
+            return $field->original() ?? $this->value();
+        }
+
+        return $this->original() ?? $this->value();
+    }
+
     /**
      * @param $operator
      * @param $value
@@ -65,9 +85,12 @@ trait CanCascadeFields
         $this->conditions[] = compact('operator', 'value', 'closure');
 
         $this->form->cascadeGroup($closure, [
-            'column' => $this->column(),
-            'index'  => count($this->conditions) - 1,
-            'class'  => $this->getCascadeClass($value),
+            'column'     => $this->column(),
+            'index'      => count($this->conditions) - 1,
+            'class'      => $this->getCascadeClass($value, count($this->conditions) - 1),
+            'controller' => $this,
+            'operator'   => $operator,
+            'value'      => $value,
         ]);
     }
 
@@ -86,15 +109,11 @@ trait CanCascadeFields
      *
      * @return string
      */
-    protected function getCascadeClass($value)
+    protected function getCascadeClass($value, $index = 0)
     {
-        if (is_array($value)) {
-            $value = implode('-', $value);
-        }
+        $this->cascadeId ??= uniqid('cascade-');
 
-        $class = preg_replace('/\s+/', '-', $this->getElementClassString());
-
-        return sprintf('cascade-%s-%s', $class, bin2hex($value));
+        return $this->cascadeId.'-'.$index;
     }
 
     /**
@@ -125,36 +144,8 @@ trait CanCascadeFields
     {
         $condition = $this->conditions[$group->index()];
 
-        extract($condition);
-
-        $old = old($this->column(), $this->value());
-
-        switch ($operator) {
-            case '=':
-                return $old == $value;
-            case '>':
-                return $old > $value;
-            case '<':
-                return $old < $value;
-            case '>=':
-                return $old >= $value;
-            case '<=':
-                return $old <= $value;
-            case '!=':
-                return $old != $value;
-            case 'in':
-                return in_array($old, $value);
-            case 'notIn':
-                return !in_array($old, $value);
-            case 'has':
-                return in_array($value, Arr::wrap($old));
-            case 'oneIn':
-                return count(array_intersect(Arr::wrap($value), Arr::wrap($old))) >= 1;
-            case 'oneNotIn':
-                return count(array_intersect(Arr::wrap($value), Arr::wrap($old))) == 0;
-            default:
-                throw new \Exception("Operator [$operator] not support.");
-        }
+        return \Encore\Admin\Form\Cascade::matches($condition['operator'],
+            old($this->column(), $this->value()), $condition['value']);
     }
 
     /**
@@ -182,61 +173,35 @@ trait CanCascadeFields
             return;
         }
 
-        $cascadeGroups = collect($this->conditions)->map(function ($condition) {
+        $cascadeGroups = collect($this->conditions)->map(function ($condition, $index) {
             return [
-                'class'    => $this->getCascadeClass($condition['value']),
+                'class'    => $this->getCascadeClass($condition['value'], $index),
                 'operator' => $condition['operator'],
                 'value'    => $condition['value'],
             ];
         })->toJson();
 
+        $runtime = \Encore\Admin\Form\CascadeScript::runtime();
+        $namespace = '.adminCascade'.str_replace('-', '', $this->getCascadeClass('', 0));
         $script = <<<SCRIPT
 ;(function () {
-    var operator_table = {
-        '=': function(a, b) {
-            if ($.isArray(a) && $.isArray(b)) {
-                return $(a).not(b).length === 0 && $(b).not(a).length === 0;
-            }
-
-            return a == b;
-        },
-        '>': function(a, b) { return a > b; },
-        '<': function(a, b) { return a < b; },
-        '>=': function(a, b) { return a >= b; },
-        '<=': function(a, b) { return a <= b; },
-        '!=': function(a, b) {
-             if ($.isArray(a) && $.isArray(b)) {
-                return !($(a).not(b).length === 0 && $(b).not(a).length === 0);
-             }
-
-             return a != b;
-        },
-        'in': function(a, b) { return $.inArray(a, b) != -1; },
-        'notIn': function(a, b) { return $.inArray(a, b) == -1; },
-        'has': function(a, b) { return $.inArray(b, a) != -1; },
-        'oneIn': function(a, b) { return ($.isArray(a) ? a : []).filter(v => b.includes(v)).length >= 1; },
-        'oneNotIn': function(a, b) { return ($.isArray(a) ? a : []).filter(v => b.includes(v)).length == 0; },
-    };
+    {$runtime}
     var cascade_groups = {$cascadeGroups};
-        
-    var default_value = {$this->getValueByJs()};
-    cascade_groups.forEach(function (event) {
-        $('div.cascade-group.' + event.class).toggleClass('hide', !operator_table[event.operator](default_value, event.value));
+    // Each rendered instance owns its groups; its controls are siblings in the same container.
+    $('div.cascade-group.' + cascade_groups[0].class).each(function () {
+        var scope = $(this).parent();
+        var controls = scope.find('{$this->getElementClassSelector()}');
+        function update() {
+            {$this->getFormFrontValue()}
+            cascade_groups.forEach(function (event) {
+                scope.find('div.cascade-group.' + event.class)
+                    .toggleClass('hide', !$.admin.cascade.matches(event.operator, checked, event.value));
+            });
+            $.admin.cascade.sync(scope);
+        }
+        controls.off('{$this->cascadeEvent}{$namespace}').on('{$this->cascadeEvent}{$namespace}', update);
+        update();
     });
-    
-    $('{$this->getElementClassSelector()}').on('{$this->cascadeEvent}', function (e) {
-
-        {$this->getFormFrontValue()}
-
-        cascade_groups.forEach(function (event) {
-            var group = $('div.cascade-group.'+event.class);
-            if( operator_table[event.operator](checked, event.value) ) {
-                group.removeClass('hide');
-            } else {
-                group.addClass('hide');
-            }
-        });
-    })
 })();
 SCRIPT;
 
@@ -250,14 +215,16 @@ SCRIPT;
     {
         if ($this instanceof Checkbox) {
             return <<<SCRIPT
-var checked = $('{$this->getElementClassSelector()}:checked').map(function(){
+var checked = controls.filter(':checked').map(function(){
   return $(this).val();
 }).get();
 SCRIPT;
         }
 
         if ($this instanceof Select || $this instanceof Radio) {
-            return 'var checked = $(this).val();';
+            return $this instanceof Radio
+                ? "var checked = controls.filter(':checked').val();"
+                : 'var checked = controls.first().val();';
         }
 
         throw new \InvalidArgumentException('Invalid form field type');

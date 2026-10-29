@@ -19,6 +19,24 @@ class Field implements Renderable
 {
     use Macroable;
 
+    protected $cascadeGroups = [];
+
+    public function addCascadeGroup(Field\CascadeGroup $group): void
+    {
+        $this->cascadeGroups[] = $group;
+    }
+
+    public function isCascadeActive(array $input): bool
+    {
+        foreach ($this->cascadeGroups as $group) {
+            if (!$group->matchesInput($input)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     const FILE_DELETE_FLAG = '_file_del_';
     const FILE_SORT_FLAG = '_file_sort_';
 

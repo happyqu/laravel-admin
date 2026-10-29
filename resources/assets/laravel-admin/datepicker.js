@@ -236,7 +236,9 @@
         if (existing) existing.destroy();
         else if (input._flatpickr) input._flatpickr.destroy();
         var options = $.extend({}, supplied);
-        var locked = input.disabled || input.readOnly;
+        var cascadeDisabled = $(input).data('adminCascadeDisabled');
+        // A hidden branch is temporarily disabled before widgets initialize.
+        var locked = input.readOnly || (input.disabled && !(cascadeDisabled && !cascadeDisabled.disabled));
         var nativeFormat = options.dateFormat || convertFormat(options.format);
         var locale = localeFor(options.locale);
         var unescaped = nativeFormat.replace(/\\./g, '');
@@ -361,7 +363,7 @@
 
         var controller = {
             input: input, baseMin: baseMin, baseMax: baseMax,
-            show: function () { if (!locked) fp.open(); return controller; },
+            show: function () { if (!locked && !input.disabled) fp.open(); return controller; },
             hide: function () { fp.close(); return controller; },
             clear: function () { invalid = null; rawValue = ''; input.setCustomValidity(''); fp.clear(); return controller; },
             date: function (value) {
@@ -397,7 +399,10 @@
         });
         fp = flatpickr(input, config);
         if (!fp || !fp.config) throw new Error('Unable to initialize datepicker.');
-        if (fp.altInput) fp.altInput.setAttribute('autocomplete', 'off');
+        if (fp.altInput) {
+            fp.altInput.setAttribute('autocomplete', 'off');
+            if (cascadeDisabled) $(fp.altInput).data('adminCascadeDisabled', {disabled: cascadeDisabled.disabled});
+        }
         controller.instance = fp;
         controller.id = id;
         $(input).data('adminDatepicker', controller).data('DateTimePicker', controller);

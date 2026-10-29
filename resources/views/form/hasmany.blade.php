@@ -12,13 +12,13 @@
 
         @foreach($forms as $pk => $form)
 
-            <div class="has-many-{{$domName ?? $column}}-form fields-group">
+            <div class="has-many-{{$domName ?? $column}}-form fields-group" data-new="{{ $form->isNew() ? 'true' : 'false' }}">
 
                 @foreach($form->fields() as $field)
                     {!! $field->render() !!}
                 @endforeach
 
-                @if($options['allowDelete'])
+                @if($options['allowDelete'] || $form->isNew())
                 <div class="form-group">
                     <label class="{{$viewClass['label']}} control-label"></label>
                     <div class="{{$viewClass['field']}}">
@@ -34,7 +34,7 @@
     
 
     <template class="{{$domName ?? $column}}-tpl">
-        <div class="has-many-{{$domName ?? $column}}-form fields-group">
+        <div class="has-many-{{$domName ?? $column}}-form fields-group" data-new="true">
 
             {!! $template !!}
 

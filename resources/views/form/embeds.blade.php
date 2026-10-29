@@ -6,11 +6,11 @@
 
 <hr style="margin-top: 0px;">
 
-<div id="embed-{{$column}}" class="embed-{{$column}}">
+<div id="embed-{{$domName ?? $column}}" class="embed-{{$domName ?? $column}}">
 
-    <div class="embed-{{$column}}-forms">
+    <div class="embed-{{$domName ?? $column}}-forms">
 
-        <div class="embed-{{$column}}-form fields-group">
+        <div class="embed-{{$domName ?? $column}}-form fields-group">
 
             @foreach($form->fields() as $field)
                 {!! $field->render() !!}

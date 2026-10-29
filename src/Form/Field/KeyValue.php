@@ -66,9 +66,7 @@ class KeyValue extends Field
                 $fail('Invalid key.');
             }
         }];
-        if ($fieldRules) {
-            $rules["{$this->column}.values.*"] = $fieldRules;
-        }
+        $rules["{$this->column}.values.*"] = array_merge((array) $fieldRules, [$this->scalarValueRule()]);
         $attributes["{$this->column}.keys.*"] = __('Key');
         $attributes["{$this->column}.values.*"] = __('Value');
 
@@ -94,7 +92,9 @@ class KeyValue extends Field
             }
         }
 
-        return array_combine($value['keys'] ?? [], $value['values'] ?? []);
+        $this->validateScalarValues($value['values'] ?? []);
+
+        return array_combine(array_values($value['keys'] ?? []), array_values($value['values'] ?? []));
     }
 
     public function render()
