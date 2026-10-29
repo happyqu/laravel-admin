@@ -12,7 +12,7 @@ class Date extends Text
     protected static $js = [
         '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
         '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-        '/vendor/laravel-admin/laravel-admin/datepicker.js',
+        '/vendor/laravel-admin/laravel-admin/datepicker.js?v=3',
     ];
 
     protected $format = 'YYYY-MM-DD';
@@ -54,6 +54,7 @@ $('{$selector}').filter('input').each(function () {
 JS;
 
         $this->prepend('<i class="fa fa-calendar fa-fw"></i>')
+            ->defaultAttribute('autocomplete', 'off')
             ->defaultAttribute('style', 'width: 110px');
 
         return parent::render();

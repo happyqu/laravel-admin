@@ -50,6 +50,41 @@ test('date formatting preserves bracket literals and rejects unsupported tokens 
     } finally { w.finish(); }
 });
 
+test('focusing an empty date field does not fill it or enable browser autofill', () => {
+    const w = page();
+    try {
+        for (const options of [
+            {format: 'YYYY-MM-DD'},
+            {format: 'YYYY-MM-DD HH:mm:ss'},
+            {format: 'HH:mm:ss'},
+            {format: 'YYYY-MM-DD', mode: 'multiple'},
+            {format: 'YYYY-MM-DD', altInput: true},
+        ]) {
+            const input = w.document.querySelector('#date');
+            input.value = '';
+            input.setAttribute('autocomplete', 'on');
+            const p = w.$.admin.datepicker.init(input, options);
+            const visibleInput = p.instance.altInput || input;
+            let changes = 0;
+            const changed = () => changes++;
+            w.$(input).on('dp.change', changed);
+            assert.equal(input.autocomplete, 'off');
+            assert.equal(visibleInput.autocomplete, 'off');
+            visibleInput.focus();
+            assert.equal(p.instance.isOpen, true);
+            assert.equal(input.value, '');
+            assert.equal(visibleInput.value, '');
+            p.hide();
+            visibleInput.blur();
+            assert.equal(input.value, '');
+            assert.equal(p.instance.selectedDates.length, 0);
+            assert.equal(changes, 0);
+            w.$(input).off('dp.change', changed);
+            p.destroy();
+        }
+    } finally { w.finish(); }
+});
+
 test('calendar drills up from days to months and years, then returns without changing the saved date', () => {
     const w = page('<input id="date" value="2026-10-15">');
     try {
@@ -127,6 +162,60 @@ test('calendar month and year panels respect bounds, keyboard navigation and res
         p.show();
         assert.equal(panel.hidden, true);
         assert.equal(calendar.getAttribute('data-admin-calendar-view'), 'days');
+    } finally { w.finish(); }
+});
+
+test('calendar titles follow silent month jumps before a day can be selected', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'YYYY-MM-DD', locale: 'zh-CN' });
+        for (const [initial, month, day] of [['2026-09-10', 7, 10], ['2026-11-10', 11, 10], ['2026-08-30', 8, 30]]) {
+            p.date(initial);
+            p.show();
+            let changes = 0;
+            const changed = () => changes++;
+            w.$(p.input).on('dp.change', changed);
+            p.instance.jumpToDate(new w.Date(2026, month, 1));
+            const calendar = p.instance.calendarContainer;
+            assert.equal(calendar.querySelector('.admin-datepicker-title').textContent, `${month + 1}月 2026`);
+            assert.equal(p.input.value, initial, 'Browsing must leave the saved date unchanged');
+            assert.equal(changes, 0, 'A silent jump must remain silent');
+            const cell = [...p.instance.daysContainer.querySelectorAll('.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay)')]
+                .find(el => el.dateObj.getDate() === day);
+            assert.equal(cell.dateObj.getMonth(), month);
+            cell.click();
+            assert.equal(p.input.value, `2026-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+            assert.equal(changes, 1);
+            w.$(p.input).off('dp.change', changed);
+        }
+    } finally { w.finish(); }
+});
+
+test('silent setDate, clear and direct redraw keep calendar titles consistent across years', () => {
+    const w = page('<input id="date" value="2026-08-30">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format: 'YYYY-MM-DD', locale: 'zh-CN' });
+        const originalRedraw = p.instance.redraw;
+        p.show();
+        const title = p.instance.calendarContainer.querySelector('.admin-datepicker-title');
+        let changes = 0;
+        w.$(p.input).on('dp.change', () => changes++);
+        p.instance.setDate('2026-09-30', false);
+        assert.equal(title.textContent, '9月 2026');
+        p.instance.setDate('2027-01-10', false);
+        assert.equal(title.textContent, '1月 2027');
+        p.instance.clear(false);
+        assert.equal(title.textContent, '8月 2026');
+        p.instance.currentYear = 2025;
+        p.instance.currentMonth = 10;
+        p.instance.redraw();
+        assert.equal(title.textContent, '11月 2025');
+        assert.equal(changes, 0);
+        // Reinitialization must not keep a stale header or a wrapper from a destroyed picker.
+        const next = w.$.admin.datepicker.init(p.input, { format: 'YYYY-MM-DD', locale: 'en' });
+        next.instance.jumpToDate(new w.Date(2026, 8, 1));
+        assert.equal(next.instance.calendarContainer.querySelector('.admin-datepicker-title').textContent, 'September 2026');
+        assert.notEqual(next.instance.redraw, originalRedraw);
     } finally { w.finish(); }
 });
 

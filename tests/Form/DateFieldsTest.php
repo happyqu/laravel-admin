@@ -53,7 +53,7 @@ class DateFieldsTest extends TestCase
                 foreach ($files as $file) {
                     $this->assertStringNotContainsString('moment', $file);
                     $this->assertStringNotContainsString('datetimepicker', $file);
-                    $this->assertFileExists(dirname(__DIR__, 2).'/resources/assets/'.substr($file, strlen('/vendor/laravel-admin/')));
+                    $this->assertFileExists(dirname(__DIR__, 2).'/resources/assets/'.substr(parse_url($file, PHP_URL_PATH), strlen('/vendor/laravel-admin/')));
                 }
             }
         }
@@ -69,6 +69,7 @@ class DateFieldsTest extends TestCase
         $this->assertStringContainsString('"mode":"multiple"', $field->getScript());
         $this->assertStringContainsString('28/10/2026, 29/10/2026', $html);
         $this->assertStringContainsString('width: 100%', $html);
+        $this->assertStringContainsString('autocomplete="off"', $html);
         $field->options(['locale' => 'zh_TW'])->render();
         $this->assertStringContainsString('"locale":"zh_TW"', $field->getScript());
     }

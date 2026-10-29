@@ -196,12 +196,22 @@
         instance.config.onMonthChange.push(render);
         instance.config.onYearChange.push(render);
         instance.config.onValueUpdate.push(render);
+        // Silent jumpToDate/setDate/clear calls still rebuild the day grid.
+        // Keep the custom header in that same redraw, even without change hooks.
+        var redraw = instance.redraw;
+        instance.redraw = function () {
+            var result = redraw.apply(instance, arguments);
+            render();
+            return result;
+        };
+        instance.config.onDestroy.push(function () { instance.redraw = redraw; });
         render();
     }
 
     function init(node, supplied) {
         var input = inputOf(node);
         if (!input) return null;
+        input.setAttribute('autocomplete', 'off');
         var existing = $(input).data('adminDatepicker');
         if (existing) existing.destroy();
         else if (input._flatpickr) input._flatpickr.destroy();
@@ -367,6 +377,7 @@
         });
         fp = flatpickr(input, config);
         if (!fp || !fp.config) throw new Error('Unable to initialize datepicker.');
+        if (fp.altInput) fp.altInput.setAttribute('autocomplete', 'off');
         controller.instance = fp;
         controller.id = id;
         $(input).data('adminDatepicker', controller).data('DateTimePicker', controller);
