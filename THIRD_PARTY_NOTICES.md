@@ -79,6 +79,6 @@ Log Viewer 基于 `laravel-admin-ext/log-viewer` 修改，上游地址为 https:
 
 ## 日期组件迁移
 
-日期、时间、范围、多日期、Grid 筛选和日期行内编辑统一使用 flatpickr 4.6.13，Moment.js 和 eonasdan-bootstrap-datetimepicker 已移除。原始 flatpickr `dist` 目录保持原样。
+日期、时间、范围、多日期、Grid 筛选和日期行内编辑统一使用 flatpickr 4.6.13，Moment.js 和 eonasdan-bootstrap-datetimepicker 已移除。原始 flatpickr `dist` 目录保持原样。后台加载由 `node tools/build-flatpickr.cjs` 生成的 `resources/assets/laravel-admin/flatpickr-local.js`：它在独立作用域中为上游代码提供日期构造兼容处理，通过时间戳和本地 setter 创建日历日期，避免时区改写对多参数 Date 构造施加额外偏移，不替换全局 Date。构建包含完整的上游代码并保留 MIT 声明；更新上游后须重新生成，可用 `node tools/build-flatpickr.cjs --check` 检查产物。
 
 `resources/assets/laravel-admin/datepicker.js` 与 `datepicker.css` 为本包维护的适配代码。`resources/assets/laravel-admin/flatpickr-locales.js` 原样取自 npm 官方 `flatpickr@4.6.13` 的 `dist/l10n/index.js`，沿用 MIT 许可证，并保留文件中附带的版权及许可声明。X-Editable 内置的旧 combodate 代码保留在上游资源中，但本包日期输入通过 Flatpickr 适配器注册，不再调用其 Moment 实现。

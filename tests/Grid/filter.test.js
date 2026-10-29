@@ -48,7 +48,7 @@ test('date and range filters initialize and constrain only their own named grid'
     const second = fixtures.dates_second;
     const w = page(first.html + second.html);
     try {
-        for (const asset of ['flatpickr/dist/flatpickr.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+        for (const asset of ['laravel-admin/flatpickr-local.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
             w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
         }
         w.eval(first.script);

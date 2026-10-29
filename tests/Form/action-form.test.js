@@ -13,7 +13,7 @@ test('date fields open from the calendar icon and from an action input without a
     const dom = new JSDOM(payloads[0].html, { runScripts: 'outside-only', url: 'http://localhost/admin/items' });
     const w = dom.window;
     w.eval(read('resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'));
-    w.eval(read('resources/assets/flatpickr/dist/flatpickr.js'));
+    w.eval(read('resources/assets/laravel-admin/flatpickr-local.js'));
     w.eval(read('resources/assets/laravel-admin/flatpickr-locales.js'));
     w.eval(read('resources/assets/laravel-admin/datepicker.js'));
     const $ = w.jQuery;

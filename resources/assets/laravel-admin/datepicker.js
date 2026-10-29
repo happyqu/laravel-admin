@@ -3,6 +3,19 @@
     if (!$ || !window.flatpickr || ($.admin && $.admin.datepicker)) return;
 
     var flatpickr = window.flatpickr;
+    // Avoid timezone shims that offset the multi-argument Date constructor.
+    // Keep local calendar semantics (including DST) without a fixed UTC offset.
+    function localDate(year, month, day, hours, minutes, seconds, milliseconds) {
+        var date = new Date(0);
+        var integerYear = Number(year) < 0 ? Math.ceil(Number(year)) : Math.floor(Number(year));
+        date.setHours(0, 0, 0, 0);
+        date.setFullYear(integerYear >= 0 && integerYear <= 99 ? 1900 + integerYear : Number(year), month,
+            arguments.length > 2 ? day : 1);
+        date.setHours(arguments.length > 3 ? hours : 0, arguments.length > 4 ? minutes : 0,
+            arguments.length > 5 ? seconds : 0, arguments.length > 6 ? milliseconds : 0);
+        return date;
+    }
+
     var document = window.document;
     var live = new Set();
     var nextId = 0;
@@ -105,13 +118,13 @@
         var numericMonths = /月$/.test(instance.l10n.months.longhand[0]);
         function allowed(year, month) {
             var min = instance.config.minDate, max = instance.config.maxDate;
-            var start = new Date(year, month === undefined ? 0 : month, 1);
-            var end = new Date(year, month === undefined ? 12 : month + 1, 0, 23, 59, 59, 999);
+            var start = localDate(year, month === undefined ? 0 : month, 1);
+            var end = localDate(year, month === undefined ? 12 : month + 1, 0, 23, 59, 59, 999);
             return year >= 1 && year <= 9999 && !(min && end < min) && !(max && start > max);
         }
         function canMove(step) {
             if (mode === 'days') {
-                var date = new Date(instance.currentYear, instance.currentMonth + step, 1);
+                var date = localDate(instance.currentYear, instance.currentMonth + step, 1);
                 return allowed(date.getFullYear(), date.getMonth());
             }
             if (mode === 'months') return allowed(viewYear + step);
@@ -143,7 +156,7 @@
                     item.setAttribute('aria-pressed', String(selected));
                     item.addEventListener('click', function () {
                         if (monthView) {
-                            instance.jumpToDate(new Date(viewYear, value, 1), true);
+                            instance.jumpToDate(localDate(viewYear, value, 1), true);
                             mode = 'days';
                         } else {
                             viewYear = year;

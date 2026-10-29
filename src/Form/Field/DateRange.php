@@ -12,9 +12,9 @@ class DateRange extends Field
     ];
 
     protected static $js = [
-        '/vendor/laravel-admin/flatpickr/dist/flatpickr.js',
+        '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
         '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-        '/vendor/laravel-admin/laravel-admin/datepicker.js?v=3',
+        '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
     ];
 
     protected $format = 'YYYY-MM-DD';

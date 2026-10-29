@@ -7,20 +7,74 @@ const { JSDOM } = require('jsdom');
 const root = path.join(__dirname, '../..');
 const read = name => fs.readFileSync(path.join(root, 'resources/assets', name), 'utf8');
 
-function page(html = '<input id="date" name="date">', editable = false) {
+function page(html = '<input id="date" name="date">', editable = false, beforeLoad = () => {}) {
     const w = new JSDOM('<div id="admin-content"><form>' + html + '</form></div>', {
         runScripts: 'outside-only', url: 'http://localhost/admin/items', pretendToBeVisual: true,
     }).window;
+    beforeLoad(w);
     w.eval(read('AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'));
     if (editable) {
         w.eval(read('AdminLTE/bootstrap/js/bootstrap.min.js'));
         w.eval(read('bootstrap3-editable/js/bootstrap-editable.min.js'));
     }
-    w.eval(read('flatpickr/dist/flatpickr.js'));
+    w.eval(read('laravel-admin/flatpickr-local.js'));
     w.eval(read('laravel-admin/flatpickr-locales.js'));
     w.eval(read('laravel-admin/datepicker.js'));
     w.finish = () => { w.$.admin.datepicker.destroy(); w.close(); };
     return w;
+}
+
+for (const offset of [-8, 0, 8]) {
+    test(`calendar navigation and selected dates survive a ${offset}h constructor offset`, () => {
+        let browserDate;
+        const w = page(undefined, false, window => {
+            window.eval(`window.Date = new Proxy(Date, {
+                construct: function (Target, args) {
+                    var date = Reflect.construct(Target, args);
+                    if (args.length > 1) date.setHours(date.getHours() + ${offset});
+                    return date;
+                }
+            });`);
+            browserDate = window.Date;
+        });
+        try {
+            const picker = w.$.admin.datepicker.init(w.document.querySelector('#date'), {locale: 'zh-CN'});
+            const fp = picker.instance;
+            picker.show();
+            assert.equal(picker.input.value, '');
+            fp.jumpToDate('2026-08-01', true);
+            for (let month = 7; month <= 12; month++) {
+                const year = month === 12 ? 2027 : 2026;
+                const actualMonth = month % 12;
+                const expectedDays = [31, 30, 31, 30, 31, 31][month - 7];
+                assert.equal(fp.currentYear, year);
+                assert.equal(fp.currentMonth, actualMonth);
+                const cells = [...fp.daysContainer.querySelectorAll('.flatpickr-day')];
+                const current = cells.filter(c => !c.classList.contains('prevMonthDay') && !c.classList.contains('nextMonthDay'));
+                assert.equal(current.length, expectedDays);
+                for (const cell of cells) {
+                    const date = cell.dateObj;
+                    assert.equal(Number(cell.textContent), date.getDate());
+                    assert.equal(cell.classList.contains('prevMonthDay'), date.getFullYear() < year || (date.getFullYear() === year && date.getMonth() < actualMonth));
+                    assert.equal(cell.classList.contains('nextMonthDay'), date.getFullYear() > year || (date.getFullYear() === year && date.getMonth() > actualMonth));
+                    assert.equal(date.getDay(), cells.indexOf(cell) % 7);
+                }
+                // Covers August 30 and November 10, both reported as wrong months.
+                const day = actualMonth === 7 ? 30 : 10;
+                current[day - 1].click();
+                assert.equal(picker.input.value, `${year}-${String(actualMonth + 1).padStart(2, '0')}-${day}`);
+                assert.equal(new w.FormData(w.document.querySelector('form')).get('date'), picker.input.value);
+                picker.show();
+                fp.calendarContainer.querySelector('.admin-datepicker-next').click();
+            }
+            fp.jumpToDate('2024-02-01', true);
+            const leapDay = [...fp.daysContainer.querySelectorAll('.flatpickr-day')]
+                .find(c => c.dateObj.getMonth() === 1 && c.dateObj.getDate() === 29);
+            leapDay.click();
+            assert.equal(picker.input.value, '2024-02-29');
+            assert.equal(w.Date, browserDate, 'component does not replace the browser Date');
+        } finally { w.finish(); }
+    });
 }
 
 test('legacy formats retain submitted date, datetime, time, year and month values', () => {

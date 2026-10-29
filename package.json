@@ -2,7 +2,8 @@
   "name": "laravel-admin-frontend-tests",
   "private": true,
   "scripts": {
-    "test": "node --test tests/Form/*.test.js tests/Grid/*.test.js tests/Widgets/*.test.js tests/IframeTabs/*.test.js tests/Assets/*.test.js"
+    "build:datepicker": "node tools/build-flatpickr.cjs",
+    "test": "node tools/build-flatpickr.cjs --check && node --test tests/Form/*.test.js tests/Grid/*.test.js tests/Widgets/*.test.js tests/IframeTabs/*.test.js tests/Assets/*.test.js"
   },
   "devDependencies": {
     "jsdom": "26.1.0"

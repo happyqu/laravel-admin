@@ -49,7 +49,7 @@ test('different inline editor types keep their own handlers, and double clicks s
 test('inline datetime popovers use Flatpickr and submit the selected string value', async () => {
     const { w, calls } = page(['datetime']);
     try {
-        for (const asset of ['flatpickr/dist/flatpickr.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+        for (const asset of ['laravel-admin/flatpickr-local.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
             w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
         }
         const content = open(w, 'datetime');
@@ -92,7 +92,7 @@ test('inline failures preserve the value and render validation messages as text'
 test('inline datetime submission rejects invalid input and allows correction without locking the button', () => {
     const { w, calls } = page(['datetime']);
     try {
-        for (const asset of ['flatpickr/dist/flatpickr.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+        for (const asset of ['laravel-admin/flatpickr-local.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
             w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
         }
         const content = open(w, 'datetime');
