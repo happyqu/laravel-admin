@@ -6436,14 +6436,14 @@
                 },
                 {
                     "path": "laravel-admin/image-editor.js",
-                    "sha256": "acf36344726e7866c165e75cdbf79cc558598b5b7f4e340a64a623e20dec51a6",
-                    "bytes": 11935,
+                    "sha256": "0e83791a2904f7c519d845d84b5ef90623d8a948fc1c6d5306c8ebf93dc603f8",
+                    "bytes": 15137,
                     "origin": "happyqu/laravel-admin client image editor"
                 },
                 {
                     "path": "laravel-admin/image-editor.css",
-                    "sha256": "898d7b8d0bcbf0dd0fb45e2252f3707b6981a62d1f30fb62810aa0fc25dc0bc1",
-                    "bytes": 704,
+                    "sha256": "bf9c67ed5241344d8a4accd18dda5c94d0dc05610a2c61d98d81cf5c96f5fd72",
+                    "bytes": 815,
                     "origin": "happyqu/laravel-admin client image editor styles"
                 }
             ],

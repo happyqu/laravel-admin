@@ -39,9 +39,9 @@ trait ImageField
     public static function getAssets()
     {
         $assets = parent::getAssets();
-        $assets['css'][] = '/vendor/laravel-admin/laravel-admin/image-editor.css?v=1';
+        $assets['css'][] = '/vendor/laravel-admin/laravel-admin/image-editor.css?v=3';
         $assets['js'][] = '/vendor/laravel-admin/cropperjs/cropper.min.js?v=2.3.1';
-        $assets['js'][] = '/vendor/laravel-admin/laravel-admin/image-editor.js?v=1';
+        $assets['js'][] = '/vendor/laravel-admin/laravel-admin/image-editor.js?v=4';
 
         return $assets;
     }
@@ -59,6 +59,11 @@ trait ImageField
                 'processing' => trans('admin.image_editor.processing'),
                 'error' => trans('admin.image_editor.error'),
                 'unsupported' => trans('admin.image_editor.unsupported'),
+                'zoomIn' => trans('admin.image_editor.zoom_in'),
+                'zoomOut' => trans('admin.image_editor.zoom_out'),
+                'move' => trans('admin.image_editor.move'),
+                'select' => trans('admin.image_editor.select'),
+                'reset' => trans('admin.image_editor.reset'),
             ];
             $config = json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
             $this->script .= "\nLAImageEditor.bind(document.querySelectorAll('input{$this->getElementClassSelector()}'), {$config});";

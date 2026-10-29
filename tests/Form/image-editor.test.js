@@ -42,9 +42,15 @@ function page(realPlugin = false, pluginOptions = {}) {
                     return canvas;
                 }};
             data.selection = this.selection;
+            this.image = {$ready: () => Promise.resolve(), $getTransform: () => [0.1, 0, 0, 0.1, 0, 0],
+                $zoom: amount => { data.zoom = amount; }, $setTransform: matrix => { data.resetTransform = matrix; }};
+            this.selection.$reset = () => { data.resetSelection = true; };
+            data.cropperImage = this.image;
+            data.backgroundHandle = {};
         }
         getCropperSelection() { return this.selection; }
-        getCropperImage() { return {$ready: () => Promise.resolve(), $getTransform: () => [0.1, 0, 0, 0.1, 0, 0]}; }
+        getCropperImage() { return this.image; }
+        getCropperCanvas() { return {querySelector: () => data.backgroundHandle}; }
         destroy() { data.destroyed = (data.destroyed || 0) + 1; }
     }};
     w.eval(fs.readFileSync(path.join(root, 'resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'), 'utf8'));
@@ -58,7 +64,8 @@ function page(realPlugin = false, pluginOptions = {}) {
         };
     }
     w.eval(fs.readFileSync(path.join(root, 'resources/assets/laravel-admin/image-editor.js'), 'utf8'));
-    const labels = {title: 'Crop', confirm: 'OK', cancel: 'Cancel', processing: 'Processing', error: 'Failed', unsupported: 'Unsupported'};
+    const labels = {title: 'Crop', confirm: 'OK', cancel: 'Cancel', processing: 'Processing', error: 'Failed', unsupported: 'Unsupported',
+        zoomIn: 'Zoom in', zoomOut: 'Zoom out', move: 'Move image', select: 'Adjust crop box', reset: 'Reset'};
     data.bind = config => w.LAImageEditor.bind([input], Object.assign({labels}, config));
     data.select = files => { data.files = files; input.dispatchEvent(new w.Event('change', {bubbles: true})); };
     data.file = (name = 'a.jpg', type = 'image/jpeg') => new w.File(['x'.repeat(100)], name, {type});
@@ -93,7 +100,7 @@ test('v2 cropping exports fixed pixels and free crops at original resolution', a
             data.bind({cropper: {width: fixed ? 400 : null, height: fixed ? 400 : null, options: {}}});
             data.select([data.file()]);
             await tick();
-            w.document.querySelector('.la-image-editor .btn-primary').click();
+            w.document.querySelector('.la-image-editor-actions .btn-primary').click();
             await tick();
             assert.equal(data.files[0].size, 20);
             assert.equal(data.cropSize.width, fixed ? 400 : 2000);
@@ -109,9 +116,9 @@ test('canceling the second crop discards the whole batch and releases object URL
         data.bind({cropper: {width: null, height: null, options: {}}});
         data.select([data.file(), data.file('b.jpg')]);
         await tick();
-        w.document.querySelector('.la-image-editor .btn-primary').click();
+        w.document.querySelector('.la-image-editor-actions .btn-primary').click();
         await tick();
-        w.document.querySelector('.la-image-editor .btn-default').click();
+        w.document.querySelector('.la-image-editor-actions .btn-default').click();
         await tick();
         assert.equal(data.files.length, 0);
         assert.equal(data.seen.length, 0);
@@ -130,12 +137,49 @@ test('non-square fixed crops normalize Cropper rounding to the requested output 
             data.select([data.file()]);
             await tick();
             assert.equal(data.selection.precise, true);
-            w.document.querySelector('.la-image-editor .btn-primary').click();
+            w.document.querySelector('.la-image-editor-actions .btn-primary').click();
             await tick();
             assert.equal(data.exports[0].width, width);
             assert.equal(data.exports[0].height, height);
         } finally { w.close(); }
     }
+});
+
+test('mouse controls switch image dragging and crop selection, zoom and reset', async () => {
+    const {w, data} = page();
+    try {
+        data.bind({cropper: {width: 1600, height: 900, options: {}}});
+        data.select([data.file()]);
+        await tick();
+        const control = action => w.document.querySelector(`[data-image-action="${action}"]`);
+        assert.equal(data.cropperImage.scalable, true);
+        assert.equal(data.cropperImage.translatable, true);
+        assert.equal(data.backgroundHandle.action, 'select');
+        assert.equal(data.selection.movable, true);
+        assert.equal(control('select').getAttribute('aria-pressed'), 'true');
+        assert.equal(control('select').classList.contains('btn-primary'), true);
+        control('move').click();
+        control('zoomIn').click();
+        assert.equal(data.zoom, 0.1);
+        control('zoomOut').click();
+        assert.equal(data.zoom, -0.1);
+        control('select').click();
+        assert.equal(data.backgroundHandle.action, 'select');
+        assert.equal(data.selection.movable, true);
+        assert.equal(control('select').getAttribute('aria-pressed'), 'true');
+        control('move').click();
+        assert.equal(data.backgroundHandle.action, 'move');
+        assert.equal(data.selection.movable, false);
+        control('reset').click();
+        assert.deepEqual(Array.from(data.resetTransform), [0.1, 0, 0, 0.1, 0, 0]);
+        assert.equal(data.resetSelection, true);
+        const confirm = w.document.querySelector('.la-image-editor-actions .btn-primary');
+        confirm.focus();
+        confirm.dispatchEvent(new w.KeyboardEvent('keydown', {key: 'Tab', bubbles: true, cancelable: true}));
+        assert.equal(w.document.activeElement, control('zoomIn'));
+        control('zoomIn').dispatchEvent(new w.KeyboardEvent('keydown', {key: 'Tab', shiftKey: true, bubbles: true, cancelable: true}));
+        assert.equal(w.document.activeElement, confirm);
+    } finally { w.close(); }
 });
 
 for (const failure of ['cancel', 'unsupported', 'encode']) {
@@ -158,7 +202,7 @@ for (const failure of ['cancel', 'unsupported', 'encode']) {
             data.select([failure === 'unsupported' ? data.file('a.gif', 'image/gif') : data.file()]);
             await tick();
             if (failure !== 'unsupported') {
-                w.document.querySelector(failure === 'cancel' ? '.la-image-editor .btn-default' : '.la-image-editor .btn-primary').click();
+                w.document.querySelector(failure === 'cancel' ? '.la-image-editor-actions .btn-default' : '.la-image-editor-actions .btn-primary').click();
             }
             await tick();
             assert.equal(widget.previewCache.count(), 1);

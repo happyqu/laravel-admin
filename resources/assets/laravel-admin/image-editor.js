@@ -17,7 +17,14 @@
             var overlay = document.createElement('div');
             overlay.className = 'la-image-editor';
             overlay.innerHTML = '<div class="la-image-editor-panel" role="dialog" aria-modal="true" tabindex="-1">' +
-                '<strong></strong><div class="la-image-editor-stage"></div>' +
+                '<strong></strong><div class="la-image-editor-toolbar" role="toolbar"><div class="btn-group" role="group">' +
+                '<button type="button" class="btn btn-default btn-sm" data-image-action="zoomIn" disabled></button>' +
+                '<button type="button" class="btn btn-default btn-sm" data-image-action="zoomOut" disabled></button></div>' +
+                '<div class="btn-group" role="group">' +
+                '<button type="button" class="btn btn-default btn-sm" data-image-action="move" disabled></button>' +
+                '<button type="button" class="btn btn-default btn-sm" data-image-action="select" disabled></button></div>' +
+                '<button type="button" class="btn btn-default btn-sm" data-image-action="reset" disabled></button></div>' +
+                '<div class="la-image-editor-stage"></div>' +
                 '<div class="la-image-editor-actions"><button type="button" class="btn btn-default"></button>' +
                 '<button type="button" class="btn btn-primary" disabled></button></div></div>';
             var panel = overlay.firstChild;
@@ -25,7 +32,11 @@
             title.textContent = labels.title;
             panel.setAttribute('aria-label', labels.title);
             panel.querySelector('.la-image-editor-stage').appendChild(image);
-            var buttons = panel.querySelectorAll('button');
+            var buttons = panel.querySelectorAll('.la-image-editor-actions button');
+            var controls = panel.querySelectorAll('[data-image-action]');
+            Array.prototype.forEach.call(controls, function (control) {
+                control.textContent = labels[control.getAttribute('data-image-action')];
+            });
             buttons[0].textContent = labels.cancel;
             buttons[1].textContent = labels.confirm;
             var previousFocus = document.activeElement;
@@ -44,10 +55,11 @@
             function keydown(event) {
                 if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); finish(null); }
                 if (event.key === 'Tab') {
-                    var target = event.shiftKey ? buttons[0] : (buttons[1].disabled ? buttons[0] : buttons[1]);
-                    if (!panel.contains(document.activeElement) || document.activeElement === target) {
+                    var focusable = panel.querySelectorAll('button:not(:disabled)');
+                    var first = focusable[0], last = focusable[focusable.length - 1];
+                    if (!panel.contains(document.activeElement) || document.activeElement === (event.shiftKey ? first : last)) {
                         event.preventDefault();
-                        (event.shiftKey && !buttons[1].disabled ? buttons[1] : buttons[0]).focus();
+                        (event.shiftKey ? last : first).focus();
                     }
                 }
             }
@@ -80,6 +92,10 @@
             try {
                 editor = new window.Cropper.Cropper(image);
                 var selection = editor.getCropperSelection();
+                var cropperImage = editor.getCropperImage();
+                var backgroundHandle = editor.getCropperCanvas().querySelector('cropper-handle');
+                cropperImage.scalable = true;
+                cropperImage.translatable = true;
                 selection.precise = true;
                 // Configure the v2 selection element, not the v1 constructor.
                 ['initialCoverage', 'initialAspectRatio', 'movable', 'resizable', 'zoomable',
@@ -87,9 +103,42 @@
                     if (Object.prototype.hasOwnProperty.call(config.options, key)) selection[key] = config.options[key];
                 });
                 selection.aspectRatio = config.width ? config.width / config.height : (config.options.aspectRatio || NaN);
-                editor.getCropperImage().$ready().then(function () {
+                function setMode(moving) {
+                    backgroundHandle.action = moving ? 'move' : 'select';
+                    // A movable selection consumes drags inside the crop box.
+                    selection.movable = moving ? false : config.options.movable !== false;
+                    ['move', 'select'].forEach(function (mode) {
+                        var control = panel.querySelector('[data-image-action="' + mode + '"]');
+                        var active = moving === (mode === 'move');
+                        control.setAttribute('aria-pressed', String(active));
+                        control.classList.toggle('btn-primary', active);
+                        control.classList.toggle('btn-default', !active);
+                    });
+                }
+                setMode(false);
+                var initialTransform;
+                Array.prototype.forEach.call(controls, function (control) {
+                    control.onclick = function () {
+                        switch (control.getAttribute('data-image-action')) {
+                        case 'zoomIn': cropperImage.$zoom(0.1); break;
+                        case 'zoomOut': cropperImage.$zoom(-0.1); break;
+                        case 'move': setMode(true); break;
+                        case 'select': setMode(false); break;
+                        case 'reset':
+                            cropperImage.$setTransform(initialTransform);
+                            selection.$reset();
+                            break;
+                        }
+                    };
+                });
+                cropperImage.$ready().then(function () {
                     if (settled) return;
-                    return selection.$nextTick(function () { if (!settled) buttons[1].disabled = false; });
+                    return selection.$nextTick(function () {
+                        if (settled) return;
+                        initialTransform = cropperImage.$getTransform().slice();
+                        buttons[1].disabled = false;
+                        Array.prototype.forEach.call(controls, function (control) { control.disabled = false; });
+                    });
                 }).catch(function (error) { finish(null, error); });
             } catch (error) { finish(null, error); }
         });

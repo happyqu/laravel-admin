@@ -126,6 +126,11 @@ return [
     'next'                   => '下一步',
     'quick_create'           => '快速创建',
     'image_editor' => [
+        'zoom_in' => '放大',
+        'zoom_out' => '缩小',
+        'move' => '移动图片',
+        'select' => '调整裁剪框',
+        'reset' => '重置',
         'title' => '裁剪图片',
         'processing' => '正在处理图片，请稍候…',
         'error' => '图片处理失败，请重新选择图片或使用支持的浏览器。',

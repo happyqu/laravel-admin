@@ -127,6 +127,11 @@ return [
     'next'                   => 'Next',
     'quick_create'           => 'Quick create',
     'image_editor' => [
+        'zoom_in' => 'Zoom in',
+        'zoom_out' => 'Zoom out',
+        'move' => 'Move image',
+        'select' => 'Adjust crop box',
+        'reset' => 'Reset',
         'title' => 'Crop image',
         'processing' => 'Processing images, please wait…',
         'error' => 'Image processing failed. Please select the images again or use a supported browser.',
