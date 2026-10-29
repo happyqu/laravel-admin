@@ -125,6 +125,12 @@ return [
     'prev'                   => '上一步',
     'next'                   => '下一步',
     'quick_create'           => '快速创建',
+    'image_editor' => [
+        'title' => '裁剪图片',
+        'processing' => '正在处理图片，请稍候…',
+        'error' => '图片处理失败，请重新选择图片或使用支持的浏览器。',
+        'unsupported' => '裁剪仅支持 JPEG、PNG、WebP 图片，请重新选择。',
+    ],
     'iframe_tabs' => [
         'oprations' => '页签操作',
         'refresh_current' => '刷新当前',

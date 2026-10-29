@@ -126,6 +126,12 @@ return [
     'prev'                   => 'Prev',
     'next'                   => 'Next',
     'quick_create'           => 'Quick create',
+    'image_editor' => [
+        'title' => 'Crop image',
+        'processing' => 'Processing images, please wait…',
+        'error' => 'Image processing failed. Please select the images again or use a supported browser.',
+        'unsupported' => 'Cropping supports JPEG, PNG and WebP only. Please select another image.',
+    ],
     'iframe_tabs' => [
         'oprations' => 'Tab operations',
         'refresh_current' => 'Refresh current',

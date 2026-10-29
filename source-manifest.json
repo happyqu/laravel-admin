@@ -6419,6 +6419,32 @@
                     "bytes": 102847,
                     "origin": "flatpickr@4.6.13 dist/l10n/index.js",
                     "source_url": "https://registry.npmjs.org/flatpickr/-/flatpickr-4.6.13.tgz"
+                },
+                {
+                    "path": "cropperjs/cropper.min.js",
+                    "sha256": "f47f299818c2a37dc797dceceeb1ba4f78dc1eae7d7f8406b6256d5e53406276",
+                    "bytes": 50904,
+                    "origin": "cropperjs@2.3.1 dist/cropper.min.js",
+                    "source_url": "https://registry.npmjs.org/cropperjs/-/cropperjs-2.3.1.tgz"
+                },
+                {
+                    "path": "cropperjs/LICENSE",
+                    "sha256": "eb917650781dcf06a60b97cba9b05bf583931ec2d311d8a5548a8dca90a57e0f",
+                    "bytes": 1084,
+                    "origin": "cropperjs@2.3.1 LICENSE",
+                    "source_url": "https://registry.npmjs.org/cropperjs/-/cropperjs-2.3.1.tgz"
+                },
+                {
+                    "path": "laravel-admin/image-editor.js",
+                    "sha256": "acf36344726e7866c165e75cdbf79cc558598b5b7f4e340a64a623e20dec51a6",
+                    "bytes": 11935,
+                    "origin": "happyqu/laravel-admin client image editor"
+                },
+                {
+                    "path": "laravel-admin/image-editor.css",
+                    "sha256": "898d7b8d0bcbf0dd0fb45e2252f3707b6981a62d1f30fb62810aa0fc25dc0bc1",
+                    "bytes": 704,
+                    "origin": "happyqu/laravel-admin client image editor styles"
                 }
             ],
             "source_paths": [

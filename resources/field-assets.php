@@ -276,11 +276,14 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=4.5.2',
+      1 => '/vendor/laravel-admin/laravel-admin/image-editor.css?v=1',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/canvas-to-blob.min.js',
       1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=4.5.2',
+      2 => '/vendor/laravel-admin/cropperjs/cropper.min.js?v=2.3.1',
+      3 => '/vendor/laravel-admin/laravel-admin/image-editor.js?v=1',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Ip' => 
@@ -364,12 +367,15 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/bootstrap-fileinput/css/fileinput.min.css?v=4.5.2',
+      1 => '/vendor/laravel-admin/laravel-admin/image-editor.css?v=1',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/canvas-to-blob.min.js',
       1 => '/vendor/laravel-admin/bootstrap-fileinput/js/fileinput.min.js?v=4.5.2',
       2 => '/vendor/laravel-admin/bootstrap-fileinput/js/plugins/sortable.min.js?v=4.5.2',
+      3 => '/vendor/laravel-admin/cropperjs/cropper.min.js?v=2.3.1',
+      4 => '/vendor/laravel-admin/laravel-admin/image-editor.js?v=1',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\MultipleSelect' => 

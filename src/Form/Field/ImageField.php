@@ -10,6 +10,61 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 trait ImageField
 {
+    protected $clientImageOptions = [];
+
+    /** Compress selected images in the browser before uploading. */
+    public function compress(float $quality = 0.8, int $maxWidth = 1920, int $maxHeight = 1920)
+    {
+        if (!is_finite($quality) || $quality <= 0 || $quality > 1 || $maxWidth < 1 || $maxHeight < 1) {
+            throw new \InvalidArgumentException('Image quality must be in (0, 1] and dimensions must be positive.');
+        }
+
+        $this->clientImageOptions['compress'] = compact('quality', 'maxWidth', 'maxHeight');
+
+        return $this;
+    }
+
+    /** Free cropping, or a fixed output size when both dimensions are supplied. */
+    public function cropper(?int $width = null, ?int $height = null, array $options = [])
+    {
+        if (($width === null) !== ($height === null) || ($width !== null && ($width < 1 || $height < 1))) {
+            throw new \InvalidArgumentException('Crop dimensions must both be null or positive integers.');
+        }
+
+        $this->clientImageOptions['cropper'] = compact('width', 'height', 'options');
+
+        return $this;
+    }
+
+    public static function getAssets()
+    {
+        $assets = parent::getAssets();
+        $assets['css'][] = '/vendor/laravel-admin/laravel-admin/image-editor.css?v=1';
+        $assets['js'][] = '/vendor/laravel-admin/cropperjs/cropper.min.js?v=2.3.1';
+        $assets['js'][] = '/vendor/laravel-admin/laravel-admin/image-editor.js?v=1';
+
+        return $assets;
+    }
+
+    protected function setupScripts($options)
+    {
+        parent::setupScripts($options);
+
+        if ($this->clientImageOptions) {
+            $config = $this->clientImageOptions;
+            $config['labels'] = [
+                'title' => trans('admin.image_editor.title'),
+                'confirm' => trans('admin.confirm'),
+                'cancel' => trans('admin.cancel'),
+                'processing' => trans('admin.image_editor.processing'),
+                'error' => trans('admin.image_editor.error'),
+                'unsupported' => trans('admin.image_editor.unsupported'),
+            ];
+            $config = json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+            $this->script .= "\nLAImageEditor.bind(document.querySelectorAll('input{$this->getElementClassSelector()}'), {$config});";
+        }
+    }
+
     /**
      * Intervention calls.
      *

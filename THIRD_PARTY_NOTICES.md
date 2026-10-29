@@ -42,6 +42,7 @@ Log Viewer 基于 `laravel-admin-ext/log-viewer` 修改，上游地址为 https:
 | SweetAlert2 | 7.26.12 | MIT | Copyright (c) Limon Monte | `licenses/MIT.txt` |
 | Select2 | 4.0.3 | MIT | Copyright (c) Kevin Brown, Igor Vaynberg, Select2 contributors | `licenses/MIT.txt` |
 | flatpickr | 4.6.13 | MIT | Copyright (c) Gregory Petrosyan | `licenses/MIT.txt` |
+| Cropper.js | 2.3.1 | MIT | Copyright (c) 2015-present Chen Fengyuan | `resources/assets/cropperjs/LICENSE` |
 | layer / layer mobile | 3.1.1 / 2.0.0 | MIT | Copyright (c) 贤心 | `licenses/MIT.txt` |
 | iCheck | 1.0.1 | MIT | Copyright (c) Damir Sultanov | `licenses/MIT.txt` |
 | NProgress | 未标注 | MIT | Copyright (c) 2013-2014 Rico Sta. Cruz | `licenses/MIT.txt` |

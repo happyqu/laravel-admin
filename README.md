@@ -318,6 +318,31 @@ PHP、PHTML、PHAR、HTML、SVG 等危险上传类型被禁止，不能通过白
 
 默认 `admin` 磁盘为 `public/uploads`；宿主自定义同名磁盘优先。图片裁切、缩略图等功能按需安装 `intervention/image:^2.7`。
 
+#### 上传前压缩与裁剪（纯前端）
+
+`image`、`multipleImage` 可直接启用浏览器处理，不依赖 `intervention/image`：
+
+```php
+// JPEG / WebP 编码质量 0.8，最长宽高 1920px，保持比例、不放大。
+$form->image('photo', '图片')->compress();
+$form->multipleImage('photos', '相册')->compress(0.75, 1600, 1200);
+
+// 自由裁剪；选择新图片后弹出裁剪框，多图逐张处理。
+$form->image('cover', '封面')->cropper();
+
+// 固定比例与输出尺寸；先裁剪，再压缩。
+$form->image('avatar', '头像')->cropper(400, 400)->compress(0.85, 400, 400);
+
+// 自定义 Cropper.js 2.x 选区属性，例如仅限制比例，不指定输出像素尺寸。
+$form->image('banner', '横幅')->cropper(null, null, ['aspectRatio' => 16 / 9]);
+```
+
+处理结果以普通文件提交，原有上传验证、存储、编辑预览、删除和嵌套表单流程继续生效；不开启以上方法时沿用原有行为。处理期间阻止提交，完成后可提交；取消裁剪会清空本次文件选择，已保存图片保留。仅处理新选择的本地文件，`picker()` 选择的已有文件不进行处理。
+
+需要支持 Canvas、`toBlob`、`File` 和可写 `DataTransfer` 的现代浏览器。JPEG、PNG、WebP 支持压缩与裁剪；PNG 保留透明通道，质量参数仅影响 JPEG / WebP。单独压缩时，结果不小于原文件则保留原文件；GIF 等其他格式压缩时原样上传，裁剪时提示重新选择支持的格式，避免意外丢失动画。Canvas 重编码会移除原有 EXIF 元数据。前端处理不能替代服务端验证。
+
+内置 Cropper.js 2.3.1 随资源发布，不需要额外安装 cropper 扩展。升级后需重新发布 `laravel-admin-assets` 资源。现有 `->crop()`、`->resize()`、`->thumbnail()` 等仍是服务端操作，需要可选依赖。
+
 ## 日志查看器
 
 内置日志查看器，无需额外安装或注册 Provider。默认入口为 `/admin/logs`（跟随后台前缀），支持文件切换、分页、异常详情、实时追加、删除当前文件和删除当前目录内的全部 `.log` 文件。
