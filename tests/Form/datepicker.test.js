@@ -57,7 +57,7 @@ for (const offset of [-8, 0, 8]) {
                     assert.equal(Number(cell.textContent), date.getDate());
                     assert.equal(cell.classList.contains('prevMonthDay'), date.getFullYear() < year || (date.getFullYear() === year && date.getMonth() < actualMonth));
                     assert.equal(cell.classList.contains('nextMonthDay'), date.getFullYear() > year || (date.getFullYear() === year && date.getMonth() > actualMonth));
-                    assert.equal(date.getDay(), cells.indexOf(cell) % 7);
+                    assert.equal(date.getDay(), (cells.indexOf(cell) + fp.l10n.firstDayOfWeek) % 7);
                 }
                 // Covers August 30 and November 10, both reported as wrong months.
                 const day = actualMonth === 7 ? 30 : 10;
@@ -150,9 +150,11 @@ test('calendar drills up from days to months and years, then returns without cha
         const next = calendar.querySelector('.admin-datepicker-next');
         const prev = calendar.querySelector('.admin-datepicker-prev');
         const view = () => calendar.getAttribute('data-admin-calendar-view');
-        assert.equal(title.textContent, '10月 2026');
+        assert.deepEqual([...calendar.querySelectorAll('.flatpickr-weekday')].map(el => el.textContent.trim()), ['一', '二', '三', '四', '五', '六', '日']);
+        assert.equal(w.flatpickr.l10ns.zh.firstDayOfWeek, undefined, 'shared upstream locale stays unchanged');
+        assert.equal(title.textContent, '十月 2026');
         next.click();
-        assert.equal(title.textContent, '11月 2026');
+        assert.equal(title.textContent, '十一月 2026');
         prev.click();
         title.click();
         assert.equal(view(), 'months');
@@ -175,7 +177,7 @@ test('calendar drills up from days to months and years, then returns without cha
         assert.equal(title.textContent, '2027');
         panel.children[1].click();
         assert.equal(view(), 'days');
-        assert.equal(title.textContent, '2月 2027');
+        assert.equal(title.textContent, '二月 2027');
         assert.equal(p.input.value, '2026-10-15');
         assert.equal(p.instance.isOpen, true);
         const day = p.instance.daysContainer.querySelector('.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay)');
@@ -231,7 +233,7 @@ test('calendar titles follow silent month jumps before a day can be selected', (
             w.$(p.input).on('dp.change', changed);
             p.instance.jumpToDate(new w.Date(2026, month, 1));
             const calendar = p.instance.calendarContainer;
-            assert.equal(calendar.querySelector('.admin-datepicker-title').textContent, `${month + 1}月 2026`);
+            assert.equal(calendar.querySelector('.admin-datepicker-title').textContent, `${p.instance.l10n.months.longhand[month]} 2026`);
             assert.equal(p.input.value, initial, 'Browsing must leave the saved date unchanged');
             assert.equal(changes, 0, 'A silent jump must remain silent');
             const cell = [...p.instance.daysContainer.querySelectorAll('.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay)')]
@@ -255,15 +257,15 @@ test('silent setDate, clear and direct redraw keep calendar titles consistent ac
         let changes = 0;
         w.$(p.input).on('dp.change', () => changes++);
         p.instance.setDate('2026-09-30', false);
-        assert.equal(title.textContent, '9月 2026');
+        assert.equal(title.textContent, '九月 2026');
         p.instance.setDate('2027-01-10', false);
-        assert.equal(title.textContent, '1月 2027');
+        assert.equal(title.textContent, '一月 2027');
         p.instance.clear(false);
-        assert.equal(title.textContent, '8月 2026');
+        assert.equal(title.textContent, '八月 2026');
         p.instance.currentYear = 2025;
         p.instance.currentMonth = 10;
         p.instance.redraw();
-        assert.equal(title.textContent, '11月 2025');
+        assert.equal(title.textContent, '十一月 2025');
         assert.equal(changes, 0);
         // Reinitialization must not keep a stale header or a wrapper from a destroyed picker.
         const next = w.$.admin.datepicker.init(p.input, { format: 'YYYY-MM-DD', locale: 'en' });

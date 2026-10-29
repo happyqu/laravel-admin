@@ -2,13 +2,13 @@
     z-index: 1100;
     box-sizing: border-box;
     width: max-content !important;
-    min-width: 306px;
-    padding: 12px;
-    color: #435366;
+    min-width: 268px;
+    padding: 7px;
+    color: #444;
     background: #fff;
-    border: 1px solid #dce3eb;
-    border-radius: 6px;
-    box-shadow: 0 4px 8px rgba(31, 45, 61, .04), 0 12px 28px rgba(31, 45, 61, .12);
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, .12);
     font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 13px;
     line-height: 1.42857143;
@@ -18,7 +18,7 @@
 .admin-datepicker.arrowBottom:before { border-top-color: #dce3eb; }
 
 .admin-datepicker .flatpickr-months { position: relative; z-index: 2; height: 36px; margin-bottom: 6px; }
-.admin-datepicker .flatpickr-months .flatpickr-month { height: 36px; overflow: visible; color: #34465a; background: transparent; }
+.admin-datepicker .flatpickr-months .flatpickr-month { height: 36px; overflow: visible; color: #444; background: transparent; }
 .admin-datepicker .flatpickr-current-month {
     display: flex;
     align-items: center;
@@ -28,40 +28,46 @@
     width: calc(100% - 64px);
     height: 36px;
     padding: 0;
-    color: #34465a;
+    color: #444;
     font-size: 14px;
     font-weight: 600;
 }
 /* The single-month picker uses the same day / month / year navigation as Bootstrap datetimepicker. */
 .admin-datepicker-tiered > .flatpickr-months { display: none; }
-.admin-datepicker-navigation { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 280px; height: 36px; margin-bottom: 6px; }
+.admin-datepicker-navigation { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 252px; height: 36px; margin-bottom: 6px; }
 .admin-datepicker-navigation button {
     display: flex; align-items: center; justify-content: center; height: 32px;
-    padding: 0; border: 0; border-radius: 4px; color: #34465a; background: transparent;
-    font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    padding: 0; border: 0; border-radius: 4px; color: #444; background: transparent;
+    font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
 }
 .admin-datepicker-navigation .admin-datepicker-title { flex: 1; }
 .admin-datepicker-navigation .admin-datepicker-prev,
 .admin-datepicker-navigation .admin-datepicker-next { flex: 0 0 28px; }
-.admin-datepicker-navigation svg { width: 12px; height: 12px; fill: currentColor; }
+.admin-datepicker-navigation svg { display: none; }
+.admin-datepicker-navigation .admin-datepicker-prev:before,
+.admin-datepicker-navigation .admin-datepicker-next:before {
+    content: ''; width: 9px; height: 9px; border-left: 4px solid currentColor;
+    border-bottom: 4px solid currentColor; transform: rotate(45deg);
+}
+.admin-datepicker-navigation .admin-datepicker-next:before { transform: rotate(225deg); }
 .admin-datepicker-navigation button:hover,
-.admin-datepicker .admin-datepicker-period:hover { background: #edf3f8; }
+.admin-datepicker .admin-datepicker-period:hover { background: #eee; }
 .admin-datepicker-navigation button:disabled,
-.admin-datepicker .admin-datepicker-period:disabled { color: #bdc6d0; background: transparent; cursor: default; }
+.admin-datepicker .admin-datepicker-period:disabled { color: #999; background: transparent; cursor: default; }
 .admin-datepicker-periods {
     display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr);
-    gap: 8px; box-sizing: border-box; width: 100%; min-width: 280px; height: 250px; padding: 8px 0;
+    gap: 4px; box-sizing: border-box; width: 100%; min-width: 252px; height: 180px; padding: 0;
 }
 .admin-datepicker-periods[hidden] { display: none; }
 .admin-datepicker[data-admin-calendar-view="months"] > .flatpickr-innerContainer,
 .admin-datepicker[data-admin-calendar-view="years"] > .flatpickr-innerContainer { display: none; }
 .admin-datepicker .admin-datepicker-period {
-    align-self: center; width: 100%; height: 56px; padding: 0 2px;
-    border: 0; border-radius: 5px; color: #435366; background: transparent;
+    align-self: center; justify-self: center; width: calc(100% - 4px); height: 56px; padding: 0 2px;
+    border: 0; border-radius: 5px; color: #444; background: transparent;
     font-family: inherit; font-size: 14px; line-height: 1.4; cursor: pointer;
 }
 .admin-datepicker .admin-datepicker-period[aria-pressed="true"] {
-    color: #fff; background: linear-gradient(150deg, #008fc5, #0646ce);
+    color: #fff; background: linear-gradient(#008fc5, #0646ce);
 }
 .admin-datepicker-navigation button:focus-visible,
 .admin-datepicker .admin-datepicker-period:focus-visible { outline: 2px solid #3c8dbc; outline-offset: -2px; }
@@ -95,43 +101,48 @@
 .admin-datepicker .flatpickr-rContainer { width: max-content; }
 .admin-datepicker .flatpickr-days { width: max-content !important; }
 .admin-datepicker .dayContainer {
-    flex: 0 0 280px;
-    width: 280px;
-    min-width: 280px;
-    max-width: 280px;
+    flex: 0 0 252px;
+    width: 252px;
+    min-width: 252px;
+    max-width: 252px;
     padding: 0;
     justify-content: flex-start;
 }
-.admin-datepicker .flatpickr-weekdays { height: 28px; margin-bottom: 6px; background: #f7f9fb; border-radius: 4px; }
-.admin-datepicker .flatpickr-weekdaycontainer { width: 280px; }
-.admin-datepicker .flatpickr-weekday { color: #8996a6; font-size: 12px; font-weight: 500; line-height: 28px; }
+.admin-datepicker .flatpickr-weekdays { height: 30px; margin-bottom: 2px; background: transparent; }
+.admin-datepicker .flatpickr-weekdaycontainer { width: 252px; }
+.admin-datepicker .flatpickr-weekday { color: #444; font-size: 14px; font-weight: 700; line-height: 30px; }
 .admin-datepicker .flatpickr-day {
-    flex: 0 0 32px;
-    width: 32px;
-    max-width: 32px;
-    height: 32px;
-    margin: 2px 4px;
-    color: #435366;
+    flex: 0 0 36px;
+    width: 36px;
+    max-width: 36px;
+    height: 30px;
+    margin: 0;
+    color: #444;
     border-radius: 4px;
-    font-size: 13px;
-    line-height: 30px;
+    font-size: 14px;
+    line-height: 28px;
     font-variant-numeric: tabular-nums;
 }
 .admin-datepicker .flatpickr-day:hover,
-.admin-datepicker .flatpickr-day:focus { color: #34465a; background: #edf3f8; border-color: #edf3f8; }
-.admin-datepicker .flatpickr-day.today { color: #2f7fac; background: #f1f8fc; border-color: #a7cde3; }
+.admin-datepicker .flatpickr-day:focus { color: #444; background: #eee; border-color: #edf3f8; }
+.admin-datepicker .flatpickr-day.today { border-color: transparent; }
+.admin-datepicker .flatpickr-day.today:after {
+    content: ''; position: absolute; right: 3px; bottom: 3px;
+    border-left: 7px solid transparent; border-bottom: 7px solid #007bce;
+}
+.admin-datepicker .flatpickr-day.today.selected:after { border-bottom-color: #fff; }
 .admin-datepicker .flatpickr-day.selected,
 .admin-datepicker .flatpickr-day.startRange,
 .admin-datepicker .flatpickr-day.endRange,
 .admin-datepicker .flatpickr-day.selected:hover,
 .admin-datepicker .flatpickr-day.startRange:hover,
 .admin-datepicker .flatpickr-day.endRange:hover,
-.admin-datepicker .flatpickr-day.today.selected { color: #fff; background: #3c8dbc; border-color: #3c8dbc; }
+.admin-datepicker .flatpickr-day.today.selected { color: #fff; background: linear-gradient(#008fc5, #0646ce); border-color: transparent; }
 .admin-datepicker .flatpickr-day.inRange { background: #e8f3f9; border-color: #e8f3f9; box-shadow: -8px 0 0 #e8f3f9, 8px 0 0 #e8f3f9; }
 .admin-datepicker .flatpickr-day.prevMonthDay:not(.selected),
 .admin-datepicker .flatpickr-day.nextMonthDay:not(.selected),
 .admin-datepicker .flatpickr-day.flatpickr-disabled,
-.admin-datepicker .flatpickr-day.flatpickr-disabled:hover { color: #bdc6d0; }
+.admin-datepicker .flatpickr-day.flatpickr-disabled:hover { color: #999; }
 .admin-datepicker .flatpickr-day.flatpickr-disabled:hover { background: transparent; border-color: transparent; }
 .admin-datepicker .flatpickr-day.hidden { display: block !important; visibility: hidden; }
 .admin-datepicker .flatpickr-weekwrapper { flex: 0 0 40px; width: 40px; }
@@ -143,43 +154,57 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: 44px;
-    max-height: 44px;
-    padding-top: 10px;
-    margin-top: 8px;
-    border-top: 1px solid #e9edf2;
-    line-height: 30px;
+    height: 40px;
+    max-height: 40px;
+    padding: 8px 4px 0;
+    margin-top: 6px;
+    border-top: 1px solid #edf0f4;
+    line-height: 28px;
 }
 .admin-datepicker .flatpickr-time .numInputWrapper {
-    flex: 0 0 64px;
-    width: 64px;
-    height: 32px;
-    background: #f8fafc;
-    border: 1px solid #dce3eb;
+    box-sizing: border-box;
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: 64px;
+    height: 28px;
+    background: #f7f9fc;
+    border: 1px solid #e3e8ef;
     border-radius: 4px;
+    transition: border-color .15s, background-color .15s, box-shadow .15s;
 }
-.admin-datepicker .flatpickr-time .numInputWrapper:focus-within { border-color: #3c8dbc; box-shadow: 0 0 0 2px rgba(60, 141, 188, .1); }
+.admin-datepicker .flatpickr-time .numInputWrapper:hover { background: #fff; border-color: #c5d4e2; }
+.admin-datepicker .flatpickr-time .numInputWrapper:focus-within { background: #fff; border-color: #3c8dbc; box-shadow: 0 0 0 2px rgba(60, 141, 188, .08); }
 .admin-datepicker .flatpickr-time input {
-    height: 30px;
-    padding: 0 14px 0 6px;
+    display: block;
+    width: 100%;
+    height: 20px;
+    margin: 3px 0;
+    padding: 0 12px;
     color: #435366;
     background: transparent;
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 20px;
     font-variant-numeric: tabular-nums;
 }
+.admin-datepicker .flatpickr-time input::selection { color: #235c83; background: #dceefa; }
 .admin-datepicker .flatpickr-time input:hover,
-.admin-datepicker .flatpickr-time input:focus { background: transparent; }
-.admin-datepicker .flatpickr-time .flatpickr-am-pm { width: 38px; height: 32px; border-radius: 4px; color: #607287; font-size: 12px; font-weight: 500; line-height: 32px; }
-.admin-datepicker .flatpickr-time .flatpickr-am-pm:hover { background: #edf3f8; }
-.admin-datepicker .flatpickr-time .flatpickr-time-separator { flex: 0 0 8px; width: 8px; height: 32px; color: #9aa7b5; font-weight: 400; line-height: 30px; }
+.admin-datepicker .flatpickr-time input:focus { background: transparent; box-shadow: none; }
+.admin-datepicker .flatpickr-time .flatpickr-am-pm { flex: 0 0 34px; width: 34px; height: 28px; border-radius: 4px; color: #607287; font-size: 12px; font-weight: 500; line-height: 28px; }
+.admin-datepicker .flatpickr-time .flatpickr-am-pm:hover,
+.admin-datepicker .flatpickr-time .flatpickr-am-pm:focus { background: #edf3f8; }
+.admin-datepicker .flatpickr-time .flatpickr-time-separator { flex: 0 0 4px; width: 4px; height: 28px; color: #a5b1bf; font-size: 12px; font-weight: 400; line-height: 26px; }
 .admin-datepicker .numInputWrapper span.arrowUp,
 .admin-datepicker .numInputWrapper span.arrowDown { width: 14px; border: 0; }
-.admin-datepicker.noCalendar .flatpickr-time { height: 32px; padding-top: 0; margin-top: 0; border-top: 0; }
+.admin-datepicker .flatpickr-time .numInputWrapper span { width: 12px; }
+.admin-datepicker .flatpickr-time .numInputWrapper span:hover { background: #e8f1f8; }
+.admin-datepicker .flatpickr-time .numInputWrapper span.arrowUp:after { border-bottom-color: #8094a8; }
+.admin-datepicker .flatpickr-time .numInputWrapper span.arrowDown:after { border-top-color: #8094a8; }
+.admin-datepicker.noCalendar .flatpickr-time { height: 28px; max-height: 28px; padding-top: 0; margin-top: 0; border-top: 0; }
 
 .admin-datepicker-buttons { display: flex; justify-content: flex-end; gap: 6px; padding-top: 10px; margin-top: 10px; border-top: 1px solid #e9edf2; }
 .admin-datepicker-buttons .btn { min-height: 26px; padding: 3px 10px; border-color: #dce3eb; border-radius: 4px; color: #66788b; font-size: 12px; line-height: 18px; }
-.admin-datepicker-buttons .btn:hover { background: #f1f5f9; border-color: #c9d5e1; color: #34465a; }
+.admin-datepicker-buttons .btn:hover { background: #f1f5f9; border-color: #c9d5e1; color: #444; }
 .ie-container .flatpickr-calendar.inline { border-color: transparent; box-shadow: none; }
 .modal .flatpickr-calendar.admin-datepicker { z-index: 1100; }

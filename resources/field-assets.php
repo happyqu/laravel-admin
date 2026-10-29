@@ -101,13 +101,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\DateMultiple' => 
@@ -115,13 +115,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\DateRange' => 
@@ -129,13 +129,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Datetime' => 
@@ -143,13 +143,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\DatetimeRange' => 
@@ -157,13 +157,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Decimal' => 
@@ -340,13 +340,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\MultipleFile' => 
@@ -527,13 +527,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\TimeRange' => 
@@ -541,13 +541,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Timezone' => 
@@ -575,13 +575,13 @@ return array (
     'css' => 
     array (
       0 => '/vendor/laravel-admin/flatpickr/dist/flatpickr.min.css',
-      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css',
+      1 => '/vendor/laravel-admin/laravel-admin/datepicker.css?v=4',
     ),
     'js' => 
     array (
       0 => '/vendor/laravel-admin/laravel-admin/flatpickr-local.js?v=1',
       1 => '/vendor/laravel-admin/laravel-admin/flatpickr-locales.js',
-      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=4',
+      2 => '/vendor/laravel-admin/laravel-admin/datepicker.js?v=5',
     ),
   ),
 );

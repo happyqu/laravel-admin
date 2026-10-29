@@ -39,8 +39,15 @@
         var code = String(name || 'en').toLowerCase().replace(/-/g, '_');
         var aliases = { zh_cn: 'zh', zh_hans: 'zh', zh_hant: 'zh_tw', zh_hk: 'zh_tw', pt_br: 'pt', vi: 'vn' };
         code = aliases[code] || code;
-        if (flatpickr.l10ns[code]) return flatpickr.l10ns[code];
-        if (flatpickr.l10ns[code.split('_')[0]]) return flatpickr.l10ns[code.split('_')[0]];
+        var locale = flatpickr.l10ns[code] || flatpickr.l10ns[code.split('_')[0]];
+        if (locale) {
+            // Match the Bootstrap calendar: Monday first and compact Chinese weekdays.
+            if (/^zh(?:_|$)/.test(code)) return $.extend({}, locale, {
+                firstDayOfWeek: 1,
+                weekdays: $.extend({}, locale.weekdays, { shorthand: ['日', '一', '二', '三', '四', '五', '六'] })
+            });
+            return locale;
+        }
         console.warn('Unknown datepicker locale, using English: ' + name);
         return flatpickr.l10ns.en;
     }
@@ -137,7 +144,7 @@
             panel.hidden = mode === 'days';
             title.setAttribute('aria-expanded', String(mode !== 'days'));
             title.textContent = mode === 'days'
-                ? (numericMonths ? (instance.currentMonth + 1) + '月' : instance.l10n.months.longhand[instance.currentMonth]) + ' ' + instance.currentYear
+                ? instance.l10n.months.longhand[instance.currentMonth] + ' ' + instance.currentYear
                 : mode === 'months' ? String(viewYear) : firstYear + '-' + (firstYear + 11);
             panel.setAttribute('aria-label', mode === 'months' ? instance.l10n.monthAriaLabel : instance.l10n.yearAriaLabel);
             prev.setAttribute('aria-label', mode === 'days' ? 'Previous month' : mode === 'months' ? 'Previous year' : 'Previous years');
