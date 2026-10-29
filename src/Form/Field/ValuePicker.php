@@ -80,6 +80,10 @@ class ValuePicker
 
         $this->addPickBtn($callback);
 
+        if (!$field->isWritable()) {
+            return;
+        }
+
         Admin::component('admin::components.filepicker', [
             'url'       => $this->getLoadUrl(),
             'modal'     => $this->modal,
@@ -98,9 +102,12 @@ class ValuePicker
     protected function addPickBtn(?\Closure $callback = null)
     {
         $text = admin_trans('admin.browse');
+        $attributes = $this->field->isWritable()
+            ? 'class="btn btn-primary" data-toggle="modal" data-target="#'.$this->modal.'"'
+            : 'class="btn btn-primary disabled" aria-disabled="true" tabindex="-1"';
 
         $btn = <<<HTML
-<a class="btn btn-primary" data-toggle="modal" data-target="#{$this->modal}">
+<a {$attributes}>
     <i class="fa fa-folder-open"></i>  {$text}
 </a>
 HTML;

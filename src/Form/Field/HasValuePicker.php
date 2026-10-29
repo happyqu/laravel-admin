@@ -81,6 +81,7 @@ trait HasValuePicker
             ->attribute('placeholder', $this->getPlaceholder())
             ->addVariables([
                 'preview' => $this->picker->getPreview(get_called_class()),
+                'canPick' => $this->isWritable(),
             ]);
 
         return Admin::component('admin::form.filepicker', $this->variables());

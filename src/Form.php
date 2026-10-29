@@ -1288,11 +1288,12 @@ class Form implements Renderable
     protected function cascadeInputContext(array $input): array
     {
         $input = Form\Cascade::mergeContext($this->inputs, $input);
-        $needsStored = $this->fields()->contains(fn ($field) => method_exists($field, 'hasCascadeConditions')
-            && $field->hasCascadeConditions()
-            && (!$field->isWritable() || ($this->partialSubmission && !Arr::has($input, $field->column()))));
+        $needsStored = $this->fields()->contains(fn ($field) => !$field->isWritable()
+            || (method_exists($field, 'hasCascadeConditions') && $field->hasCascadeConditions()
+                && $this->partialSubmission && !Arr::has($input, $field->column())));
 
-        return Form\Cascade::context($this->fields(), $input, $needsStored ? $this->model()->toArray() : [], $this->partialSubmission);
+        $stored = $needsStored && $this->model instanceof Model ? $this->model->toArray() : [];
+        return Form\Cascade::context($this->fields(), $input, $stored, $this->partialSubmission);
     }
 
     /**

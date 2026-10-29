@@ -30,8 +30,16 @@ var separator = '{{ $separator }}';
 var modal = $('#{{ $modal }}');
 var value;
 var refresh = function () {};
+var canPick = function () {
+    return pickInput.length === 1 && !pickInput.prop('readOnly') && !pickInput.is(':disabled');
+};
 
 modal.on('show.bs.modal', function (e) {
+    if (!canPick()) {
+        e.preventDefault();
+        return;
+    }
+    updateValue();
     load("{!! $url !!}");
 }).on('click', '.page-item a, .filter-box a', function (e) {
     load($(this).attr('href'));
@@ -53,7 +61,9 @@ modal.on('show.bs.modal', function (e) {
     };
 
     var load = function (url) {
+        if (!canPick()) return;
         $.get(url, function (data) {
+            if (!canPick()) return;
             modal.find('.modal-body').html(data);
             modal.find('input.select').iCheck({
                 radioClass:'iradio_minimal-blue',
@@ -84,6 +94,7 @@ modal.on('show.bs.modal', function (e) {
             value.splice(index, 1);
         }
     }).find('.modal-footer .submit').click(function () {
+        if (!canPick()) { modal.modal('hide'); return; }
         pickInput.val(value.join(separator));
         modal.modal('toggle');
 
@@ -97,7 +108,9 @@ modal.on('show.bs.modal', function (e) {
     };
 
     var load = function (url) {
+        if (!canPick()) return;
         $.get(url, function (data) {
+            if (!canPick()) return;
             modal.find('.modal-body').html(data);
             modal.find('input.select').iCheck({
                 radioClass:'iradio_minimal-blue',
@@ -116,6 +129,7 @@ modal.on('show.bs.modal', function (e) {
     modal.on('ifChecked', 'input.select', function (e) {
         value = $(this).val();
     }).find('.modal-footer .submit').click(function () {
+        if (!canPick()) { modal.modal('hide'); return; }
         pickInput.val(value);
         modal.modal('toggle');
 
@@ -126,7 +140,11 @@ modal.on('show.bs.modal', function (e) {
 
 updateValue();
 
-$('.picker-file-preview').on('click', 'a.remove', function () {
+pickInput.closest('.input-group').siblings('.picker-file-preview')
+.off('click.adminPicker', 'a.remove').on('click.adminPicker', 'a.remove', function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!canPick()) return;
     var preview = $(this).parents('.file-preview-frame');
     var current = preview.data('val');
 

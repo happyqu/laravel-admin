@@ -10,17 +10,55 @@ class Cascade
     /** Fill only omitted partial controls and non-writable controls from trusted definitions/data. */
     public static function context(iterable $fields, array $input, array $stored = [], bool $partial = false): array
     {
+        $fields = collect($fields)->all();
+        $submitted = $input;
+        $restored = [];
         foreach ($fields as $field) {
-            if (!method_exists($field, 'hasCascadeConditions') || !$field->hasCascadeConditions()) {
+            $control = method_exists($field, 'hasCascadeConditions') && $field->hasCascadeConditions();
+            if ($field->isWritable() && !($control && $partial && !Arr::has($input, $field->column()))) {
                 continue;
             }
-            $column = $field->column();
-            if (!$field->isWritable() || ($partial && !Arr::has($input, $column))) {
-                Arr::set($input, $column, $field->cascadeStoredValue($stored));
+            $columns = $field->column();
+            $value = self::storedValue($field, $stored);
+            foreach ((array) $columns as $key => $column) {
+                if (!is_string($column) || $column === '') {
+                    continue;
+                }
+                Arr::set($input, $column, is_array($columns) ? ($value[$key] ?? null) : $value);
+                $restored[$column] = true;
+            }
+        }
+        // An active writable definition may share a column with a protected one.
+        foreach ($fields as $field) {
+            if (!$field->isWritable() || !$field->isCascadeActive($input)) {
+                continue;
+            }
+            foreach ((array) $field->column() as $column) {
+                if (!isset($restored[$column])) {
+                    continue;
+                }
+                if (Arr::has($submitted, $column)) {
+                    Arr::set($input, $column, Arr::get($submitted, $column));
+                } elseif (!(method_exists($field, 'hasCascadeConditions') && $field->hasCascadeConditions() && $partial)) {
+                    Arr::forget($input, $column);
+                }
             }
         }
 
         return $input;
+    }
+
+    protected static function storedValue(Field $field, array $stored)
+    {
+        if (method_exists($field, 'cascadeStoredValue')) {
+            return $field->cascadeStoredValue($stored);
+        }
+        if (Arr::has($stored, $field->column())) {
+            $copy = clone $field;
+            $copy->setOriginal($stored);
+            return $copy->original();
+        }
+        return $field->original() ?? $field->value();
     }
 
     /** Merge object-shaped partial values, while replacing lists and explicit empty arrays. */

@@ -18,9 +18,11 @@
                 </div>
                 <div class="file-caption-info">{{ basename($item['url']) }}</div>
                 <div class="file-actions">
+                    @if($canPick ?? true)
                     <a class="btn btn-default btn-sm remove">
                         <i class="fa fa-trash"></i>
                     </a>
+                    @endif
                     <a class="btn btn-default btn-sm" target="_blank" download="{{ basename($item['url']) }}" href="{{ $item['url'] }}">
                         <i class="fa fa-download"></i>
                     </a>

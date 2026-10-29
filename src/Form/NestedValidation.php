@@ -14,7 +14,8 @@ class NestedValidation
                 $field->setOriginal($original);
             }
 
-            foreach (SubmissionValidator::failed($fields, $input) as $failed) {
+            $context = Cascade::context($fields, $input, $original);
+            foreach (SubmissionValidator::failed($fields, $input, null, $context) as $failed) {
                 foreach ($failed->errors()->messages() as $column => $messages) {
                     foreach ($messages as $message) {
                         $validator->errors()->add($prefix.'.'.$column, $message);
