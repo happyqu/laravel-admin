@@ -10,8 +10,8 @@ class Cascader extends Field
 {
     use HasSource;
 
-    protected static $css = ['/vendor/laravel-admin/laravel-admin/cascader.css?v=2'];
-    protected static $js = ['/vendor/laravel-admin/laravel-admin/cascader.js?v=2'];
+    protected static $css = ['/vendor/laravel-admin/laravel-admin/cascader.css?v=5'];
+    protected static $js = ['/vendor/laravel-admin/laravel-admin/cascader.js?v=4'];
 
     public function __construct($column, $arguments = [])
     {

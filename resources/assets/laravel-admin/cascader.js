@@ -43,13 +43,12 @@
         this.destroyed = false;
         this.tree = null;
         this.treeLoading = false;
-        this.pendingOpen = false;
         var id = 'admin-cascader-panel-' + (++sequence);
         this.panel.attr('id', id);
         this.toggle.attr('aria-controls', id);
         // Keep the panel inside a modal's focus boundary, outside clipping form groups.
         this.panel.appendTo(this.$root.closest('.modal').length ? this.$root.closest('.modal') : document.body);
-        this.toggle.on('click.adminCascader', function () { self.opened || self.pendingOpen ? self.hide() : self.open(); });
+        this.toggle.on('click.adminCascader', function () { self.opened ? self.hide() : self.open(); });
         this.clear.on('click.adminCascader', function () { if (!self.locked()) self.commit([]); });
         this.panel.on('keydown.adminCascader', function (event) { self.keydown(event); });
         this.$root.on('keydown.adminCascader', function (event) {
@@ -82,7 +81,9 @@
     Controller.prototype.display = function () {
         var text = this.committed.map(function (node) { return node.label; }).join(' / ');
         this.label.text(text || this.config.placeholder).attr('title', text);
-        this.clear.prop('hidden', !this.committed.length || this.locked());
+        var clearable = !!this.committed.length && !this.locked();
+        this.clear.prop('hidden', !clearable);
+        this.$root.toggleClass('is-clearable', clearable);
     };
     Controller.prototype.resolve = function () {
         var self = this, version = ++this.resolveVersion;
@@ -92,21 +93,10 @@
         this.committed = nonempty.map(function (id) { return { value: id, label: id }; });
         this.display();
         if (this.config.preload && this.tree === null) {
-            this.valid = false;
-            this.treeLoading = true;
-            this.notify(this.messages.loading);
-            this.resolveRequest = tree(this.config).done(function (items) {
-                if (self.destroyed || version !== self.resolveVersion) return;
-                self.tree = items;
-                self.treeLoading = false;
-                self.resolve();
-                if (self.pendingOpen) self.open();
-            }).fail(function (xhr, state) {
-                if (self.destroyed || version !== self.resolveVersion) return;
-                self.treeLoading = false;
-                self.pendingOpen = false;
-                self.notify(self.messages.failed, function () { self.resolve(); });
-            });
+            // Keep saved values visible and untouched until the user opens the picker.
+            // The server validates submitted paths even when this field is never opened.
+            this.valid = true;
+            this.notify('');
             return;
         }
         if (!nonempty.length) { this.valid = true; this.notify(''); return; }
@@ -172,19 +162,46 @@
     };
     Controller.prototype.open = function () {
         if (this.locked()) return;
-        if (this.config.preload && this.tree === null) {
-            this.pendingOpen = true;
-            if (!this.treeLoading) this.resolve();
-            return;
-        }
         live.forEach(function (controller) { if (controller !== this) controller.hide(); }, this);
         this.hide();
         this.opened = true;
         this.path = [];
         this.panel.prop('hidden', false);
         this.toggle.attr('aria-expanded', 'true');
-        this.load([], '', null, false, false, true);
+        if (this.config.preload && this.tree === null) this.loadTree();
+        else this.load([], '', null, false, false, true);
         this.position();
+    };
+    Controller.prototype.treeState = function (failed) {
+        var self = this;
+        this.columnsRoot.empty().append($('<div class="admin-cascader-tree-state" role="status">')
+            .append($('<span>').text(failed ? this.messages.failed : this.messages.loading)));
+        this.panel.attr('aria-busy', failed ? 'false' : 'true');
+        if (failed) this.columnsRoot.children().append(button('admin-cascader-retry', this.messages.retry)
+            .on('click', function () { self.loadTree(); }));
+        this.crumbs();
+        this.position();
+    };
+    Controller.prototype.loadTree = function () {
+        var self = this;
+        this.treeState(false);
+        if (this.treeLoading) return;
+        this.treeLoading = true;
+        tree(this.config).done(function (items) {
+            if (self.destroyed) return;
+            self.treeLoading = false;
+            self.tree = items;
+            self.panel.attr('aria-busy', 'false');
+            self.columnsRoot.empty();
+            self.resolve();
+            // Closing, clearing or leaving the field must never reopen the panel.
+            if (self.opened) { self.open(); self.focusColumn(0); }
+        }).fail(function () {
+            if (self.destroyed) return;
+            self.treeLoading = false;
+            self.panel.attr('aria-busy', 'false');
+            if (self.opened) self.treeState(true);
+        });
     };
     Controller.prototype.trim = function (length) {
         this.columns.splice(length).forEach(function (column) {
@@ -195,7 +212,6 @@
         });
     };
     Controller.prototype.hide = function () {
-        this.pendingOpen = false;
         this.opened = false;
         this.trim(0);
         this.panel.prop('hidden', true);
@@ -316,7 +332,6 @@
     Controller.prototype.commit = function (path) {
         if (this.locked() || (this.config.depth && path.length > this.config.depth)) return;
         ++this.resolveVersion;
-        this.treeLoading = false;
         if (this.resolveRequest) this.resolveRequest.abort();
         var previous = this.inputs.map(function (input) { return input.value; });
         var ids = this.ids(path), self = this;

@@ -14,6 +14,7 @@
     line-height: inherit;
 }
 .admin-cascader .admin-cascader-control.form-control {
+    position: relative;
     display: flex;
     align-items: center;
     width: 100%;
@@ -34,7 +35,7 @@
     min-width: 0;
     height: 32px;
     margin: 0;
-    padding: 6px 12px;
+    padding: 6px 32px 6px 12px;
     border: 0;
     background: transparent;
     color: inherit;
@@ -48,21 +49,59 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.admin-cascader-toggle > span:last-child { flex: 0 0 12px; color: #888; font-size: 11px; text-align: center; }
+.admin-cascader-arrow {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    width: 20px;
+    height: 28px;
+    pointer-events: none;
+}
+.admin-cascader-arrow b {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    margin-left: -4px;
+    border-style: solid;
+    border-width: 5px 4px 0;
+    border-color: #888 transparent transparent;
+}
+.admin-cascader-toggle[aria-expanded=true] .admin-cascader-arrow b {
+    border-width: 0 4px 5px;
+    border-color: transparent transparent #888;
+}
 .admin-cascader-toggle:disabled { cursor: default; background: #eee; }
 .admin-cascader .admin-cascader-clear {
-    flex: 0 0 28px;
-    height: 28px;
-    margin: 0 4px 0 0;
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 32px;
+    margin: 0;
     padding: 0;
     border: 0;
     background: transparent;
-    font-size: 18px;
-    line-height: 28px;
-    color: #999;
+    color: #b3b8bf;
     cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
 }
-.admin-cascader-clear:hover { color: #555; }
+.admin-cascader-clear svg { width: 14px; height: 14px; fill: currentColor; }
+.admin-cascader-clear path { fill: none; stroke: #fff; stroke-width: 1.4; stroke-linecap: round; }
+.admin-cascader .admin-cascader-clear:hover { color: #90969f; }
+.admin-cascader.is-clearable .admin-cascader-control:hover .admin-cascader-clear,
+.admin-cascader.is-clearable .admin-cascader-control:focus-within .admin-cascader-clear { opacity: 1; pointer-events: auto; }
+.admin-cascader.is-clearable .admin-cascader-control:hover .admin-cascader-arrow,
+.admin-cascader.is-clearable .admin-cascader-control:focus-within .admin-cascader-arrow { visibility: hidden; }
+@media (hover: none) {
+    .admin-cascader.is-clearable .admin-cascader-clear { opacity: 1; pointer-events: auto; }
+    .admin-cascader.is-clearable .admin-cascader-arrow { visibility: hidden; }
+}
 .admin-cascader button:focus-visible, .admin-cascader-panel button:focus-visible {
     outline: 2px solid #3c8dbc;
     outline-offset: -2px;
@@ -156,3 +195,5 @@
     .admin-cascader-column { display: none; flex-basis: 100%; width: 100%; border: 0; }
     .admin-cascader-column:last-child { display: block; }
 }
+
+.admin-cascader-tree-state { width: 100%; min-height: 96px; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 16px; color: #999; font-size: 12px; }

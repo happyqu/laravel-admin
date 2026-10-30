@@ -46,11 +46,11 @@ return array (
   array (
     'css' =>
     array (
-      0 => '/vendor/laravel-admin/laravel-admin/cascader.css?v=2',
+      0 => '/vendor/laravel-admin/laravel-admin/cascader.css?v=5',
     ),
     'js' =>
     array (
-      0 => '/vendor/laravel-admin/laravel-admin/cascader.js?v=2',
+      0 => '/vendor/laravel-admin/laravel-admin/cascader.js?v=4',
     ),
   ),
   'Encore\\Admin\\Form\\Field\\Checkbox' => 

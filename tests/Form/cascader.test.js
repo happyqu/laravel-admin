@@ -63,6 +63,12 @@ test('bundled China regions submit province/city/district names rather than code
     const { w, requests, controller } = page('china', 1, null, true);
     try {
         const c = controller(), names = ['浙江省', '杭州市', '西湖区'];
+        assert.equal(requests.length, 0);
+        assert.equal(c.status.text(), '');
+        c.open();
+        assert.equal(c.opened, true);
+        assert.equal(c.panel.attr('aria-busy'), 'true');
+        assert.equal(c.panel.find('[role="status"]').text(), c.messages.loading);
         assert.equal(requests[0].options.data.operation, 'tree');
         requests[0].done({ items: fixtures.chinaTree });
         c.open();
@@ -82,6 +88,7 @@ test('regions without district children finish at the city and submit an empty d
     const { w, requests, controller } = page('china', 1, null, true);
     try {
         const c = controller();
+        c.open();
         requests[0].done({ items: fixtures.chinaTree });
         c.open();
         choose(c, 0, c.columns[0].items.findIndex(node => node.value === '广东省'));
@@ -98,9 +105,16 @@ test('regions without district children finish at the city and submit an empty d
 test('static instances share one download and resolve, search, reopen and reset locally', async () => {
     const { w, requests, controller } = page('edit', 2, null, true);
     try {
+        assert.equal(requests.length, 0);
+        const c = controller(), other = controller(1);
+        assert.equal(c.label.text(), '0 / 1 / 2');
+        assert.equal(c.valid, true);
+        assert.equal(w.document.querySelector('form').dispatchEvent(new w.Event('submit', { cancelable: true })), true);
+        c.open();
+        other.open();
+        assert.equal(c.opened, false);
         assert.equal(requests.length, 1);
         requests[0].done({ items: fixtures.staticTree });
-        const c = controller(), other = controller(1);
         assert.equal(c.valid, true);
         assert.equal(other.valid, true);
         assert.equal(c.label.find('b').length, 0);
@@ -125,9 +139,12 @@ test('a failed static download retries once and clearing a pending value does no
     const { w, requests, controller } = page('edit', 1, null, true);
     try {
         const c = controller();
+        c.open();
         requests[0].fail(503);
-        assert.equal(c.valid, false);
-        c.status.find('button')[0].click();
+        assert.equal(c.valid, true);
+        assert.equal(c.status.text(), '');
+        assert.equal(c.panel.attr('aria-busy'), 'false');
+        c.panel.find('.admin-cascader-retry')[0].click();
         assert.equal(requests.length, 2);
         c.clear[0].click();
         requests[1].done({ items: fixtures.staticTree });
@@ -136,6 +153,40 @@ test('a failed static download retries once and clearing a pending value does no
         assert.equal(c.columns.length, 1);
         assert.equal(requests.length, 2);
         assert.deepEqual(values(w), ['', '', '']);
+    } finally { w.close(); }
+});
+
+test('closing a pending static picker never reopens it, and reopening uses the cached tree', () => {
+    const { w, requests, controller } = page('china', 1, null, true);
+    try {
+        const c = controller();
+        assert.equal(requests.length, 0);
+        c.toggle[0].click();
+        assert.equal(c.opened, true);
+        c.toggle[0].click();
+        assert.equal(c.opened, false);
+        requests[0].done({ items: fixtures.chinaTree });
+        assert.equal(c.opened, false);
+        assert.equal(c.panel.prop('hidden'), true);
+        assert.equal(c.status.text(), '');
+        c.open();
+        assert.equal(requests.length, 1);
+        assert.equal(c.columns[0].items.length, 34);
+    } finally { w.close(); }
+});
+
+test('untouched static fields and form resets do not download a tree', async () => {
+    const { w, requests, controller } = page('edit', 1, null, true);
+    try {
+        const c = controller();
+        c.clear[0].click();
+        w.document.querySelector('form').reset();
+        await new Promise(resolve => setTimeout(resolve, 10));
+        assert.deepEqual(values(w), ['0', '1', '2']);
+        assert.equal(c.label.text(), '0 / 1 / 2');
+        assert.equal(c.valid, true);
+        assert.equal(requests.length, 0);
+        assert.equal(c.status.text(), '');
     } finally { w.close(); }
 });
 
