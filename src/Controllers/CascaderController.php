@@ -3,6 +3,7 @@
 namespace Encore\Admin\Controllers;
 
 use Encore\Admin\Cascader\Source;
+use Encore\Admin\Cascader\TreeSource;
 use Encore\Admin\Security\ComponentSubmission;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -13,7 +14,7 @@ class CascaderController
     {
         validator($request->all(), [
             'source' => 'required|string|max:512', 'settings' => 'required|string|max:16384',
-            'operation' => 'required|in:children,resolve', 'path' => 'sometimes|array|max:16',
+            'operation' => 'required|in:children,resolve,tree', 'path' => 'sometimes|array|max:16',
             'path.*' => 'nullable|string|max:255', 'value' => 'nullable|string|max:255',
             'search' => 'nullable|string|max:200', 'cursor' => 'nullable|string|max:255',
         ])->validate();
@@ -25,6 +26,13 @@ class CascaderController
         $source = Source::make($sourceClass, $settings['context']);
 
         try {
+            if ($request->input('operation') === 'tree') {
+                if (!$source instanceof TreeSource) {
+                    throw new InvalidArgumentException('This source does not provide a complete tree.');
+                }
+
+                return response()->json(['items' => $source->tree()]);
+            }
             $path = Source::path($request->input('path', []));
             if ($request->input('operation') === 'resolve') {
                 $value = $request->has('value') ? $request->input('value') : $path;

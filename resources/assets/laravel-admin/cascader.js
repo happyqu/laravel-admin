@@ -2,9 +2,22 @@
     'use strict';
     $.admin = $.admin || {};
     if ($.admin.cascader) { $.admin.cascader.init(document); return; }
-    var live = new Set(), sequence = 0;
+    var live = new Set(), sequence = 0, trees = new Map();
     function button(className, text) { return $('<button type="button">').addClass(className).text(text); }
     function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+    function tree(config) {
+        var key = config.treeKey || config.url;
+        if (!trees.has(key)) {
+            var deferred = $.Deferred(), promise = deferred.promise();
+            // A shared download belongs to all matching instances, not one field's lifecycle.
+            promise.abort = function () {};
+            trees.set(key, promise);
+            $.ajax({ url: config.url, data: { operation: 'tree' }, dataType: 'json', adminLoading: false })
+                .done(function (result) { deferred.resolve(result.items); })
+                .fail(function (xhr, state) { trees.delete(key); deferred.reject(xhr, state); });
+        }
+        return trees.get(key);
+    }
     function Controller(root) {
         var self = this;
         this.root = root;
@@ -28,12 +41,15 @@
         this.valid = true;
         this.opened = false;
         this.destroyed = false;
+        this.tree = null;
+        this.treeLoading = false;
+        this.pendingOpen = false;
         var id = 'admin-cascader-panel-' + (++sequence);
         this.panel.attr('id', id);
         this.toggle.attr('aria-controls', id);
         // Keep the panel inside a modal's focus boundary, outside clipping form groups.
         this.panel.appendTo(this.$root.closest('.modal').length ? this.$root.closest('.modal') : document.body);
-        this.toggle.on('click.adminCascader', function () { self.opened ? self.hide() : self.open(); });
+        this.toggle.on('click.adminCascader', function () { self.opened || self.pendingOpen ? self.hide() : self.open(); });
         this.clear.on('click.adminCascader', function () { if (!self.locked()) self.commit([]); });
         this.panel.on('keydown.adminCascader', function (event) { self.keydown(event); });
         this.$root.on('keydown.adminCascader', function (event) {
@@ -75,7 +91,55 @@
         var nonempty = values.filter(function (id) { return id !== ''; });
         this.committed = nonempty.map(function (id) { return { value: id, label: id }; });
         this.display();
+        if (this.config.preload && this.tree === null) {
+            this.valid = false;
+            this.treeLoading = true;
+            this.notify(this.messages.loading);
+            this.resolveRequest = tree(this.config).done(function (items) {
+                if (self.destroyed || version !== self.resolveVersion) return;
+                self.tree = items;
+                self.treeLoading = false;
+                self.resolve();
+                if (self.pendingOpen) self.open();
+            }).fail(function (xhr, state) {
+                if (self.destroyed || version !== self.resolveVersion) return;
+                self.treeLoading = false;
+                self.pendingOpen = false;
+                self.notify(self.messages.failed, function () { self.resolve(); });
+            });
+            return;
+        }
         if (!nonempty.length) { this.valid = true; this.notify(''); return; }
+        if (this.tree !== null) {
+            var ids = values.slice(), path = [], items = this.tree, ended = false, invalid = false;
+            ids.forEach(function (id) {
+                if (id === '') { ended = true; return; }
+                var node = items.find(function (item) { return String(item.value) === id; });
+                if (ended || !node || node.disabled) { invalid = true; return; }
+                path.push(node);
+                items = node.children || [];
+            });
+            if (!this.config.multiField) {
+                // Terminal IDs need not be globally unique: require exactly one matching path.
+                var matches = [];
+                var walk = function (items, ancestors) {
+                    items.forEach(function (node) {
+                        var next = ancestors.concat([node]);
+                        if (String(node.value) === values[0] && !next.some(function (item) { return item.disabled; })) matches.push(next);
+                        walk(node.children || [], next);
+                    });
+                };
+                walk(this.tree, []);
+                path = matches.length === 1 ? matches[0] : [];
+                invalid = !path.length;
+            }
+            invalid = invalid || (this.config.depth && path.length > this.config.depth)
+                || (this.config.leafOnly && path.length && !path[path.length - 1].leaf);
+            this.valid = !invalid;
+            if (invalid) this.notify(this.messages.invalid, function () { self.resolve(); });
+            else { this.committed = path; this.display(); this.notify(''); }
+            return;
+        }
         this.valid = false;
         this.notify(this.messages.loading);
         var data = { operation: 'resolve' };
@@ -96,7 +160,7 @@
     Controller.prototype.position = function () {
         if (!this.opened) return;
         var rect = this.root.getBoundingClientRect();
-        var width = Math.min(Math.max(rect.width, this.columns.length * 200), window.innerWidth - 16);
+        var width = Math.min(Math.max(240, this.columns.length * 192), window.innerWidth - 16);
         var height = Math.min(this.panel[0].offsetHeight || 340, window.innerHeight - 16);
         var top = rect.bottom + 4;
         if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 4);
@@ -108,6 +172,11 @@
     };
     Controller.prototype.open = function () {
         if (this.locked()) return;
+        if (this.config.preload && this.tree === null) {
+            this.pendingOpen = true;
+            if (!this.treeLoading) this.resolve();
+            return;
+        }
         live.forEach(function (controller) { if (controller !== this) controller.hide(); }, this);
         this.hide();
         this.opened = true;
@@ -126,6 +195,7 @@
         });
     };
     Controller.prototype.hide = function () {
+        this.pendingOpen = false;
         this.opened = false;
         this.trim(0);
         this.panel.prop('hidden', true);
@@ -160,18 +230,16 @@
                 column.version++;
                 if (column.request) column.request.abort();
                 clearTimeout(column.timer);
-                column.timer = setTimeout(function () { self.load(path, column.search.val(), null, false, false, false); }, 250);
+                if (self.tree !== null) self.load(path, column.search.val(), null, false, false, false);
+                else column.timer = setTimeout(function () { self.load(path, column.search.val(), null, false, false, false); }, 250);
             });
         }
         var version = ++column.version;
         if (column.request) column.request.abort();
-        column.element.attr('aria-busy', 'true');
         if (!append) column.items = [];
-        column.list.empty().append($('<div class="admin-cascader-message">').text(this.messages.loading));
         this.crumbs();
         this.position();
-        column.request = $.ajax({ url: this.config.url, data: { operation: 'children', path: ids, search: search, cursor: cursor }, dataType: 'json', adminLoading: false })
-            .done(function (result) {
+        var show = function (result) {
                 if (self.destroyed || !self.opened || self.columns[depth] !== column || column.version !== version) return;
                 column.element.attr('aria-busy', 'false');
                 column.items = column.items.concat(result.items);
@@ -184,7 +252,22 @@
                     if (!selected.leaf && depth + 1 < self.committed.length) self.expand(path.concat([selected]), false, true);
                 }
                 self.position();
-            }).fail(function (xhr, state) {
+        };
+        if (this.tree !== null) {
+            var items = this.tree;
+            ids.forEach(function (id) {
+                var parent = items.find(function (node) { return String(node.value) === id; });
+                items = parent ? parent.children || [] : [];
+            });
+            items = items.filter(function (node) { return !search || String(node.label).toLocaleLowerCase().indexOf(search.toLocaleLowerCase()) !== -1; });
+            var offset = Math.max(0, Number(cursor) || 0);
+            show({ items: items.slice(offset, offset + 50), nextCursor: items.length > offset + 50 ? String(offset + 50) : null });
+            return;
+        }
+        column.element.attr('aria-busy', 'true');
+        column.list.empty().append($('<div class="admin-cascader-message">').text(this.messages.loading));
+        column.request = $.ajax({ url: this.config.url, data: { operation: 'children', path: ids, search: search, cursor: cursor }, dataType: 'json', adminLoading: false })
+            .done(show).fail(function (xhr, state) {
                 if (self.destroyed || state === 'abort' || self.columns[depth] !== column || column.version !== version) return;
                 column.element.attr('aria-busy', 'false');
                 column.list.empty().append($('<div class="admin-cascader-message">').text(self.messages.failed),
@@ -200,6 +283,7 @@
             var active = selected && String(selected.value) === String(node.value);
             var row = $('<div class="admin-cascader-row">').toggleClass('is-active', !!active);
             var item = button('admin-cascader-node', '').attr({ role: 'option', 'aria-selected': active ? 'true' : 'false' }).prop('disabled', !!node.disabled);
+            item.attr('title', node.label);
             item.append($('<span>').text(node.label), $('<span aria-hidden="true">').text(node.leaf ? (active ? '✓' : '') : '›'));
             item.on('click', function () {
                 if (self.locked() || node.disabled) return;
@@ -232,6 +316,7 @@
     Controller.prototype.commit = function (path) {
         if (this.locked() || (this.config.depth && path.length > this.config.depth)) return;
         ++this.resolveVersion;
+        this.treeLoading = false;
         if (this.resolveRequest) this.resolveRequest.abort();
         var previous = this.inputs.map(function (input) { return input.value; });
         var ids = this.ids(path), self = this;

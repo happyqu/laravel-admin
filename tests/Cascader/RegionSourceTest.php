@@ -20,6 +20,17 @@ class RegionSourceTest extends TestCase
             }
         }
         $source = new RegionSource();
+        $tree = $source->tree();
+        $this->assertCount(34, $tree);
+        $this->assertSame(384, array_sum(array_map(static fn ($province) => count($province['children']), $tree)));
+        $treeDistricts = 0;
+        foreach ($tree as $province) {
+            foreach ($province['children'] as $city) {
+                $treeDistricts += count($city['children']);
+                $this->assertSame(!$city['children'], $city['leaf']);
+            }
+        }
+        $this->assertSame(3619, $treeDistricts);
         $provinces = $source->children([])['items'];
         $this->assertCount(34, $provinces);
         $cities = $districts = 0;

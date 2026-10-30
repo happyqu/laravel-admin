@@ -5,7 +5,7 @@ namespace Encore\Admin\Cascader;
 use InvalidArgumentException;
 
 /** Subclasses supply a small static tree with value/label/children nodes. */
-abstract class ArraySource extends Source
+abstract class ArraySource extends Source implements TreeSource
 {
     abstract protected function options(): array;
 
@@ -14,6 +14,19 @@ abstract class ArraySource extends Source
         $node['leaf'] = empty($node['children']);
 
         return self::nodes([$node])[0];
+    }
+
+    public function tree(): array
+    {
+        $normalize = function (array $items, int $depth = 0) use (&$normalize): array {
+            if ($items && $depth >= 16) {
+                throw new InvalidArgumentException('Cascader supports at most 16 levels.');
+            }
+
+            return array_map(fn ($item) => $this->node($item) + ['children' => $normalize($item['children'] ?? [], $depth + 1)], array_values($items));
+        };
+
+        return $normalize($this->options());
     }
 
     public function children(array $path, string $search = '', ?string $cursor = null): array

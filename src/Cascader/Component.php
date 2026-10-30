@@ -16,6 +16,8 @@ class Component
             'url' => $url, 'multiField' => $multi, 'depth' => $depth, 'leafOnly' => $leafOnly, 'locked' => $locked,
             'placeholder' => $placeholder ?? trans('admin::cascader.choose'),
             'messages' => trans('admin::cascader'),
+            'preload' => is_subclass_of($source, TreeSource::class),
+            'treeKey' => json_encode([$source, $context], JSON_THROW_ON_ERROR),
         ];
     }
 

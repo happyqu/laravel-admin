@@ -11,9 +11,15 @@ const nodes = [
     { value: '1', label: '<img src=x onerror=alert(1)>', leaf: false },
     { value: '2', label: 'District', leaf: true },
 ];
-function page(type = 'empty', count = 1, html = null) {
+function page(type = 'empty', count = 1, html = null, preload = false) {
     const w = new JSDOM(html || `<form>${fixtures[type].repeat(count)}<button type="submit">Save</button></form>`, { runScripts: 'outside-only', url: 'http://localhost/admin/items' }).window;
     w.eval(fs.readFileSync(path.join(root, 'resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'), 'utf8'));
+    // Most cases exercise the remote-provider path; explicit preload cases use the local tree.
+    w.$('[data-admin-cascader]').each(function () {
+        const config = JSON.parse(this.getAttribute('data-admin-cascader'));
+        config.preload = preload;
+        this.setAttribute('data-admin-cascader', JSON.stringify(config));
+    });
     const requests = [];
     w.$.ajax = options => {
         const deferred = w.$.Deferred();
@@ -54,14 +60,17 @@ test('three levels commit together, escape labels, and clear without restoring o
 });
 
 test('bundled China regions submit province/city/district names rather than codes', () => {
-    const { w, requests, controller } = page('china');
+    const { w, requests, controller } = page('china', 1, null, true);
     try {
         const c = controller(), names = ['浙江省', '杭州市', '西湖区'];
+        assert.equal(requests[0].options.data.operation, 'tree');
+        requests[0].done({ items: fixtures.chinaTree });
         c.open();
         for (let level = 0; level < 3; level++) {
-            requests[level].done(fixtures.chinaNodes[level]);
             choose(c, level, c.columns[level].items.findIndex(node => node.value === names[level]));
+            assert.equal(c.panel.find('[aria-busy="true"]').length, 0);
         }
+        assert.equal(requests.length, 1);
         assert.deepEqual(values(w), names);
         const data = new w.FormData(w.document.querySelector('form'));
         assert.deepEqual(['province', 'city', 'district'].map(field => data.get(field)), names);
@@ -70,19 +79,63 @@ test('bundled China regions submit province/city/district names rather than code
 });
 
 test('regions without district children finish at the city and submit an empty district', () => {
-    const { w, requests, controller } = page('china');
+    const { w, requests, controller } = page('china', 1, null, true);
     try {
         const c = controller();
+        requests[0].done({ items: fixtures.chinaTree });
         c.open();
-        requests[0].done(fixtures.chinaNodes[0]);
         choose(c, 0, c.columns[0].items.findIndex(node => node.value === '广东省'));
-        requests[1].done(fixtures.chinaCitiesWithoutDistricts);
         choose(c, 1, c.columns[1].items.findIndex(node => node.value === '东莞市'));
+        assert.equal(requests.length, 1);
         assert.equal(c.opened, false);
         assert.deepEqual(values(w), ['广东省', '东莞市', '']);
         const data = new w.FormData(w.document.querySelector('form'));
         assert.equal(data.get('district'), '');
         assert.equal(c.label.text(), '广东省 / 东莞市');
+    } finally { w.close(); }
+});
+
+test('static instances share one download and resolve, search, reopen and reset locally', async () => {
+    const { w, requests, controller } = page('edit', 2, null, true);
+    try {
+        assert.equal(requests.length, 1);
+        requests[0].done({ items: fixtures.staticTree });
+        const c = controller(), other = controller(1);
+        assert.equal(c.valid, true);
+        assert.equal(other.valid, true);
+        assert.equal(c.label.find('b').length, 0);
+        c.open();
+        assert.equal(c.columns.length, 3);
+        c.columns[0].search.val('Other').trigger('input');
+        assert.equal(c.columns.length, 1);
+        assert.equal(c.columns[0].items.length, 1);
+        assert.equal(c.columns[0].items[0].value, '3');
+        c.hide(); c.open();
+        assert.equal(c.columns.length, 3);
+        c.clear[0].click();
+        w.document.querySelector('form').reset();
+        await new Promise(resolve => setTimeout(resolve, 10));
+        assert.deepEqual(values(w), ['0', '1', '2']);
+        assert.equal(c.valid, true);
+        assert.equal(requests.length, 1);
+    } finally { w.close(); }
+});
+
+test('a failed static download retries once and clearing a pending value does not stall loading', () => {
+    const { w, requests, controller } = page('edit', 1, null, true);
+    try {
+        const c = controller();
+        requests[0].fail(503);
+        assert.equal(c.valid, false);
+        c.status.find('button')[0].click();
+        assert.equal(requests.length, 2);
+        c.clear[0].click();
+        requests[1].done({ items: fixtures.staticTree });
+        c.open();
+        assert.equal(c.opened, true);
+        assert.equal(c.columns.length, 1);
+        assert.equal(requests.length, 2);
+        assert.deepEqual(values(w), ['', '', '']);
     } finally { w.close(); }
 });
 

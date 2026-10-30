@@ -5,7 +5,7 @@ namespace Encore\Admin\Cascader;
 use InvalidArgumentException;
 
 /** Offline province/city/district names; option values and labels are identical. */
-class RegionSource extends Source
+class RegionSource extends Source implements TreeSource
 {
     private static ?array $regions = null;
 
@@ -24,6 +24,21 @@ class RegionSource extends Source
             'value' => $name, 'label' => $name,
             'leaf' => $leaf, 'disabled' => false,
         ];
+    }
+
+    public function tree(): array
+    {
+        $tree = [];
+        foreach ($this->regions() as $province => $cities) {
+            $cityNodes = [];
+            foreach ($cities as $city => $districts) {
+                $districtNodes = array_map(fn ($name) => $this->node($name, true) + ['children' => []], $districts);
+                $cityNodes[] = $this->node($city, !$districtNodes) + ['children' => $districtNodes];
+            }
+            $tree[] = $this->node($province, !$cityNodes) + ['children' => $cityNodes];
+        }
+
+        return $tree;
     }
 
     private function branch(array $path): array

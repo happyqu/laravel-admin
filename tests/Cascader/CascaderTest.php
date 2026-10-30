@@ -263,6 +263,11 @@ class CascaderTest extends TestCase
         $request = $this->request($query + ['operation' => 'children', 'path' => ['0']], 'GET', 'http://localhost/admin/_cascader_');
         $result = (new CascaderController())($request)->getData(true);
         $this->assertSame('<b>City</b>', $result['items'][0]['label']);
+        $this->assertTrue($config['preload']);
+        $request = $this->request($query + ['operation' => 'tree'], 'GET', 'http://localhost/admin/_cascader_');
+        $tree = (new CascaderController())($request)->getData(true)['items'];
+        $this->assertSame('2', $tree[0]['children'][0]['children'][0]['value']);
+        $this->assertTrue($tree[0]['children'][0]['children'][0]['leaf']);
         $request = $this->request($query + ['operation' => 'resolve', 'path' => ['0', '1', '2']], 'GET', 'http://localhost/admin/_cascader_');
         $this->assertCount(3, (new CascaderController())($request)->getData(true)['items']);
         $request = $this->request($query + ['operation' => 'resolve', 'path' => ['3', '1', '2']], 'GET', 'http://localhost/admin/_cascader_');

@@ -39,4 +39,6 @@ $out['china'] = (string) $field->render();
 $source = new Encore\Admin\Cascader\RegionSource();
 $out['chinaNodes'] = [$source->children([]), $source->children(['浙江省']), $source->children(['浙江省', '杭州市'])];
 $out['chinaCitiesWithoutDistricts'] = $source->children(['广东省']);
+$out['chinaTree'] = $source->tree();
+$out['staticTree'] = (new Encore\Admin\Tests\Cascader\FixtureSource())->tree();
 echo json_encode($out, JSON_THROW_ON_ERROR);
