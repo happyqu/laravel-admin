@@ -82,6 +82,30 @@ async function until(condition) {
     assert.fail('Expected browser update did not occur');
 }
 
+test('direct AJAX form saves normalize dates before serializing and reject invalid edits', async () => {
+    const app = await page('<form method="post" action="/admin/users/1"><input id="date" name="date"></form>');
+    const w = app.window;
+    try {
+        for (const asset of ['flatpickr-local.js', 'flatpickr-locales.js', 'datepicker.js']) {
+            w.eval(read('resources/assets/laravel-admin/' + asset));
+        }
+        const input = w.document.querySelector('#date');
+        w.$.admin.datepicker.init(input, {format: 'YYYY-MM-DD'});
+        input.value = '2026-1-2 3';
+        input.dispatchEvent(new w.Event('input', {bubbles: true}));
+        w.$.admin.submitForm(input.form);
+        assert.equal(app.requests.length, 1);
+        assert.equal(app.requests[0].options.data.get('date'), '2026-01-02');
+        app.requests[0].reject(422, {errors: {date: ['Rejected']}});
+        await new Promise(resolve => w.setTimeout(resolve, 0));
+        input.value = '2026-2-30 3';
+        input.dispatchEvent(new w.Event('input', {bubbles: true}));
+        assert.equal(await w.$.admin.submitForm(input.form), false);
+        assert.equal(app.requests.length, 1);
+        assert.equal(input.value, '2026-2-30 3');
+    } finally { if (w.$.admin.datepicker) w.$.admin.datepicker.destroy(); app.dom.window.close(); }
+});
+
 function iframePage(app, openerId, currentId = 'iframe_editor') {
     Object.defineProperty(app.window, 'frameElement', { value: { id: currentId }, configurable: true });
     const source = read('src/Concerns/RegistersIframeTabs.php');

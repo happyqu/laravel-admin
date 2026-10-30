@@ -89,6 +89,23 @@ test('inline failures preserve the value and render validation messages as text'
     } finally { w.close(); }
 });
 
+test('inline datetime normalizes manual input before an AJAX save without blur', () => {
+    const { w, calls } = page(['datetime']);
+    try {
+        for (const asset of ['laravel-admin/flatpickr-local.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+            w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
+        }
+        const content = open(w, 'datetime');
+        const input = content.find('.ie-input')[0];
+        input.value = '2026-1-2 3';
+        input.dispatchEvent(new w.Event('input', {bubbles: true}));
+        content.find('.ie-submit').trigger('click');
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].data.field_datetime, '2026-01-02 03:00:00');
+        assert.equal(input.value, '2026-01-02 03:00:00');
+    } finally { if (w.$.admin.datepicker) w.$.admin.datepicker.destroy(); w.close(); }
+});
+
 test('inline datetime submission rejects invalid input and allows correction without locking the button', () => {
     const { w, calls } = page(['datetime']);
     try {

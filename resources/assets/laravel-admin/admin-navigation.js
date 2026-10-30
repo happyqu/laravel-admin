@@ -259,6 +259,7 @@
     };
     $.admin.submitForm = function (form, submitter) {
         if (!$.admin.canSubmitForm(form)) { return Promise.resolve(false); }
+        if ($.admin.datepicker && !$.admin.datepicker.prepare(form)) { return Promise.resolve(false); }
         if (!form.noValidate && !(submitter && submitter.formNoValidate) && !form.reportValidity()) {
             return Promise.resolve(false);
         }

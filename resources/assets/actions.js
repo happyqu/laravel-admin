@@ -92,6 +92,7 @@
             });
             shell.on('submit.happyAdminAction', 'form', function (event) {
                 event.preventDefault();
+                if ($.admin.datepicker && !$.admin.datepicker.prepare(this)) return;
                 if (!active || !state.lock()) return;
                 var form = this, current = active;
                 var confirmation = current.confirm ? $.admin.swal({ type: 'question', title: current.confirm, showCancelButton: true }) : Promise.resolve({ value: true });

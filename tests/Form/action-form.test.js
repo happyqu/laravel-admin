@@ -9,6 +9,48 @@ const root = path.join(__dirname, '../..');
 const payloads = JSON.parse(execFileSync('php', ['tests/Form/fixtures/action-form.php'], { cwd: root, encoding: 'utf8' }));
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 
+test('action AJAX saves normalize dates without blur and reject invalid input before locking', async () => {
+    const w = new JSDOM('<a data-admin-action="ticket" data-admin-mode="form" data-admin-keyed="0" data-admin-load="/load" data-admin-execute="/execute">Open</a>', {
+        runScripts: 'outside-only', url: 'http://localhost/admin/items', pretendToBeVisual: true,
+    }).window;
+    for (const asset of ['AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js', 'AdminLTE/bootstrap/js/bootstrap.min.js',
+        'laravel-admin/flatpickr-local.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+        w.eval(read('resources/assets/' + asset));
+    }
+    const $ = w.jQuery, saves = [];
+    $.extend($.admin, {token: 'csrf', isResponseError: data => data.status === false,
+        responseMessage: () => '', toastr: {error() {}}});
+    $.ajax = options => {
+        if (options.url === '/load') return Promise.resolve({
+            mode: 'form', ticket: 'execution', assets: {}, html: payloads[0].html,
+            scripts: payloads[0].scripts.filter(script => script.includes('.adminDatepicker(')),
+        });
+        saves.push(options);
+        return new Promise(() => {});
+    };
+    try {
+        await new Promise(resolve => w.setTimeout(resolve, 0));
+        $.support.transition = false;
+        w.eval(read('resources/assets/actions.js'));
+        $('a').trigger('click');
+        await new Promise(resolve => setImmediate(resolve));
+        const modal = $('[data-admin-action-shell]');
+        const input = modal.find('[name="start"]')[0];
+        input.value = '2026-2-30 3';
+        input.dispatchEvent(new w.Event('input', {bubbles: true}));
+        modal.find('form').trigger('submit');
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(saves.length, 0);
+        assert.equal(input.value, '2026-2-30 3');
+        input.value = '2026-1-2 3';
+        input.dispatchEvent(new w.Event('input', {bubbles: true}));
+        modal.find('form').trigger('submit');
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(saves.length, 1);
+        assert.equal(saves[0].data.get('start'), '2026-01-02');
+    } finally { $.admin.datepicker.destroy(); w.close(); }
+});
+
 test('action runtime protects date gestures after loading and reopening the rendered form', async () => {
     const w = new JSDOM('<a data-admin-action="ticket" data-admin-mode="form" data-admin-keyed="0" data-admin-load="/load" data-admin-execute="/execute">Open</a>', {
         runScripts: 'outside-only', url: 'http://localhost/admin/items', pretendToBeVisual: true,

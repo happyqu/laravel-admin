@@ -326,6 +326,317 @@ test('manual input updates the selected date, rejects impossible values and can 
     } finally { w.finish(); }
 });
 
+test('manual dates normalize numeric fields and complete omitted time on blur and Enter', () => {
+    const w = page();
+    try {
+        for (const [options, value, expected] of [
+            [{format: 'YYYY-MM-DD HH:mm:ss'}, '2026-10-22 10', '2026-10-22 10:00:00'],
+            [{format: 'YYYY-MM-DD HH:mm:ss'}, '2026-1-2 3:4', '2026-01-02 03:04:00'],
+            [{format: 'YYYY-MM-DD HH:mm:ss'}, '2026-1-2 3:4:5', '2026-01-02 03:04:05'],
+            [{format: 'YYYY-MM-DD HH:mm:ss'}, '2026-10-22', '2026-10-22 00:00:00'],
+            [{dateFormat: 'Y-m-d H:i'}, '2026-10-22 1', '2026-10-22 01:00'],
+            [{format: 'DD/MM/YYYY'}, ' 2/1/2026 ', '02/01/2026'],
+            [{format: 'YYYY-MM-DD[T]HH:mm:ss'}, '2026-1-2T3', '2026-01-02T03:00:00'],
+            [{format: 'HH:mm:ss'}, '3:4', '03:04:00'],
+            [{format: 'YYYY-MM-DD', mode: 'multiple'}, '2026-1-2, 2026-3-4', '2026-01-02, 2026-03-04'],
+        ]) {
+            for (const event of [new w.FocusEvent('blur', {relatedTarget: w.document.body}),
+                new w.KeyboardEvent('keydown', {key: 'Enter', keyCode: 13, bubbles: true})]) {
+                const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), options);
+                p.date('2026-10-22');
+                p.show();
+                type(w, p.input, value);
+                p.input.dispatchEvent(event);
+                assert.equal(p.input.value, expected, value);
+                assert.equal(p.input.checkValidity(), true, value);
+                assert.equal(p.date().format(), expected.split(', ')[0]);
+                assert.equal(new w.FormData(w.document.querySelector('form')).get('date'), expected);
+                p.destroy();
+            }
+        }
+    } finally { w.finish(); }
+});
+
+test('normalization retains impossible, incomplete and out-of-bounds manual dates', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {
+            format: 'YYYY-MM-DD HH:mm:ss', minDate: '2026-01-01 09:00:00',
+        });
+        for (const value of ['2026-2-30 10', '2026-10-22 24', '2026-10-22 10:60',
+            '2026-10', '2026-01-01 8', '2026-10-22 10garbage']) {
+            type(w, p.input, value);
+            p.input.dispatchEvent(new w.FocusEvent('blur', {relatedTarget: w.document.body}));
+            assert.equal(p.input.value, value);
+            assert.equal(p.input.checkValidity(), false, value);
+        }
+        type(w, p.input, '');
+        p.input.dispatchEvent(new w.FocusEvent('blur', {relatedTarget: w.document.body}));
+        assert.equal(p.input.value, '');
+        assert.equal(p.input.checkValidity(), true);
+    } finally { w.finish(); }
+});
+
+test('manual values use the configured date, datetime, time and custom output precision', () => {
+    const w = page();
+    try {
+        for (const [format, value, expected] of [
+            ['YYYY-MM-DD', '2026-1-2 3:4:5', '2026-01-02'],
+            ['YYYY-MM-DD', '2026-10-22 10', '2026-10-22'],
+            ['YYYY-MM-DD', '2026-10-22T10:30:00', '2026-10-22'],
+            ['DD/MM/YYYY', '2/1/2026 3:4', '02/01/2026'],
+            ['YYYY-MM-DD HH:mm', '2026-1-2 3:4:59', '2026-01-02 03:04'],
+            ['HH:mm', '3:4:59', '03:04'],
+            ['YYYY-MM', '2026-1', '2026-01'],
+            ['YYYY', '2026', '2026'],
+            ['MMM D, YYYY', 'Oct 02, 2026', 'Oct 2, 2026'],
+            ['YYYY年MM月DD日', '2026年1月2日', '2026年01月02日'],
+            ['hh:mm:ss A', '12 am', '12:00:00 AM'],
+            ['hh:mm:ss A', '12 pm', '12:00:00 PM'],
+            ['hh:mm:ss A', '1:5 pm', '01:05:00 PM'],
+            ['YYYY-MM-DD hh:mm:ss A', '2026-1-2 1 pm', '2026-01-02 01:00:00 PM'],
+            ['YYYY-MM-DD hh:mm:ss A', '2026-1-2', '2026-01-02 12:00:00 AM'],
+        ]) {
+            const input = w.document.querySelector('#date');
+            input.value = '';
+            const p = w.$.admin.datepicker.init(input, {format});
+            type(w, input, value);
+            input.dispatchEvent(new w.FocusEvent('blur', {relatedTarget: w.document.body}));
+            assert.equal(input.value, expected, format + ': ' + value);
+            assert.equal(input.checkValidity(), true);
+            assert.equal(p.date().format(), expected);
+            p.destroy();
+        }
+    } finally { w.finish(); }
+});
+
+test('date extraction validates the entire input and never discards garbage or invalid time', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {format: 'YYYY-MM-DD'});
+        for (const value of ['2026-10-22 abc', '2026-10-22 25:00', '2026-10-22 10:70',
+            '2026-2-30 10', '2026-10', '2026-10-22T10:00:00Z', '2026-10-22 10:00+08:00']) {
+            type(w, p.input, value);
+            p.show();
+            w.document.body.dispatchEvent(new w.MouseEvent('mousedown', {bubbles: true}));
+            p.input.dispatchEvent(new w.FocusEvent('blur', {relatedTarget: w.document.body}));
+            assert.equal(p.input.value, value);
+            assert.equal(p.input.checkValidity(), false, value);
+        }
+    } finally { w.finish(); }
+});
+
+test('blur into calendar and outside clicks commit once and keep the selected date synchronized', () => {
+    const w = page('<input id="date" value="2026-10-22 00:00:00">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {format: 'YYYY-MM-DD HH:mm:ss'});
+        let changes = 0, nativeChanges = 0, blurs = 0, enters = 0;
+        w.$(p.input).on('dp.change', () => changes++).on('change', () => nativeChanges++);
+        p.input.addEventListener('blur', () => blurs++);
+        p.input.addEventListener('keydown', event => { if (event.key === 'Enter') enters++; });
+        p.show();
+        type(w, p.input, '2026-10-22 10');
+        p.input.dispatchEvent(new w.FocusEvent('blur', {relatedTarget: p.instance.hourElement}));
+        assert.equal(p.input.value, '2026-10-22 10:00:00');
+        assert.equal(p.instance.hourElement.value, '10');
+        assert.equal(blurs, 1, 'business blur handlers still receive valid edits');
+        w.document.body.dispatchEvent(new w.MouseEvent('mousedown', {bubbles: true}));
+        assert.equal(changes, 1);
+        assert.equal(nativeChanges, 1);
+        type(w, p.input, '2026-10-22 10:0');
+        p.input.dispatchEvent(new w.FocusEvent('blur'));
+        assert.equal(changes, 1, 'formatting the same date does not emit another change');
+        p.show();
+        type(w, p.input, '2026-10-23 9');
+        w.document.body.dispatchEvent(new w.MouseEvent('mousedown', {bubbles: true}));
+        assert.equal(p.input.value, '2026-10-23 09:00:00');
+        assert.equal(changes, 2);
+        assert.equal(nativeChanges, 2);
+        type(w, p.input, '2026-10-24 8');
+        p.input.dispatchEvent(new w.KeyboardEvent('keydown', {key: 'Enter', keyCode: 13, bubbles: true}));
+        assert.equal(enters, 1);
+        assert.equal(changes, 3);
+        assert.equal(nativeChanges, 3, 'Flatpickr Enter does not emit a duplicate change');
+    } finally { w.finish(); }
+});
+
+test('submit without blur normalizes values and blocks invalid programmatic submissions', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {format: 'YYYY-MM-DD'});
+        const form = p.input.form;
+        const submissions = [];
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            submissions.push(new w.FormData(form).get('date'));
+        });
+        type(w, p.input, '2026-1-2 3');
+        form.requestSubmit();
+        assert.deepEqual(submissions, ['2026-01-02']);
+        p.input.value = '2026-2-30';
+        assert.equal(form.dispatchEvent(new w.Event('submit', {bubbles: true, cancelable: true})), false);
+        assert.equal(submissions.length, 1);
+        assert.equal(p.input.value, '2026-2-30');
+    } finally { w.finish(); }
+});
+
+test('altInput validates visible edits and formats display and submission independently', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {
+            dateFormat: 'Y-m-d H:i:S', altInput: true, altFormat: 'd/m/Y H:i:S',
+        });
+        const alt = p.instance.altInput;
+        type(w, alt, '2/1/2026 3:4');
+        assert.equal(alt.checkValidity(), true);
+        assert.equal(w.$.admin.datepicker.prepare(p.input.form), true);
+        assert.equal(alt.value, '02/01/2026 03:04:00');
+        assert.equal(p.input.value, '2026-01-02 03:04:00');
+        type(w, alt, '30/2/2026 3');
+        alt.dispatchEvent(new w.FocusEvent('blur', {relatedTarget: w.document.body}));
+        assert.equal(alt.value, '30/2/2026 3');
+        assert.equal(alt.checkValidity(), false);
+        assert.equal(p.input.form.checkValidity(), false);
+        type(w, alt, '2/1/2026 5');
+        alt.dispatchEvent(new w.FocusEvent('blur'));
+        assert.equal(p.input.value, '2026-01-02 05:00:00');
+        assert.equal(alt.checkValidity(), true);
+    } finally { w.finish(); }
+});
+
+test('localized twelve-hour input inherits missing locale defaults and rejects ambiguous hours', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {format: 'YYYY-MM-DD hh:mm:ss A', locale: 'zh-CN'});
+        type(w, p.input, '2026-1-2 1 pm');
+        p.input.dispatchEvent(new w.FocusEvent('blur'));
+        assert.equal(p.input.value, '2026-01-02 01:00:00 PM');
+        for (const value of ['2026-1-2 1', '2026-1-2 13 pm', '2026-1-2 0 am']) {
+            type(w, p.input, value);
+            assert.equal(p.input.checkValidity(), false, value);
+        }
+    } finally { w.finish(); }
+});
+
+test('untouched altInput preserves stored precision on blur, Enter, outside click and submit', () => {
+    const w = page('<input id="date" name="date" value="2026-10-22 10:20:45">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {
+            dateFormat: 'Y-m-d H:i:S', altInput: true, altFormat: 'd/m/Y H:i',
+            minDate: '2026-10-22 10:20:30',
+        });
+        const alt = p.instance.altInput;
+        let changes = 0;
+        w.$(p.input).on('dp.change change', () => changes++);
+        const verify = () => {
+            assert.equal(p.input.value, '2026-10-22 10:20:45');
+            assert.equal(alt.value, '22/10/2026 10:20');
+            assert.equal(p.date().toDate().getSeconds(), 45);
+            assert.equal(p.input.form.checkValidity(), true);
+            assert.equal(changes, 0);
+        };
+        verify();
+        alt.focus(); alt.blur(); verify();
+        alt.dispatchEvent(new w.KeyboardEvent('keydown', {key: 'Enter', keyCode: 13, bubbles: true})); verify();
+        p.show();
+        w.document.body.dispatchEvent(new w.MouseEvent('mousedown', {bubbles: true})); verify();
+        assert.equal(w.$.admin.datepicker.prepare(p.input.form), true); verify();
+        let submitted;
+        p.input.form.addEventListener('submit', event => {
+            event.preventDefault(); submitted = new w.FormData(p.input.form).get('date');
+        });
+        p.input.form.requestSubmit();
+        assert.equal(submitted, '2026-10-22 10:20:45'); verify();
+        type(w, alt, '22/10/2026 11:25');
+        alt.dispatchEvent(new w.FocusEvent('blur'));
+        assert.equal(p.input.value, '2026-10-22 11:25:00');
+        assert.equal(p.input.checkValidity(), true);
+    } finally { w.finish(); }
+});
+
+test('user edits must respect custom parser rejection even when they match rendered selections', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {
+            format: 'YYYY-MM-DD',
+            parseDate(value) {
+                if (value === 'payday') return new w.Date(2026, 9, 28);
+                if (value === '2026-10-22') return undefined;
+                if (value === '2026-10-23') return new w.Date(NaN);
+                return null;
+            },
+        });
+        for (const value of ['2026-10-22', '2026-10-23', '2026-10-28']) {
+            type(w, p.input, value);
+            p.input.dispatchEvent(new w.FocusEvent('blur'));
+            assert.equal(p.input.value, value);
+            assert.equal(p.input.checkValidity(), false, value);
+            assert.equal(w.$.admin.datepicker.prepare(p.input.form), false);
+        }
+        type(w, p.input, 'payday');
+        p.input.dispatchEvent(new w.FocusEvent('blur'));
+        assert.equal(p.input.value, '2026-10-28');
+        assert.equal(w.$.admin.datepicker.prepare(p.input.form), true);
+        type(w, p.input, '2026-10-28');
+        assert.equal(p.input.checkValidity(), false, 'retyped canonical text still goes through the custom parser');
+    } finally { w.finish(); }
+});
+
+test('altInput retains invalid preload and follows dynamic readonly and disabled state', async () => {
+    const w = page('<input id="date" value="invalid">');
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y'});
+        const alt = p.instance.altInput;
+        assert.equal(alt.value, 'invalid');
+        assert.equal(alt.checkValidity(), false);
+        for (const property of ['readOnly', 'disabled']) {
+            p.input[property] = true;
+            await Promise.resolve();
+            assert.equal(alt[property], true);
+            assert.equal(p.input.form.checkValidity(), true);
+            p.input[property] = false;
+            await Promise.resolve();
+            assert.equal(alt[property], false);
+            assert.equal(alt.checkValidity(), false);
+        }
+    } finally { w.finish(); }
+});
+
+test('custom parsers are not required to reparse the formatted submission value', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), {
+            format: 'YYYY-MM-DD',
+            parseDate(value) { return value === 'payday' ? new w.Date(2026, 9, 28, 10, 20) : null; },
+        });
+        type(w, p.input, 'payday');
+        p.input.dispatchEvent(new w.FocusEvent('blur'));
+        assert.equal(p.input.value, '2026-10-28');
+        assert.equal(p.date().toDate().getHours(), 0);
+        assert.equal(p.input.checkValidity(), true);
+    } finally { w.finish(); }
+});
+
+test('range boundary updates preserve pending edits and allow moving both endpoints together', () => {
+    const w = page('<input id="start" name="start" value="2026-10-20"><input id="end" name="end" value="2026-10-22">');
+    try {
+        w.$.admin.datepicker.range('#start', '#end', {format: 'YYYY-MM-DD'});
+        const a = w.document.querySelector('#start'), b = w.document.querySelector('#end');
+        type(w, a, '2026-11-1 10');
+        a.dispatchEvent(new w.FocusEvent('blur'));
+        assert.equal(a.value, '2026-11-1 10');
+        assert.equal(b.value, '2026-10-22');
+        assert.equal(a.form.checkValidity(), false);
+        type(w, b, '2026-11-2 10');
+        assert.equal(a.value, '2026-11-1 10');
+        assert.equal(b.value, '2026-11-2 10');
+        assert.equal(w.$.admin.datepicker.prepare(a.form), true);
+        assert.equal(a.value, '2026-11-01');
+        assert.equal(b.value, '2026-11-02');
+        assert.equal(a.form.checkValidity(), true);
+    } finally { w.finish(); }
+});
+
 test('a real calendar selection recovers from preloaded and manually entered invalid dates', () => {
     const w = page('<input id="date" value="2026-02-30">');
     try {

@@ -7,6 +7,7 @@ $(document).off('click.adminPage', '.{{ $trigger }}-content .ie-submit').on('cli
     var $trigger = $popover.data('trigger');
 
     // Inline editors submit through AJAX without a native form submission.
+    if ($.admin.datepicker && !$.admin.datepicker.prepare($popover[0])) return;
     var invalidInput = $popover.find(':input').filter(function () {
         return typeof this.checkValidity === 'function' && !this.checkValidity();
     }).first()[0];

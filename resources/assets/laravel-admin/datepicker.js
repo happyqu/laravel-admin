@@ -118,6 +118,82 @@
         return null;
     }
 
+    // Accept unpadded numeric fields and omitted trailing time fields, but still
+    // let the strict parser reject impossible dates and out-of-range times.
+    function normalizeInput(value, format, locale) {
+        if (typeof value !== 'string') return value;
+        var parts = format.match(/\\.|./g) || [];
+        var numeric = /^[YymndjHhGiSs]$/;
+        var field = /^[YymndjHhGiSsFMlDK]$/;
+        if (parts.some(function (part) { return /^[A-Za-z]$/.test(part) && !field.test(part); })) return value;
+        function escape(text) { return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+        // Keep a meridiem suffix while progressively omitting seconds/minutes.
+        var suffix = parts.indexOf('K');
+        var tail = suffix === -1 ? parts.length : suffix;
+        while (tail > 0 && !numeric.test(parts[tail - 1])) tail--;
+        var end = parts.length;
+        if (suffix !== -1) end = tail;
+        while (end > 0) {
+            var fields = [];
+            var pattern = parts.map(function (part, index) {
+                if (index >= end && (suffix === -1 || index < tail)) return '';
+                if (field.test(part)) {
+                    fields.push(index);
+                    if (part === 'K') return '(' + locale.amPM.map(escape).join('|') + ')';
+                    if (!numeric.test(part)) return '(.+?)';
+                    return part === 'Y' ? '(\\d{4})' : part === 'y' ? '(\\d{2})' : '(\\d{1,2})';
+                }
+                return escape(part[0] === '\\' ? part.slice(1) : part);
+            }).join('');
+            var match = fields.length && new RegExp('^' + pattern + '$', 'i').exec(value.trim());
+            if (match) {
+                return parts.map(function (part, index) {
+                    if (!field.test(part)) return part[0] === '\\' ? part.slice(1) : part;
+                    var position = fields.indexOf(index);
+                    var text = position === -1 ? '0' : match[position + 1];
+                    if (part === 'K') return locale.amPM.filter(function (amPM) { return amPM.toLowerCase() === text.toLowerCase(); })[0];
+                    if (/^[njhs]$/.test(part)) return String(Number(text));
+                    return /^[mdHGiS]$/.test(part) && text.length < 2 ? '0' + text : text;
+                }).join('');
+            }
+            // Only time may be omitted; never invent missing calendar fields.
+            if (!/^[HiSs]$/.test(parts[end - 1])) break;
+            end--;
+            while (end > 0 && !numeric.test(parts[end - 1])) end--;
+        }
+        return value;
+    }
+
+    function parseManual(value, format, locale) {
+        if (typeof value !== 'string') return parse(value, format, locale, false);
+        var text = value.trim();
+        var result = parse(normalizeInput(text, format, locale), format, locale, false);
+        if (result) return result;
+        var unescaped = format.replace(/\\./g, '');
+        // A complete date may carry a valid time. Validate the whole string
+        // before reducing it to the field's configured precision.
+        var formats = [];
+        // In twelve-hour mode, a date without a time means midnight. An hour
+        // without a meridiem remains ambiguous and must not be guessed.
+        if (/K/.test(unescaped) && /[Yy]/.test(unescaped) && /[mnFM]/.test(unescaped) && /[dj]/.test(unescaped)) {
+            var parts = format.match(/\\.|./g) || [];
+            var firstTime = parts.findIndex(function (part) { return /^[HhGiSsK]$/.test(part); });
+            var dateFormat = parts.slice(0, firstTime).join('').replace(/(?:\s|\\T)+$/, '');
+            result = parse(normalizeInput(text, dateFormat, locale), dateFormat, locale, false);
+            if (result) return result;
+        }
+        if (!/[HhGiSsK]/.test(unescaped) && /[Yy]/.test(unescaped) && /[mnFM]/.test(unescaped) && /[dj]/.test(unescaped)) {
+            formats.push(format + ' H:i:S', format + '\\TH:i:S');
+        } else if (/i$/.test(format) && !/[SsK]/.test(unescaped)) {
+            formats.push(format + ':S');
+        }
+        for (var i = 0; i < formats.length; i++) {
+            result = parse(normalizeInput(text, formats[i], locale), formats[i], locale, false);
+            if (result) return parse(flatpickr.formatDate(result, format, locale), format, locale, false);
+        }
+        return null;
+    }
+
     function DateValue(date, format, locale) {
         this.date = new Date(date.getTime());
         this.formatString = format;
@@ -278,7 +354,7 @@
         var managedReadonly = options.allowInput === false && !input.readOnly;
         function locked() { return (input.readOnly && !managedReadonly) || input.matches(':disabled'); }
         var nativeFormat = options.dateFormat || convertFormat(options.format);
-        var locale = localeFor(options.locale);
+        var locale = $.extend({}, flatpickr.l10ns.default, localeFor(options.locale));
         var unescaped = nativeFormat.replace(/\\./g, '');
         var hasTime = /[HhGgiSsK]/.test(unescaped);
         var hasDate = /[YymndjFMlDwWU]/.test(unescaped);
@@ -286,6 +362,10 @@
         var parseRejected = false;
         var rawValue = input.value;
         var previous = null;
+        var previousSelection = '';
+        var committing = false;
+        var manuallyEdited = false;
+        var internalInput = false;
         var fp;
         var id = ++nextId;
         var host = $(node);
@@ -323,9 +403,10 @@
         });
 
         function parseInput(value, format) {
-            if (typeof options.parseDate !== 'function') return parse(value, format, locale, false);
+            if (typeof options.parseDate !== 'function') return parseManual(value, format, locale);
             var date = options.parseDate(value, format);
-            return date && typeof date.getTime === 'function' && !isNaN(date.getTime()) ? new Date(date.getTime()) : null;
+            return date && typeof date.getTime === 'function' && !isNaN(date.getTime())
+                ? new Date(date.getTime()) : null;
         }
 
         function bound(value) {
@@ -362,12 +443,20 @@
                 return result || undefined;
             },
             onChange: [function (dates, text) {
+                // Flatpickr dispatches an input event after its change hooks.
+                internalInput = true;
                 // Reject only the failed parse that caused this change. A subsequent calendar
                 // selection is a new valid edit, even when the previous input was invalid.
                 if (parseRejected) { parseRejected = false; restoreInvalid(); return; }
+                var recovering = !!invalid || input.validity.customError;
+                manuallyEdited = false;
                 invalid = null;
                 rawValue = text;
                 input.setCustomValidity('');
+                if (fp && fp.altInput) fp.altInput.setCustomValidity('');
+                var selection = dates.map(function (date) { return date.getTime(); }).join(',');
+                if (selection === previousSelection && !recovering) return;
+                previousSelection = selection;
                 var date = dates.length ? new DateValue(dates[0], nativeFormat, locale) : false;
                 var event = $.Event('dp.change', { date: date, oldDate: previous });
                 previous = date;
@@ -385,6 +474,7 @@
             }].concat(options.onClose || []),
             onReady: [function (dates, text, instance) {
                 if (dates.length) previous = new DateValue(dates[0], nativeFormat, locale);
+                previousSelection = dates.map(function (date) { return date.getTime(); }).join(',');
                 restoreInvalid();
                 parseRejected = false;
                 var calendar = instance.calendarContainer;
@@ -409,7 +499,12 @@
             }].concat(options.onReady || [])
         });
         function restoreInvalid() {
-            if (invalid) { input.value = invalid; input.setCustomValidity('Invalid date'); }
+            if (invalid) {
+                var visible = fp && fp.altInput || input;
+                visible.value = invalid;
+                visible.setCustomValidity('Invalid date');
+                input.setCustomValidity('Invalid date');
+            }
         }
         if (options.calendarWeeks !== undefined) config.weekNumbers = options.calendarWeeks;
         if (options.date !== undefined) config.defaultDate = options.date;
@@ -468,9 +563,45 @@
                 live.delete(controller);
             },
             cleanup: cleanup,
-            parseInput: function () { return parseInput(input.value, nativeFormat); },
-            validate: validate
+            parseInput: function () { return inputDates()[0] || null; },
+            validate: validate,
+            commit: commit,
+            locked: locked,
+            rangeBounds: function (min, max) {
+                // Updating Flatpickr's boundaries rewrites inputs and filters selected
+                // dates. Preserve pending edits until they have been committed.
+                function equal(a, b) { return (!a && !b) || (a && b && a.getTime() === b.getTime()); }
+                if (equal(min, fp.config.minDate) && equal(max, fp.config.maxDate)) return;
+                var text = input.value, altText = fp.altInput && fp.altInput.value;
+                var selected = fp.selectedDates.slice(), latest = fp.latestSelectedDateObj;
+                fp.set({ minDate: min || undefined, maxDate: max || undefined });
+                fp.selectedDates = selected;
+                fp.latestSelectedDateObj = latest;
+                input.value = text;
+                if (fp.altInput) fp.altInput.value = altText;
+                fp.redraw();
+            }
         };
+        function visibleInput() { return fp && fp.altInput || input; }
+        function visibleFormat() { return fp && fp.altInput ? fp.config.altFormat : nativeFormat; }
+        function selectedText(format) {
+            var separator = fp.config.mode === 'range' ? fp.l10n.rangeSeparator : fp.config.conjunction;
+            return fp.selectedDates.map(function (date) { return fp.formatDate(date, format); }).join(separator);
+        }
+        function unchangedInput() {
+            return fp && !manuallyEdited && visibleInput().value === selectedText(visibleFormat());
+        }
+        function inputDates() {
+            // Rendered text may omit precision or be outside a custom parser's
+            // accepted input syntax. Reuse its already accepted dates until edited.
+            if (unchangedInput()) return fp.selectedDates.slice();
+            var text = visibleInput().value;
+            return text ? inputValues(text).map(function (value) { return parseInput(value, visibleFormat()); }) : [];
+        }
+        function inputValues(text) {
+            return options.mode === 'multiple' ? text.split(options.conjunction || ', ')
+                : options.mode === 'range' ? text.split(locale.rangeSeparator || ' to ') : [text];
+        }
         function withinLimits(date) {
             if (!fp || !fp.isEnabled(date, true)) return !fp;
             var limits = fp.config;
@@ -483,15 +614,34 @@
         }
         function validate() {
             // Flatpickr also dispatches input after onChange; keep the restored invalid value invalid.
-            rawValue = input.value;
-            var values = options.mode === 'multiple' ? rawValue.split(options.conjunction || ', ')
-                : options.mode === 'range' ? rawValue.split(locale.rangeSeparator) : [rawValue];
-            invalid = rawValue && values.some(function (value) {
-                var date = parseInput(value, nativeFormat);
+            var visible = visibleInput();
+            rawValue = visible.value;
+            invalid = rawValue && inputDates().some(function (date) {
                 return !date || !withinLimits(date);
             }) ? rawValue : null;
-            input.setCustomValidity(invalid ? 'Invalid date' : '');
-            if (!invalid && controller.validateRange && !controller.validateRange()) input.setCustomValidity('Invalid date range');
+            var message = invalid ? 'Invalid date' : '';
+            if (!invalid && controller.validateRange && !controller.validateRange()) message = 'Invalid date range';
+            input.setCustomValidity(message);
+            visible.setCustomValidity(message);
+        }
+        function commit() {
+            if (!fp || locked() || committing) return !input.validity.customError;
+            committing = true;
+            try {
+                if (controller.refreshRange) controller.refreshRange();
+                validate();
+                if (input.validity.customError) return false;
+                if (unchangedInput()) return true;
+                var dates = inputDates().map(function (date) {
+                    // The submitted precision also controls the selected date.
+                    return parse(flatpickr.formatDate(date, nativeFormat, locale), nativeFormat, locale, false) || date;
+                });
+                var changed = dates.map(function (date) { return date.getTime(); }).join(',') !== previousSelection;
+                invalid = null; parseRejected = false;
+                fp.setDate(window.Array.from(dates), changed);
+                validate();
+                return !input.validity.customError;
+            } finally { committing = false; }
         }
         function guardInput(event) {
             if (locked()) { event.stopImmediatePropagation(); return; }
@@ -505,10 +655,10 @@
                 event.stopPropagation();
             }
             if (event.type === 'blur' || (event.type === 'keydown' && event.key === 'Enter')) {
-                validate();
+                commit();
                 if (input.validity.customError) {
                     event.stopImmediatePropagation();
-                    if (event.type === 'keydown') { event.preventDefault(); input.reportValidity(); }
+                    if (event.type === 'keydown') { event.preventDefault(); visibleInput().reportValidity(); }
                 }
             }
         }
@@ -516,9 +666,25 @@
             input.addEventListener(type, guardInput, true);
             cleanup.push(function () { input.removeEventListener(type, guardInput, true); });
         });
-        $(input).on('input.adminDatepicker', validate);
+        function onInput() {
+            if (!internalInput) manuallyEdited = true;
+            internalInput = false;
+            validate();
+        }
+        $(input).on('input.adminDatepicker', onInput);
         fp = flatpickr(input, config);
         if (!fp || !fp.config) throw new Error('Unable to initialize datepicker.');
+        // Enter also invokes Flatpickr's own setDate handler after our commit.
+        // Suppress its duplicate notification while preserving normal DOM events.
+        var setDate = fp.setDate;
+        fp.setDate = function (value, trigger, format) {
+            if (!invalid && unchangedInput() && typeof value === 'string' && value === selectedText(format || nativeFormat) &&
+                fp.selectedDates.map(function (date) { return date.getTime(); }).join(',') === previousSelection) return;
+            var result = setDate.call(fp, value, trigger, format);
+            if (!parseRejected) manuallyEdited = false;
+            return result;
+        };
+        restoreInvalid();
         validate();
         function reposition() { if (fp.isOpen) fp._positionCalendar(); }
         // Capture scrolls from any enclosing panel; scroll events do not bubble.
@@ -537,14 +703,26 @@
         cleanup.push(function () { fp.calendarContainer.removeEventListener('keydown', calendarKeydown); });
         var stateObserver = new MutationObserver(function (records) {
             if (records.some(function (record) { return record.target === input && record.attributeName === 'readonly'; })) managedReadonly = false;
+            if (fp.altInput) {
+                fp.altInput.disabled = input.disabled;
+                fp.altInput.readOnly = input.readOnly || !fp.config.allowInput;
+                fp.altInput.required = input.required;
+            }
             if (locked()) fp.close();
         });
-        stateObserver.observe(input, { attributes: true, attributeFilter: ['readonly', 'disabled'] });
+        stateObserver.observe(input, { attributes: true, attributeFilter: ['readonly', 'disabled', 'required'] });
         $(input).parents('fieldset').each(function () { stateObserver.observe(this, { attributes: true, attributeFilter: ['disabled'] }); });
         cleanup.push(function () { stateObserver.disconnect(); });
         if (fp.altInput) {
             fp.altInput.setAttribute('autocomplete', 'off');
+            fp.altInput.readOnly = input.readOnly || !fp.config.allowInput;
             if (cascadeDisabled) $(fp.altInput).data('adminCascadeDisabled', {disabled: cascadeDisabled.disabled});
+            ['focus', 'click', 'keydown', 'blur'].forEach(function (type) {
+                fp.altInput.addEventListener(type, guardInput, true);
+                cleanup.push(function () { fp.altInput.removeEventListener(type, guardInput, true); });
+            });
+            $(fp.altInput).on('input.adminDatepicker', onInput);
+            cleanup.push(function () { $(fp.altInput).off('.adminDatepicker'); });
         }
         controller.instance = fp;
         controller.id = id;
@@ -572,17 +750,20 @@
             a.validateRange = b.validateRange = ordered;
             function validateRange() { a.validate(); b.validate(); }
             function update() {
-                var from = a.date(), to = b.date();
-                var min = from ? from.toDate() : null, max = to ? to.toDate() : null;
+                var from = a.parseInput(), to = b.parseInput();
+                // Conflicting edits must remain editable. Retain only configured
+                // bounds until both endpoints form an ordered range.
+                var compatible = !from || !to || from <= to;
+                var min = compatible ? from : null, max = compatible ? to : null;
                 if (a.baseMax && (!max || max > a.baseMax)) max = a.baseMax;
                 if (b.baseMin && (!min || min < b.baseMin)) min = b.baseMin;
-                // Setting a boundary may clear an incompatible date. Change events only fire for user edits.
-                a.maxDate(max); b.minDate(min);
+                a.rangeBounds(a.baseMin, max); b.rangeBounds(min, b.baseMax);
                 validateRange();
             }
-            $(a.input).add(b.input).on('change' + ns, update);
-            $(a.input).add(b.input).on('input' + ns, validateRange);
-            var unlink = function () { $(a.input).add(b.input).off(ns); };
+            a.refreshRange = b.refreshRange = update;
+            var inputs = $(a.input).add(b.input).add(a.instance.altInput || []).add(b.instance.altInput || []);
+            inputs.on('change' + ns + ' input' + ns, update);
+            var unlink = function () { inputs.off(ns); };
             a.cleanup.push(unlink); b.cleanup.push(unlink);
             update();
         });
@@ -595,7 +776,34 @@
     }
 
     $.admin = $.admin || {};
-    $.admin.datepicker = { init: init, range: range, destroy: destroy, convertFormat: convertFormat };
+    function prepare(root) {
+        var controllers = [];
+        live.forEach(function (controller) {
+            if (!controller.locked() && (root === controller.input || $.contains(root, controller.input) || controller.input.form === root)) controllers.push(controller);
+        });
+        controllers.forEach(function (controller) { controller.commit(); });
+        controllers.forEach(function (controller) { controller.validate(); });
+        var invalid = controllers.filter(function (controller) { return controller.input.validity.customError; })[0];
+        if (invalid) (invalid.instance.altInput || invalid.input).reportValidity();
+        return !invalid;
+    }
+    $.admin.datepicker = { init: init, range: range, destroy: destroy, convertFormat: convertFormat, prepare: prepare };
+    // Commit before Flatpickr's outside handler can clear or clamp pending edits.
+    ['mousedown', 'touchstart', 'focus'].forEach(function (type) {
+        document.addEventListener(type, function (event) {
+            live.forEach(function (controller) {
+                var fp = controller.instance;
+                if (!fp.isOpen || fp.config.inline || fp.calendarContainer.contains(event.target) ||
+                    event.target === controller.input || event.target === fp.altInput ||
+                    fp.config.ignoredFocusElements.some(function (element) { return element.contains(event.target); })) return;
+                controller.commit();
+                fp.close();
+            });
+        }, true);
+    });
+    document.addEventListener('submit', function (event) {
+        if (!prepare(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); }
+    }, true);
     $.fn.adminDatepicker = function (options) { return this.each(function () { init(this, options); }); };
     // Limited transition API for existing host scripts. Event dates expose format()/toDate(), not Moment.
     $.fn.datetimepicker = $.fn.adminDatepicker;
