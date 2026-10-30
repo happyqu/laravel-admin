@@ -114,6 +114,74 @@ class AuthorizationTest extends TestCase
         ]), $loading);
     }
 
+    public function test_runtime_setters_are_encrypted_and_restored_for_loading_and_submission(): void
+    {
+        $action = new AuthorizationRuntimeForm();
+        $action->setSn('SN-private-001');
+        $action->setCallback('App\\Admin\\OrdersController', 'addCost');
+        $token = $this->context->register($action);
+        $this->assertSame($token, $this->context->register($action));
+        $ticket = ContextToken::decode($token);
+        $this->assertIsString($ticket['options']);
+        $this->assertStringNotContainsString('SN-private-001', json_encode($ticket));
+        [$loaded] = $this->resolve($token, [], true);
+        $this->assertSame('SN-private-001', $loaded->sn());
+        $this->assertSame(['App\\Admin\\OrdersController', 'addCost'], $loaded->callback());
+        $this->app['view']->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
+        $this->assertStringContainsString('value="SN-private-001"', $loaded->loadInteraction()['html']);
+        $execution = $this->context->executionTicket($token, [], null);
+        [$submitted] = $this->resolve($execution);
+        $this->assertSame($loaded->sn(), $submitted->sn());
+        $this->assertSame($loaded->callback(), $submitted->callback());
+    }
+
+    public function test_existing_unencrypted_explicit_options_remain_usable(): void
+    {
+        $ticket = ContextToken::decode($this->context->register(new AuthorizationExplicitRuntimeForm()));
+        $ticket['options'] = ['callback' => ['App\\Admin\\OrdersController', 'addCost']];
+        [$loaded] = $this->resolve(ContextToken::encode($ticket), [], true);
+        $this->assertSame(['App\\Admin\\OrdersController', 'addCost'], $loaded->callback());
+    }
+
+    public function test_constructor_permissions_are_rechecked_for_loading_and_submission(): void
+    {
+        $action = new AuthorizationConstructorPermissionForm();
+        $action->setSn('SN-001');
+        $token = $this->context->register($action);
+        [$loaded] = $this->resolve($token, [], true);
+        $this->assertSame('SN-001', $loaded->sn());
+        $execution = $this->context->executionTicket($token, [], null);
+        $this->user->permissions = ['orders.export'];
+        $this->assertDenied(fn () => $this->resolve($token, [], true));
+        $this->assertDenied(fn () => $this->resolve($execution));
+    }
+
+    public function test_old_automatic_snapshots_cannot_restore_cached_permissions(): void
+    {
+        $ticket = ContextToken::decode($this->context->register(new AuthorizationConstructorPermissionForm()));
+        $ticket['options'] = \Illuminate\Support\Facades\Crypt::encryptString(json_encode([
+            AuthorizationConstructorPermissionForm::class.'::allowed' => true,
+        ], JSON_THROW_ON_ERROR));
+        $this->user->permissions = ['orders.export'];
+        $this->expectException(HttpResponseException::class);
+        $this->resolve(ContextToken::encode($ticket), [], true);
+    }
+
+    public function test_invalid_encrypted_state_is_rejected(): void
+    {
+        $ticket = ContextToken::decode($this->context->register(new AuthorizationRuntimeForm()));
+        $ticket['options'] = 'invalid ciphertext';
+        $this->expectException(HttpResponseException::class);
+        $this->resolve(ContextToken::encode($ticket), [], true);
+    }
+
+    public function test_runtime_options_cannot_restore_framework_internal_properties(): void
+    {
+        $action = new AuthorizationRuntimeForm();
+        $this->expectException(HttpResponseException::class);
+        $action->restoreContext([Action::class.'::resolvedModel' => null]);
+    }
+
     public function test_role_and_permission_conditions_are_combined_and_explicit_denial_wins(): void
     {
         $action = (new AuthorizationToolbar())
@@ -586,4 +654,31 @@ class AuthorizationRestrictedToolbar extends AuthorizationToolbar
         parent::__construct();
         $this->requirePermissions(['orders.refund']);
     }
+}
+
+class AuthorizationRuntimeForm extends Action
+{
+    private $sn;
+    protected $callback;
+    public function setSn($sn) { $this->sn = $sn; }
+    public function sn() { return $this->sn; }
+    public function setCallback($class, $method) { $this->callback = [$class, $method]; }
+    public function callback() { return $this->callback; }
+    public function form() { $this->hidden('sn')->value($this->sn); }
+}
+
+class AuthorizationExplicitRuntimeForm extends AuthorizationRuntimeForm
+{
+    protected $contextProperties = ['callback'];
+}
+
+class AuthorizationConstructorPermissionForm extends AuthorizationRuntimeForm
+{
+    private $allowed = false;
+    public function __construct()
+    {
+        parent::__construct();
+        $this->allowed = Admin::user()->can('orders.refund');
+    }
+    public function authorize($user, $model) { return $this->allowed; }
 }

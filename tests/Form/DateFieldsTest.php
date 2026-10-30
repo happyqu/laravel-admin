@@ -87,4 +87,58 @@ class DateFieldsTest extends TestCase
             $this->assertSame(['start' => null, 'end' => '12:00:00'], $field->prepare(['start' => '', 'end' => '12:00:00']));
         }
     }
+
+    public function test_nested_textarea_and_ranges_restore_their_own_old_input(): void
+    {
+        request()->setLaravelSession(app('session'));
+        request()->session()->flashInput([
+            'title' => 'Parent title', 'start' => 'Parent start', 'end' => 'Parent end',
+            'rows' => ['new_1' => ['title' => 'Child title', 'start' => '2026-10-10', 'end' => '2026-10-20']],
+        ]);
+        $form = new \Encore\Admin\Form(new class extends \Illuminate\Database\Eloquent\Model {});
+        foreach (['dateRange', 'datetimeRange', 'timeRange'] as $type) {
+            $table = (new Field\Table('rows', ['Rows', function ($row) use ($type) {
+                $row->textarea('title');
+                $row->{$type}('start', 'end');
+            }]))->setForm($form);
+            $doc = new \DOMDocument();
+            @$doc->loadHTML($table->render());
+            $xpath = new \DOMXPath($doc);
+            $this->assertSame('Child title', $xpath->query('//textarea[@name="rows[new_1][title]"]')->item(0)->textContent);
+            foreach (['start' => '2026-10-10', 'end' => '2026-10-20'] as $column => $expected) {
+                $this->assertSame($expected, $xpath->query('//input[@name="rows[new_1]['.$column.']"]')->item(0)->getAttribute('value'));
+            }
+        }
+    }
+
+    public function test_datetime_range_displays_both_validation_errors(): void
+    {
+        app()->register(\Illuminate\Validation\ValidationServiceProvider::class);
+        $field = (new Field\DatetimeRange('start', ['end', 'Period']))->rules('required', ['required' => 'Please fill :attribute']);
+        $validator = $field->getValidator(['start' => '', 'end' => '']);
+        $this->assertFalse($validator->passes());
+        $bag = new \Illuminate\Support\ViewErrorBag();
+        $bag->put('default', $validator->errors());
+        app('view')->share('errors', $bag);
+        $html = $field->render();
+        $this->assertStringContainsString('has-error', $html);
+        foreach (['startstart', 'endend'] as $key) {
+            $this->assertStringContainsString(e($validator->errors()->first($key)), $html);
+        }
+    }
+
+    public function test_datalist_escapes_values_and_labels_as_text(): void
+    {
+        $key = '" onmouseover="alert(1)';
+        $label = '</option></datalist><img src=x onerror="alert(1)"><datalist><option>';
+        $html = (new Field\Text('city', ['City']))->datalist([$key => $label])->render();
+        $doc = new \DOMDocument();
+        @$doc->loadHTML($html);
+        $options = $doc->getElementsByTagName('option');
+        $this->assertSame(0, $doc->getElementsByTagName('img')->length);
+        $this->assertSame(1, $options->length);
+        $this->assertSame($key, $options->item(0)->getAttribute('value'));
+        $this->assertFalse($options->item(0)->hasAttribute('onmouseover'));
+        $this->assertSame($label, $options->item(0)->textContent);
+    }
 }

@@ -51,20 +51,23 @@ class Listbox extends MultipleSelect
         
 $.ajax($ajaxOptions).done(function(data) {
 
-  var listbox = $("{$this->getElementClassSelector()}");
+  $("{$this->getElementClassSelector()}").each(function () {
+    var listbox = $(this);
 
-    var value = listbox.data('value') + '';
+    var value = listbox.attr('data-value') || '';
     
     if (value) {
       value = value.split(',');
     }
     
+    listbox.empty();
     for (var key in data) {
         var selected = $.inArray(key, value) >= 0;
         listbox.append(new Option(data[key], key, false, selected));
     }
     
     listbox.bootstrapDualListbox('refresh', true);
+  });
 });
 EOT;
 
@@ -90,7 +93,7 @@ $("{$this->getElementClassSelector()}").bootstrapDualListbox($settings);
 
 SCRIPT;
 
-        $this->attribute('data-value', implode(',', (array) $this->value()));
+        $this->attribute('data-value', implode(',', (array) $this->choiceValue()));
 
         return parent::render();
     }

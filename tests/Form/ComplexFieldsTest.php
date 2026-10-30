@@ -414,7 +414,9 @@ class ComplexFieldsTest extends TestCase
             public function form() { $this->select('team_user_id', 'Employee')->options([2 => 'Bob']); }
         };
         $other = $otherAction->loadInteraction();
-        $this->assertNotSame($payload['scripts'][0], $other['scripts'][0]);
+        $initializers = static fn ($scripts) => array_values(array_filter($scripts,
+            static fn ($script) => str_contains($script, '.select2(')));
+        $this->assertNotSame($initializers($payload['scripts'])[0], $initializers($other['scripts'])[0]);
     }
 
     public function test_list_size_limits_work_without_item_rules(): void

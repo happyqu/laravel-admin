@@ -18,7 +18,7 @@ $(document).off('click.adminPage.adminCheckboxButton', '.checkbox-group-toggle l
     e.stopPropagation();
     e.preventDefault();
 
-    if ($(this).find('input').is(':disabled')) return;
+    if ($(this).find('input').is(':disabled,[readonly]')) return;
 
     if ($(this).hasClass('active')) {
         $(this).removeClass('active');
@@ -40,6 +40,7 @@ SCRIPT;
      */
     public function render()
     {
+        $this->initChoiceInput();
         $this->addScript();
 
         $this->addCascadeScript();

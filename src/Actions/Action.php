@@ -42,6 +42,8 @@ abstract class Action implements Renderable
 {
     use Authorizable;
 
+    private const AUTOMATIC_CONTEXT_PREFIX = 'runtime2:';
+
     /**
      * @var Response
      */
@@ -79,7 +81,7 @@ abstract class Action implements Renderable
 
     protected $resolvedModel;
 
-    /** Non-secret runtime options explicitly required to rebuild this action. */
+    /** Additional framework properties explicitly required to rebuild this action. */
     protected $contextProperties = [];
 
     /**
@@ -312,41 +314,101 @@ abstract class Action implements Renderable
             'batch' => $this instanceof BatchAction, 'parameters' => $parameters];
     }
 
-    /** Only declared runtime options; fixed class properties are rebuilt from code. */
+    /** Preserve custom runtime values without serializing models or service objects. */
     public function contextState(): array
     {
         $state = [];
+        $automatic = $this->automaticContextProperties();
+        // Match the constructor/container initialization used by the receiving request.
+        // Declaration defaults do not include constructor-derived values such as permissions.
+        $baseline = $automatic ? app(get_class($this)) : null;
+        if ($baseline === $this) {
+            throw new \LogicException('Actions with automatic context must resolve to a fresh instance, not a shared singleton.');
+        }
+        foreach ($automatic as $key => $property) {
+            if (!$property->isInitialized($this)) continue;
+            $value = $property->getValue($this);
+            if ($property->isInitialized($baseline) && $value === $property->getValue($baseline)) continue;
+            if ($this->isContextValue($value)) $state[$key] = $value;
+        }
         foreach ($this->contextProperties as $name) {
-            $property = new \ReflectionProperty($this, $name);
+            $property = $this->contextProperty($name);
             if ($property->isStatic() || !$property->isInitialized($this)) continue;
             $value = $property->getValue($this);
             $this->assertContextValue($value);
             $state[$name] = $value;
         }
         if (strlen(json_encode($state, JSON_THROW_ON_ERROR)) > 4096) {
-            throw new \LogicException('Explicit action options exceed 4 KiB. Load large option sets on demand.');
+            throw new \LogicException('Action options exceed 4 KiB. Load large option sets on demand.');
         }
         return $state;
     }
 
     private function assertContextValue($value): void
     {
-        if (is_array($value)) {
-            foreach ($value as $item) {
-                $this->assertContextValue($item);
-            }
-        } elseif ($value !== null && !is_scalar($value)) {
+        if (!$this->isContextValue($value)) {
             throw new \LogicException('Action options must contain scalar values and arrays only.');
         }
     }
 
+    private function isContextValue($value, int $depth = 0): bool
+    {
+        if ($depth > 32) return false;
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (!$this->isContextValue($item, $depth + 1)) return false;
+            }
+            return true;
+        }
+        return $value === null || (is_scalar($value) && (!is_float($value) || is_finite($value)));
+    }
+
+    /** Qualify property names so parent and child private properties cannot collide. */
+    private function automaticContextProperties(): array
+    {
+        $properties = [];
+        $visible = [];
+        for ($class = new \ReflectionClass($this); $class; $class = $class->getParentClass()) {
+            foreach ($class->getProperties() as $property) {
+                if ($property->getDeclaringClass()->getName() !== $class->getName() || $property->isStatic()
+                    || $property->isReadOnly() || $property->getName() === 'contextProperties') continue;
+                if (!$property->isPrivate()) {
+                    if (isset($visible[$property->getName()])) continue;
+                    $visible[$property->getName()] = true;
+                }
+                if (in_array($class->getName(), [self::class, GridAction::class, RowAction::class, BatchAction::class], true)) continue;
+                $properties[self::AUTOMATIC_CONTEXT_PREFIX.$class->getName().'::'.$property->getName()] = $property;
+            }
+        }
+        // Explicit declarations retain their original, unqualified representation.
+        foreach ($this->contextProperties as $name) {
+            $property = $this->contextProperty($name);
+            unset($properties[self::AUTOMATIC_CONTEXT_PREFIX.$property->getDeclaringClass()->getName().'::'.$property->getName()]);
+        }
+        return $properties;
+    }
+
+    private function contextProperty(string $name): \ReflectionProperty
+    {
+        for ($class = new \ReflectionClass($this); $class; $class = $class->getParentClass()) {
+            if ($class->hasProperty($name)) return $class->getProperty($name);
+        }
+        throw new \ReflectionException('Unknown action context property: '.$name);
+    }
+
     public function restoreContext(array $state): void
     {
+        $automatic = $this->automaticContextProperties();
         foreach ($state as $name => $value) {
-            if (!in_array($name, $this->contextProperties, true)) {
+            if (isset($automatic[$name])) {
+                $property = $automatic[$name];
+            } elseif (in_array($name, $this->contextProperties, true)) {
+                $property = $this->contextProperty($name);
+            } else {
                 ContextToken::fail('action_context_invalid');
             }
-            (new \ReflectionProperty($this, $name))->setValue($this, $value);
+            if ($property->isStatic() || !$this->isContextValue($value)) ContextToken::fail('action_context_invalid');
+            $property->setValue($this, $value);
         }
     }
 

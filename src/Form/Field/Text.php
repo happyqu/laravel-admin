@@ -87,9 +87,9 @@ class Text extends Field
     {
         $this->defaultAttribute('list', "list-{$this->id}");
 
-        $datalist = "<datalist id=\"list-{$this->id}\">";
+        $datalist = '<datalist id="'.e('list-'.$this->id).'">';
         foreach ($entries as $k => $v) {
-            $datalist .= "<option value=\"{$k}\">{$v}</option>";
+            $datalist .= '<option value="'.e($k).'">'.e($v).'</option>';
         }
         $datalist .= '</datalist>';
 

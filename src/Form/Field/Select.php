@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 class Select extends Field
 {
     use CanCascadeFields;
+    use HasChoiceInput;
 
     /**
      * @var array
@@ -133,8 +134,12 @@ class Select extends Field
         $script = <<<EOT
 {$eventRoot}.off('change.adminPage', "{$this->getElementClassSelector()}");
 {$eventRoot}.on('change.adminPage', "{$this->getElementClassSelector()}", function () {
-    var target = $(this).closest('.fields-group').find(".$class");
-    $.get("$sourceUrl",{q : this.value}, function (data) {
+    var source = this, value = this.value;
+    $(this).closest('.fields-group').find(".$class").each(function () {
+    var target = $(this), request = {};
+    target.data('adminSelectRequest', request);
+    $.get("$sourceUrl",{q : value}, function (data) {
+        if (target.data('adminSelectRequest') !== request || source.value !== value || !document.documentElement.contains(target[0])) return;
         target.find("option").remove();
         $(target).select2({
             placeholder: $placeholder,
@@ -145,10 +150,10 @@ class Select extends Field
                 return d;
             })
         });
-        if (target.data('value')) {
-            $(target).val(target.data('value'));
-        }
+        var selected = target.attr('data-value');
+        if (selected !== undefined) target.val(selected === '' ? null : selected.split(','));
         $(target).trigger('change');
+    });
     });
 });
 EOT;
@@ -186,8 +191,12 @@ EOT;
 var fields = '$fieldsStr'.split('.');
 var urls = '$urlsStr'.split('^');
 
-var refreshOptions = function(url, target) {
+var refreshOptions = function(url, targets, source, value) {
+    targets.each(function () {
+    var target = $(this), request = {};
+    target.data('adminSelectRequest', request);
     $.get(url).then(function(data) {
+        if (target.data('adminSelectRequest') !== request || source.value !== value || !document.documentElement.contains(target[0])) return;
         target.find("option").remove();
         $(target).select2({
             placeholder: $placeholder,
@@ -199,6 +208,7 @@ var refreshOptions = function(url, target) {
             })
         }).trigger('change');
     });
+    });
 };
 
 {$eventRoot}.off('change.adminPage', "{$this->getElementClassSelector()}");
@@ -208,7 +218,8 @@ var refreshOptions = function(url, target) {
 
     fields.forEach(function(field, index){
         var target = $(_this).closest('.fields-group').find('.' + fields[index]);
-        promises.push(refreshOptions(urls[index] + "?q="+ _this.value, target));
+        var url = urls[index] + (urls[index].indexOf('?') === -1 ? '?' : '&') + 'q=' + encodeURIComponent(_this.value);
+        promises.push(refreshOptions(url, target, _this, _this.value));
     });
 });
 })();
@@ -301,11 +312,8 @@ $.ajax($ajaxOptions).done(function(data) {
         data: data,
         $configs
       });
-      var value = $(element).data('value') + '';
-      if (value) {
-        value = value.split(',');
-        $(element).val(value).trigger("change");
-      }
+      var value = $(element).attr('data-value') || '';
+      $(element).val(value === '' ? null : value.split(',')).trigger("change");
   });
 });
 
@@ -393,26 +401,6 @@ EOT;
      */
     public function readOnly()
     {
-        //移除特定字段名称,增加MultipleSelect的修订
-        //没有特定字段名可以使多个readonly的JS代码片段被Admin::script的array_unique精简代码
-        $script = <<<'EOT'
-$(document).off('select2:opening.adminReadonly', 'form select').on('select2:opening.adminReadonly', 'form select', function (e) {
-    if($(this).attr('readonly') || $(this).is(':hidden')){
-    e.preventDefault();
-    }
-});
-$(document).ready(function(){
-    $('select').each(function(){
-        if($(this).is('[readonly]')){
-            $(this).closest('.form-group').find('span.select2-selection__choice__remove').remove();
-            $(this).closest('.form-group').find('li.select2-search').first().remove();
-            $(this).closest('.form-group').find('span.select2-selection__clear').first().remove();
-        }
-    });
-});
-EOT;
-        Admin::script($script);
-
         return parent::readOnly();
     }
 
@@ -421,6 +409,7 @@ EOT;
      */
     public function render()
     {
+        $this->initChoiceInput();
         $configs = array_merge([
             'allowClear'  => true,
             'placeholder' => [
@@ -440,7 +429,7 @@ EOT;
                 $this->options = $this->options->bindTo($this->form->model());
             }
 
-            $this->options(call_user_func($this->options, $this->value, $this));
+            $this->options(call_user_func($this->options, $this->choiceValue(), $this));
         }
 
         $this->options = array_filter($this->options, 'strlen');
@@ -452,7 +441,7 @@ EOT;
 
         $this->addCascadeScript();
 
-        $this->attribute('data-value', implode(',', (array) $this->value()));
+        $this->attribute('data-value', implode(',', (array) $this->choiceValue()));
 
         return parent::render();
     }

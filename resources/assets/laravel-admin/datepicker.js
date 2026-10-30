@@ -237,8 +237,9 @@
         else if (input._flatpickr) input._flatpickr.destroy();
         var options = $.extend({}, supplied);
         var cascadeDisabled = $(input).data('adminCascadeDisabled');
-        // A hidden branch is temporarily disabled before widgets initialize.
-        var locked = input.readOnly || (input.disabled && !(cascadeDisabled && !cascadeDisabled.disabled));
+        // Flatpickr itself adds readonly when manual typing is disabled.
+        var managedReadonly = options.allowInput === false && !input.readOnly;
+        function locked() { return (input.readOnly && !managedReadonly) || input.matches(':disabled'); }
         var nativeFormat = options.dateFormat || convertFormat(options.format);
         var locale = localeFor(options.locale);
         var unescaped = nativeFormat.replace(/\\./g, '');
@@ -288,7 +289,7 @@
             defaultMinute: options.defaultMinute === undefined ? 0 : options.defaultMinute,
             defaultSeconds: options.defaultSeconds === undefined ? 0 : options.defaultSeconds,
             allowInput: options.allowInput === undefined ? true : options.allowInput,
-            clickOpens: locked ? false : options.clickOpens !== false,
+            clickOpens: options.clickOpens !== false,
             allowInvalidPreload: false, disableMobile: true,
             errorHandler: function (error) {
                 if (!invalid) (options.errorHandler || console.warn)(error);
@@ -315,7 +316,10 @@
                 previous = date;
                 host.trigger(event);
             }].concat(options.onChange || []),
-            onOpen: [function () { host.trigger('dp.show'); }].concat(options.onOpen || []),
+            onOpen: [function (dates, text, instance) {
+                if (locked()) { instance.close(); return; }
+                host.trigger('dp.show');
+            }].concat(options.onOpen || []),
             onClose: [function () { host.trigger('dp.hide'); }].concat(options.onClose || []),
             onReady: [function (dates, text, instance) {
                 if (dates.length) previous = new DateValue(dates[0], nativeFormat, locale);
@@ -359,11 +363,17 @@
         if (options.daysOfWeekDisabled) disable.push(function (date) { return options.daysOfWeekDisabled.indexOf(date.getDay()) !== -1; });
         if (disable.length) config.disable = disable;
         if (options.enabledDates) config.enable = options.enabledDates.map(function (value) { return bound(value); });
+        ['minTime', 'maxTime'].forEach(function (key) {
+            if (typeof options[key] === 'string') {
+                config[key] = parse(options[key], 'H:i:S', locale, false) || parse(options[key], 'H:i', locale, false);
+                if (!config[key]) throw new Error('Invalid datepicker boundary: ' + options[key]);
+            }
+        });
         ignored.concat(unsupported, ['format', 'date', 'stepping', 'calendarWeeks', 'widgetParent', 'disabledDates', 'enabledDates', 'daysOfWeekDisabled', 'showClear', 'showTodayButton', 'showClose']).forEach(function (key) { delete config[key]; });
 
         var controller = {
             input: input, baseMin: baseMin, baseMax: baseMax,
-            show: function () { if (!locked && !input.disabled) fp.open(); return controller; },
+            show: function () { if (!locked()) fp.open(); return controller; },
             hide: function () { fp.close(); return controller; },
             clear: function () { invalid = null; rawValue = ''; input.setCustomValidity(''); fp.clear(); return controller; },
             date: function (value) {
@@ -386,19 +396,64 @@
                 if (fp) fp.destroy();
                 live.delete(controller);
             },
-            cleanup: cleanup
+            cleanup: cleanup,
+            parseInput: function () { return parseInput(input.value, nativeFormat); },
+            validate: validate
         };
-        $(input).on('input.adminDatepicker', function () {
+        function withinLimits(date) {
+            if (!fp || !fp.isEnabled(date, true)) return !fp;
+            var limits = fp.config;
+            if (hasTime && ((fp.minDateHasTime && date < limits.minDate) ||
+                (fp.maxDateHasTime && date > limits.maxDate))) return false;
+            function seconds(value) { return value.getHours() * 3600 + value.getMinutes() * 60 + value.getSeconds(); }
+            var time = seconds(date), min = limits.minTime && seconds(limits.minTime), max = limits.maxTime && seconds(limits.maxTime);
+            if (min != null && max != null && min > max) return time >= min || time <= max;
+            return !(min != null && time < min || max != null && time > max);
+        }
+        function validate() {
             // Flatpickr also dispatches input after onChange; keep the restored invalid value invalid.
-            if (invalid && input.value === invalid) return;
             rawValue = input.value;
             var values = options.mode === 'multiple' ? rawValue.split(options.conjunction || ', ')
                 : options.mode === 'range' ? rawValue.split(locale.rangeSeparator) : [rawValue];
-            invalid = rawValue && values.some(function (value) { return !parseInput(value, nativeFormat); }) ? rawValue : null;
+            invalid = rawValue && values.some(function (value) {
+                var date = parseInput(value, nativeFormat);
+                return !date || !withinLimits(date);
+            }) ? rawValue : null;
             input.setCustomValidity(invalid ? 'Invalid date' : '');
+            if (!invalid && controller.validateRange && !controller.validateRange()) input.setCustomValidity('Invalid date range');
+        }
+        function guardInput(event) {
+            if (locked()) { event.stopImmediatePropagation(); return; }
+            if (event.type === 'blur' || (event.type === 'keydown' && event.key === 'Enter')) {
+                validate();
+                if (input.validity.customError) {
+                    event.stopImmediatePropagation();
+                    if (event.type === 'keydown') { event.preventDefault(); input.reportValidity(); }
+                }
+            }
+        }
+        ['focus', 'click', 'keydown', 'blur'].forEach(function (type) {
+            input.addEventListener(type, guardInput, true);
+            cleanup.push(function () { input.removeEventListener(type, guardInput, true); });
         });
+        $(input).on('input.adminDatepicker', validate);
         fp = flatpickr(input, config);
         if (!fp || !fp.config) throw new Error('Unable to initialize datepicker.');
+        validate();
+        function guardCalendar(event) {
+            if (locked()) { event.preventDefault(); event.stopImmediatePropagation(); fp.close(); }
+        }
+        ['click', 'mousedown', 'touchstart', 'keydown', 'input', 'change', 'increment', 'blur'].forEach(function (type) {
+            fp.calendarContainer.addEventListener(type, guardCalendar, true);
+            cleanup.push(function () { fp.calendarContainer.removeEventListener(type, guardCalendar, true); });
+        });
+        var stateObserver = new MutationObserver(function (records) {
+            if (records.some(function (record) { return record.target === input && record.attributeName === 'readonly'; })) managedReadonly = false;
+            if (locked()) fp.close();
+        });
+        stateObserver.observe(input, { attributes: true, attributeFilter: ['readonly', 'disabled'] });
+        $(input).parents('fieldset').each(function () { stateObserver.observe(this, { attributes: true, attributeFilter: ['disabled'] }); });
+        cleanup.push(function () { stateObserver.disconnect(); });
         if (fp.altInput) {
             fp.altInput.setAttribute('autocomplete', 'off');
             if (cascadeDisabled) $(fp.altInput).data('adminCascadeDisabled', {disabled: cascadeDisabled.disabled});
@@ -422,6 +477,12 @@
             if (!ends[index]) return;
             var a = init(this, options), b = init(ends[index], $.extend({}, options, { useCurrent: false }));
             var ns = '.adminDateRange' + a.id;
+            function ordered() {
+                var from = a.parseInput(), to = b.parseInput();
+                return !from || !to || from <= to;
+            }
+            a.validateRange = b.validateRange = ordered;
+            function validateRange() { a.validate(); b.validate(); }
             function update() {
                 var from = a.date(), to = b.date();
                 var min = from ? from.toDate() : null, max = to ? to.toDate() : null;
@@ -429,8 +490,10 @@
                 if (b.baseMin && (!min || min < b.baseMin)) min = b.baseMin;
                 // Setting a boundary may clear an incompatible date. Change events only fire for user edits.
                 a.maxDate(max); b.minDate(min);
+                validateRange();
             }
             $(a.input).add(b.input).on('change' + ns, update);
+            $(a.input).add(b.input).on('input' + ns, validateRange);
             var unlink = function () { $(a.input).add(b.input).off(ns); };
             a.cleanup.push(unlink); b.cleanup.push(unlink);
             update();

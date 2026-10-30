@@ -1,23 +1,19 @@
 # Laravel Admin
 
-`happyqu/laravel-admin` 是一个 Laravel 后台 Composer 包，内置 iframe 标签页、全局菜单、AJAX 内容导航，以及表格、表单和详情页组件。保留 `Encore\Admin` 命名空间，可通过 Composer 自动发现注册。
+`happyqu/laravel-admin` 是一个 Laravel 后台 Composer 包，提供表格、表单、详情页、iframe 标签页、全局菜单和 AJAX 内容导航。保留 `Encore\Admin` 命名空间，支持 Composer 自动发现；前端资源随包分发，安装时无需 npm 构建。
 
-- 支持 Laravel 10、11、12、13，包自身要求 PHP 8.1+。
-- 运行时仅依赖 `laravel/framework` 和必要的 PHP 扩展；图片处理、Excel 导出等功能按需安装依赖。
-- 前端资源随包分发，安装和发布资源无需 npm 构建。
-- 2.0 使用 AJAX 更新内容区，iframe 标签页已并入核心。
+本文中的业务类、角色、权限和字段名称均为通用示例，使用时请替换为宿主项目自己的定义。
 
 ## 目录
 
 - [环境要求](#环境要求)
 - [安装与初始化](#安装与初始化)
-- [标签页与菜单](#标签页与菜单)
-- [页面导航与前端资源](#页面导航与前端资源)
-- [表单与动态组件](#表单与动态组件)
-- [操作与工具权限](#操作与工具权限)
-- [上传安全](#上传安全)
+- [导航与资源](#导航与资源)
+- [表单组件](#表单组件)
+- [Action 与工具权限](#action-与工具权限)
+- [文件与图片](#文件与图片)
 - [日志查看器](#日志查看器)
-- [升级指南](#升级指南)
+- [升级与迁移](#升级与迁移)
 - [常见问题](#常见问题)
 - [开发与分发](#开发与分发)
 
@@ -25,34 +21,25 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| PHP | `^8.1`；还需满足所选 Laravel 版本的 PHP 要求 |
+| PHP | `^8.1`，同时满足所选 Laravel 版本的要求 |
 | Laravel | `^10.0`、`^11.0`、`^12.0`、`^13.0` |
 | PHP 扩展 | `ext-fileinfo`、`ext-dom` |
 
-以下功能的依赖不默认安装：
+以下依赖按功能安装：
 
 | 功能 | 可选依赖 |
 | --- | --- |
-| 图片裁切、缩略图 | `intervention/image:^2.7` |
+| 服务端图片裁切、缩略图 | `intervention/image:^2.7` |
 | Orderable Grid | `spatie/eloquent-sortable` |
 | Excel 导出 | `maatwebsite/excel:^3.1` |
 | 资源压缩 | `matthiasmullie/minify:^1.3` |
 
 ## 安装与初始化
 
-### 安装包
+配置宿主项目的数据库后执行：
 
 ```bash
 composer require happyqu/laravel-admin:^2.0
-```
-
-本包支持 Composer 自动发现，正常情况下无需手工注册 Provider 或 Alias。宿主关闭自动发现时，先完成下方的手工注册，再执行发布与初始化命令。
-
-### 发布与初始化
-
-数据库配置完成后执行：
-
-```bash
 php artisan vendor:publish --tag=laravel-admin-config
 php artisan vendor:publish --tag=laravel-admin-lang
 php artisan vendor:publish --tag=laravel-admin-migrations
@@ -60,29 +47,21 @@ php artisan vendor:publish --tag=laravel-admin-assets
 php artisan admin:install
 ```
 
-`admin:install` 执行迁移、初始化后台目录和基础数据，并自动初始化内置标签页的首页菜单与权限。默认地址 `/admin`，初始账号、密码均为 `admin`，首次登录后请修改密码。
+`admin:install` 会运行迁移、初始化后台目录和基础数据，并初始化内置菜单与权限。默认访问地址为 `/admin`。初始化账号定义见[基础数据初始化代码](src/Auth/Database/AdminTablesSeeder.php)，对外开放后台前请更新初始密码。
 
-后台用户表已有数据时，`admin:install` 不会再次执行基础数据初始化；后台目录已存在时也不会覆盖该目录。
+后台用户表已有数据时，不重复执行基础数据初始化；后台目录已存在时，不覆盖该目录。
 
-### 关闭自动发现时的手工注册
+### 手工注册
 
-如果宿主关闭了自动发现，再按版本手工注册。
+正常情况下由 Composer 自动发现注册。宿主关闭自动发现时，需要先注册 Provider，再执行初始化命令。
 
-Laravel 10 的 `config/app.php`：
+Laravel 10 在 `config/app.php` 的 `providers` 中添加：
 
 ```php
-'providers' => [
-    // ...
-    Encore\Admin\AdminServiceProvider::class,
-],
-
-'aliases' => [
-    // ...
-    'Admin' => Encore\Admin\Facades\Admin::class,
-],
+Encore\Admin\AdminServiceProvider::class,
 ```
 
-Laravel 11/12/13 的 `bootstrap/providers.php`：
+Laravel 11/12/13 在 `bootstrap/providers.php` 中添加：
 
 ```php
 return [
@@ -91,11 +70,17 @@ return [
 ];
 ```
 
-Alias 可在 `config/app.php` 的 `aliases` 中注册，或由宿主自行注册。
+需要使用 `Admin` 别名时，在宿主的别名配置中注册：
 
-## 标签页与菜单
+```php
+'Admin' => Encore\Admin\Facades\Admin::class,
+```
 
-标签页默认开启，配置位于 `config/admin.php` 的 `iframe_tabs`：
+## 导航与资源
+
+### 标签页与菜单
+
+标签页默认开启，在宿主 `config/admin.php` 中配置：
 
 ```php
 'iframe_tabs' => [
@@ -105,272 +90,235 @@ Alias 可在 `config/app.php` 的 `aliases` 中注册，或由宿主自行注册
 ],
 ```
 
-未配置自定义首页时使用包内 dashboard。`/admin` 是标签容器，`/admin/dashboard` 是首页内容。设置 `iframe_tabs.enable=false` 后，安装生成的路由使用标准 `HomeController@index`。`admin.route.file` 可指定后台目录中的路由文件，默认 `routes.php`。
+未自定义首页时使用包内 dashboard。默认 `/admin` 为标签容器，`/admin/dashboard` 为首页内容。关闭 `iframe_tabs.enable` 后，安装生成的路由使用标准 `HomeController@index`。`admin.route.file` 可指定后台目录中的路由文件，默认为 `routes.php`。
 
-默认使用经典侧栏，在 `.env` 中设置 `ADMIN_GLOBAL_NAVIGATION=true` 可启用全局菜单。它支持搜索、业务分类、收藏、最近访问和导航模式切换，并按管理员隔离状态。
+默认使用经典侧栏；在 `.env` 中设置 `ADMIN_GLOBAL_NAVIGATION=true` 可启用全局菜单，支持搜索、分类、收藏和最近访问，状态按管理员隔离。
 
-## 页面导航与前端资源
+### AJAX 导航
 
-### 内容导航
+内容区的同源链接与表单默认使用 AJAX。文件通过 `FormData` 提交，保留服务器重定向、表单校验和 CSRF 校验；导出、外部链接及新窗口链接保持浏览器原有行为。
 
-后台内容区的同源链接与表单默认使用 AJAX；文件上传使用 `FormData`，保留服务器重定向、表单校验和 CSRF 校验。导出下载、外部链接及新窗口链接保持浏览器原有行为。个别链接或表单需要整页请求时，添加 `data-admin-ajax="false"`。
+- 使用 `data-admin-ajax="false"` 让个别链接或表单走整页请求。
+- 请求超过 180 毫秒时显示加载提示，并发请求全部结束后关闭。
+- 静默请求可设置 `$.ajax({ adminLoading: false })`，错误处理仍保留。
+- 提交时显示加载状态并防止重复提交；失败或校验未通过时保留输入。
+- 浏览器前进、后退会重新加载对应 URL，并恢复滚动位置。
 
-### 资源与加载反馈
+前端资源统一位于 `resources/assets`，发布到 `public/vendor/laravel-admin`。更新包后需要[重新发布资源](#更新资源)。
 
-所有资源统一维护在 `resources/assets`，发布到 `public/vendor/laravel-admin`。内置标签页资源位于该目录的 `iframe-tabs` 子目录。JS、CSS、图片、字体均随包分发，无需 npm 构建。
+## 表单组件
 
-AJAX 请求超过 180 毫秒时显示居中的“加载中”提示，并发请求全部结束后关闭；不再显示顶部进度条。后台轮询等静默请求可在 `$.ajax` 选项中设置 `adminLoading: false`，其他错误处理保持正常。表单类 Action 在加载完成后才弹出表单，加载期间只显示“加载中”提示。
+### 常用字段
 
-表单提交立即显示加载提示，并将提交按钮切换为“提交中”，避免重复提交。请求失败或校验未通过时保留表单内容并恢复按钮；普通页面切换采用 AJAX，浏览器前进后退会重新加载对应 URL 的内容并恢复滚动位置。
+```php
+$form->text('title', '标题')->rules('required');
+$form->textarea('description', '说明');
+$form->number('quantity', '数量')->min(0)->max(100);
+$form->select('status', '状态')->options([1 => '启用', 2 => '停用']);
+$form->multipleSelect('labels', '标签')->options([1 => '标签一', 2 => '标签二']);
+```
 
-## 表单与动态组件
+选择类字段还包括 `checkbox`、`radio`、`radioButton`、`radioCard`、`checkboxButton`、`checkboxCard` 和 `listbox`。选项键是提交值，标签用于显示；数值 `0` 是有效选择。
+
+`readonly()` 表示只读，`disable()` 表示禁用。内置表单在服务端过滤这些字段的客户端修改；自定义提交接口需要自行执行同等校验。数值字段允许清空，完成编辑或提交时处理上下限，业务规则仍应通过 `rules()` 声明。
 
 ### 条件联动
 
-`select`、`multipleSelect`、`belongsTo`、`belongsToMany`、`radio`、`radioButton`、`radioCard`、`checkbox`、`checkboxButton`、`checkboxCard` 支持 `when()`。各分支预先渲染，条件切换时同步显示和禁用状态；隐藏分支保留页面输入值，但不参与浏览器校验或提交，重新显示时恢复原有禁用状态。
-
-服务端根据本次提交的控制值判断分支，只校验和处理命中分支的字段；嵌套 `when()` 须同时满足所有上层条件。未命中分支的数据不写入，也不会自动清空数据库旧值。禁用或只读的控制字段使用服务端可信已有值；PATCH 请求省略可编辑控制字段时使用记录已有值，关联控制字段按其关联 ID 判断。完整提交中省略可编辑控制字段、或显式清空多选值时，不会恢复旧选择。多分支共用的字段建议定义在 `when()` 外，避免重复 HTML ID 和组件初始化冲突。
+`select`、`multipleSelect`、`belongsTo`、`belongsToMany` 及上述单选、复选变体支持 `when()`：
 
 ```php
-$form->text('name', '姓名');
-$form->radio('nationality', '国籍')->options([1 => '本国', 2 => '外国'])
-    ->when(1, fn ($form) => $form->text('idcard', '身份证')->rules('required'))
-    ->when(2, fn ($form) => $form->text('passport', '护照')->rules('required'));
+$form->radio('mode', '模式')->options([1 => '简要', 2 => '详细'])
+    ->when(2, function ($form) {
+        $form->textarea('details', '详细说明')->rules('required');
+    });
 ```
+
+分支预先渲染；隐藏时保留页面输入，但不参与浏览器校验或提交。服务端根据提交的控制值判断分支，仅校验和处理命中分支的字段；隐藏分支不会自动清空数据库旧值。嵌套分支须同时满足全部上层条件。
+
+只读或禁用的控制字段使用服务端已有值。PATCH 省略可编辑控制字段时使用记录已有值，完整提交省略字段或显式清空多选时则不恢复旧选择。多个分支共用的字段建议定义在 `when()` 外。
 
 ### 日期与时间
 
-日期、日期时间、时间、起止范围、`DateMultiple`、Grid 日期筛选及日期行内编辑统一使用 Flatpickr 4.6.13，不再加载 Moment 或旧 DateTimePicker。空字段默认时间为 `00:00:00`，已有时间值保持原样，也可通过 `defaultHour`、`defaultMinute`、`defaultSeconds` 显式覆盖。PHP 字段接口、字段名和默认提交格式保持一致：
+日期组件使用随包提供的 Flatpickr，默认不自动填入当前时间；空时间字段默认从 `00:00:00` 开始，已有值保持原样。
 
 ```php
-$form->date('date');                            // YYYY-MM-DD
-$form->datetime('created_at');                   // YYYY-MM-DD HH:mm:ss
-$form->time('time');                             // HH:mm:ss
-$form->dateRange('start', 'end');                 // 两个独立字段
+$form->date('date');                          // YYYY-MM-DD
+$form->datetime('scheduled_at');              // YYYY-MM-DD HH:mm:ss
+$form->time('time');                          // HH:mm:ss
+$form->dateRange('start_date', 'end_date');
 $form->datetimeRange('started_at', 'ended_at');
 $form->timeRange('start_time', 'end_time');
 $form->DateMultiple('dates')->format('DD/MM/YYYY');
 ```
 
-`format()` 继续使用旧格式 token，常用的 `YYYY`、`YY`、`MM`、`M`、`DD`、`D`、`HH`、`hh`、`mm`、`ss`、`A` 和方括号字面量均可使用；也可以通过 `options(['dateFormat' => 'Y-m-d'])` 显式使用 Flatpickr 原生格式。不支持的格式 token 会报错，不会按其他格式提交。非法日期保留在输入框中，并阻止浏览器提交。
+范围组件提交两个独立字段。手工输入会检查日期格式、配置边界及范围顺序；无效输入保留在页面中，并阻止正常表单提交。服务端业务校验仍需通过 `rules()` 配置。
 
-语言默认取 `app.locale`，支持 Flatpickr 自带语言及 `zh-CN`、`zh_TW`、`en_US` 等别名；缺少对应语言时提示并回退英文。多日期字段也使用所配置的格式和语言。
+- `format()` 使用兼容格式，例如 `YYYY-MM-DD`、`HH:mm:ss`，支持方括号字面量。
+- 原生 Flatpickr 格式通过 `options(['dateFormat' => 'Y-m-d'])` 指定。
+- 语言默认取 `app.locale`，支持 `zh-CN`、`zh_TW`、`en_US` 等别名；未知语言回退英文。
+- `defaultHour`、`defaultMinute`、`defaultSeconds` 可配置初始时间。
 
-| 旧选项 | 迁移行为 |
+| 兼容选项 | 行为 |
 | --- | --- |
-| `format`、`locale`、`date`、`defaultDate`、`inline` | 保留用途；`date` 对应初始值 |
-| `minDate`、`maxDate` | 保留边界限制；范围字段自动联动，清空后恢复配置边界 |
+| `format`、`locale`、`date`、`defaultDate`、`inline` | 保留对应用途 |
+| `minDate`、`maxDate` | 日期边界；范围字段自动联动 |
 | `stepping` | 转换为 `minuteIncrement` |
-| `disabledDates`、`enabledDates`、`daysOfWeekDisabled` | 转换为 Flatpickr 日期限制 |
+| `disabledDates`、`enabledDates`、`daysOfWeekDisabled` | 日期限制 |
 | `calendarWeeks` | 转换为 `weekNumbers` |
 | `widgetParent` | 转换为 `appendTo` |
-| `showClear`、`showTodayButton`、`showClose` | 显示对应操作按钮 |
-| `allowInputToggle`、`useCurrent`、`useStrict`、`sideBySide`、`icons`、`tooltips`、`widgetPositioning` | 不再控制旧组件；默认允许输入和点击打开、不自动填当前时间，并严格校验输入；界面使用 Flatpickr 布局 |
-| `timeZone`、`disabledTimeIntervals`、`enabledHours`、`disabledHours`、`viewMode`、`toolbarPlacement`、`extraFormats`、`parseInputDate` | 不支持时明确报错，需迁移为业务逻辑或对应原生配置 |
+| `showClear`、`showTodayButton`、`showClose` | 显示操作按钮 |
 
-本包脚本通过 `$(input).adminDatepicker(options)` 初始化，起止字段通过 `$.admin.datepicker.range(start, end, options)` 绑定。普通动态字段移除和 AJAX 导航会清理实例；可复用弹窗关闭时收起日历，Action 弹窗关闭时销毁实例。
+旧组件的 `allowInputToggle`、`useCurrent`、`useStrict`、`sideBySide`、`icons`、`tooltips`、`widgetPositioning` 不再控制旧界面。`timeZone`、`disabledTimeIntervals`、`enabledHours`、`disabledHours`、`viewMode`、`toolbarPlacement`、`extraFormats`、`parseInputDate` 不受支持，使用时会报错，需迁移到对应配置或业务校验。
 
-为了过渡宿主自定义脚本，保留 `.datetimepicker(options)`、`.data('DateTimePicker')` 的 `date()`、`minDate()`、`maxDate()`、`show()`、`hide()`、`clear()`、`destroy()`，以及 `dp.change`、`dp.show`、`dp.hide`。`dp.change` 的 `event.date` 仅提供 `format()`、`toDate()`、`clone()`、`valueOf()`、`isValid()`，清空时为 `false`，不是完整的 Moment 对象。直接调用 `moment()`、旧插件其他方法或 `.combodate()` 的宿主代码需要自行迁移。
+过渡接口保留 `.datetimepicker(options)`、`.data('DateTimePicker')` 的 `date()`、`minDate()`、`maxDate()`、`show()`、`hide()`、`clear()`、`destroy()`，以及 `dp.change`、`dp.show`、`dp.hide`。事件日期对象支持 `format()`、`toDate()`、`clone()`、`valueOf()`、`isValid()`，不是 Moment 对象。直接依赖 Moment 或 combodate 的自定义代码需迁移。
 
-资源由 `resources/assets/laravel-admin/datepicker.js`、`datepicker.css`、`flatpickr-locales.js` 管理，原有 `resources/assets/flatpickr/dist` 不放置本包新增适配代码。升级后需重新发布前端资源并刷新页面。
+### Widget 与动态组件
 
-### 动态选择器、异步展开与弹窗
+Widget 表单的 `form()` 每个实例只构建一次，`fill([])` 清空已填数据。PATCH/DELETE 等方法通过 POST 与 `_method` 提交；渲染时检查 `authorize()`，提交时递归过滤未声明或只读字段。升级前创建的分步流程需重新开始。
 
-`_handle_selectable_` 和 `_handle_renderable_` 的 URL 由内置组件自动附带 `_component_token_`，凭据绑定当前会话用户、来源页面、组件类和参数；加载时重新检查来源页面权限。自定义代码若直接拼接这两个接口的 URL，需改用 `Encore\Admin\Security\ComponentSubmission::url($routeName, $routeParameters, $kind, $class, $payload)`：`$kind` 为 `selectable` 时，`$payload` 是构造参数列表；为 `renderable` 时，是包含当前记录主键的单元素数组。缺少或过期的凭据返回 419，篡改参数或失去来源权限返回 403。
+内置选择器和异步展开组件会自动生成绑定当前用户、来源页面、组件类及参数的凭据。自定义代码直接生成组件接口 URL 时，应使用 `Encore\Admin\Security\ComponentSubmission::url()`，不要手工拼接 `_handle_selectable_` 或 `_handle_renderable_` 地址。
 
-### Widget 表单
+## Action 与工具权限
 
-Widget 表单的 `form()` 在每个实例中只构建一次，重复渲染和校验不会重复添加字段；`fill([])` 会清空已填数据，PATCH/DELETE 等方法通过 POST 与 `_method` 提交。表单渲染也会检查 `authorize()`，提交时递归过滤嵌套编辑器中未声明或只读的字段。分步表单的流程绑定用户、后台配置和页面查询参数，升级前已创建的分步流程需重新开始。
+### 选择类型
 
-### 账号与布局
+以下类型均位于 `Encore\Admin` 命名空间：
 
-内置用户编辑和个人设置页面不回填密码哈希。编辑时密码留空保留原密码，创建用户要求密码及确认。布局列宽支持 1–12、比例值和响应式映射；无效列宽会抛出 `InvalidArgumentException`。
-
-## 操作与工具权限
-
-Action 和 Tool 共用一套角色、权限和 Gate / Policy 配置。根据按钮的执行方式选择类型：
-
-| 类型 | 适用场景 | 授权范围 |
+| 类型 | 场景 | 授权范围 |
 | --- | --- | --- |
-| `Actions\RowAction` | 当前记录的操作按钮或 Action 列 | 展示、表单加载及执行时检查当前记录 |
-| `Actions\BatchAction` | 批量操作 | 展示时检查通用条件，加载及执行时检查选中记录 |
-| `Actions\Action` / `Actions\GridAction` | 通用按钮、工具栏动作 | 通过签名动作流程检查加载和执行权限 |
-| `Grid\Tools\AbstractTool` / `Widgets\Tool` | 链接、下载、已有工具的包装 | 容器在渲染前检查权限；独立接口需自行授权 |
+| `Actions\RowAction` | 单条记录操作 | 展示、表单加载和执行时检查记录 |
+| `Actions\BatchAction` | 批量操作 | 展示时检查通用条件，加载和执行时检查选中记录 |
+| `Actions\Action` / `Actions\GridAction` | 通用按钮、工具栏操作 | 加载和执行通过签名动作流程授权 |
+| `Grid\Tools\AbstractTool` / `Widgets\Tool` | 链接、下载、已有工具包装 | 容器渲染前授权，独立接口另行授权 |
 
-上表类型均位于 `Encore\Admin` 命名空间。以下 `RefundOrder`、`BatchApprove`、`ExportOrdersTool`、`Order` 和 `OrderPolicy` 为宿主项目自定义类。
+### 权限配置
 
-### 通用配置 API
-
-| 方法 | 规则 |
+| 方法示例 | 含义 |
 | --- | --- |
-| `allowRoles(['finance', 'manager'])` | 至少属于其中一个角色，使用角色 slug |
-| `denyRoles(['auditor'])` | 命中任一角色即拒绝，优先于允许条件 |
-| `requirePermissions(['orders.refund', 'orders.view'])` | 必须拥有全部权限，使用权限 slug |
-| `requireAnyPermission(['orders.export', 'reports.export'])` | 至少拥有其中一个权限 |
-| `ability('refund')` | 通过当前后台用户的 Laravel Gate / Policy 检查当前记录；无记录的普通工具栏按钮检查全局 Gate |
-| `ability('create', Order::class)` | 检查模型级别的 Policy，适合创建按钮 |
-| `deniedAsDisabled('无退款权限')` | 无权时显示禁用文本及提示；默认隐藏 |
+| `allowRoles(['editor', 'manager'])` | 至少属于一个角色，使用角色 slug |
+| `denyRoles(['viewer'])` | 命中任一角色即拒绝 |
+| `requirePermissions(['records.view', 'records.update'])` | 必须拥有全部权限 |
+| `requireAnyPermission(['records.export', 'reports.export'])` | 至少拥有一个权限 |
+| `ability('update')` | 以当前后台用户检查记录的 Gate / Policy |
+| `ability('create', Record::class)` | 检查模型级别的 Policy |
+| `deniedAsDisabled('无操作权限')` | 无权时显示禁用提示，默认隐藏 |
 
-不同条件之间取交集；同一配置方法重复调用会替换该项。角色和权限列表不能为空，也不接受 ID、闭包或对象。权限检查沿用后台用户的 `can()`，保留其管理员行为；角色限制、显式拒绝及 Policy 不额外放行管理员。Action 以及配置了权限的 Tool 均要求用户登录。
+不同条件取交集，显式拒绝优先；重复调用同一配置方法会替换该项。角色、权限列表不能为空，只接受 slug，不接受 ID、闭包或对象。角色限制、显式拒绝及 Policy 不额外放行管理员。
 
-### 行按钮、批量按钮与操作列
-
-继承 `Encore\Admin\Actions\Action`、`RowAction`、`BatchAction` 的按钮可以在添加时配置权限：
+下面的 `ExampleRowAction`、`ExampleBatchAction`、`Record` 和 `RecordPolicy` 均为宿主自定义的示例类：
 
 ```php
 $grid->actions(function ($actions) {
     $actions->add(
-        (new RefundOrder())
-            ->allowRoles(['administrator', 'finance'])
-            ->requirePermissions(['orders.refund'])
-            ->ability('refund')
+        (new ExampleRowAction())
+            ->requirePermissions(['records.update'])
+            ->ability('update')
     );
 });
 
 $grid->batchActions(function ($batch) {
-    $batch->add((new BatchApprove())->requirePermissions(['orders.approve'])->ability('approve'));
+    $batch->add((new ExampleBatchAction())->ability('update'));
 });
 
-// Action 列支持类名，也支持配置好的实例；每行使用独立实例。
-$grid->column('status')->action((new RefundOrder())->requirePermissions(['orders.refund'])->ability('refund'));
+$grid->column('status')->action((new ExampleRowAction())->ability('update'));
+
+\Illuminate\Support\Facades\Gate::policy(Record::class, RecordPolicy::class);
 ```
 
-行按钮在展示时检查当前记录；批量按钮展示时只检查角色、权限和显式指定模型类的 ability，记录 Policy 在选择后逐条检查。批量中任意记录不通过就拒绝整次操作，不会静默跳过。加载表单和最终执行均重新查询记录并检查权限。已有 Action 的 `authorize($user, $model)` 和模型的 `actionAuthorize($user, $actionClass)` 继续生效；批量 Action 的 `authorize()` 仍接收完整选中集合。
+批量中任一记录未通过授权，会拒绝整次操作。Action 的 `authorize($user, $model)` 和模型的 `actionAuthorize($user, $actionClass)` 继续生效；批量 Action 的 `authorize()` 接收选中集合。
 
-直接跳转 URL 的 Action 只能通过上述配置控制按钮展示，目标路由仍须自行授权。旧的 `Encore\Admin\Grid\Tools\BatchAction` 及原始 HTML 按钮不属于此 API；自定义覆盖 `render()` 时，应先调用 `passesAuthorizationForRendering()`，拒绝时返回 `renderAuthorizationDenied()`，再生成按钮和凭据。
-
-### Gate 与 Policy
-
-`ability()` 使用 `Gate::forUser(Admin::user())`，以当前后台用户执行 Laravel Gate / Policy 检查。例如，退款功能权限通过后，再由 Policy 判断订单归属和状态。
-
-在宿主 Provider 的 `boot()` 中注册模型与 Policy：
-
-```php
-\Illuminate\Support\Facades\Gate::policy(Order::class, OrderPolicy::class);
-```
-
-Policy 方法示例：
-
-```php
-class OrderPolicy
-{
-    public function refund($user, Order $order): bool
-    {
-        return $user->company_id === $order->company_id
-            && $order->status === 'paid'
-            && !$order->refunded_at;
-    }
-}
-```
-
-### 自定义 Tool
-
-继承 `Encore\Admin\Grid\Tools\AbstractTool` 的工具直接支持相同的角色、权限、ability 和禁用提示配置：
-
-```php
-$grid->tools(function ($tools) {
-    $tools->append(
-        (new ExportOrdersTool())
-            ->allowRoles(['administrator', 'finance'])
-            ->requirePermissions(['orders.export'])
-            ->ability('export', Order::class)
-            ->deniedAsDisabled('无导出权限')
-    );
-});
-```
-
-其他自定义工具可以继承 `Encore\Admin\Widgets\Tool` 并实现 `render()`；已有的 Renderable、Htmlable 或 HTML 片段可以直接包装，不必修改原类：
+工具可通过 `Widgets\Tool` 包装现有 Renderable、Htmlable 或 HTML：
 
 ```php
 use Encore\Admin\Widgets\Tool;
 
 $form->tools(function ($tools) {
-    $tools->append((new Tool(new ExistingExportTool()))->requirePermissions(['orders.export']));
-});
-
-$show->panel()->tools(function ($tools) use ($order) {
     $tools->append(
-        (new Tool('<a href="/admin/orders/'.$order->getKey().'/refund">退款</a>'))
-            ->requirePermissions(['orders.refund'])
-            ->ability('refund')
-            ->forModel($order)
+        (new Tool(new ExampleExportTool()))->requirePermissions(['records.export'])
     );
 });
 ```
 
-Grid、Form、Detail、Tree、Navbar 的工具容器以及 Grid header/footer 返回的 Tool，都会先授权再渲染，拒绝时不执行工具的 `render()`，不注册其脚本。`forModel($model)` 用于绑定记录级 Policy；不绑定记录时 `ability('export')` 检查全局 Gate，也可以用 `ability('export', Order::class)` 检查模型级别的 Policy。Tool 可以定义 `authorize($user, $model)` 追加条件。不配置规则且没有 `authorize()` 的既有工具保持原行为。
+工具容器在授权后才执行渲染。`forModel($model)` 可绑定记录级 Policy；容器外使用 `renderAuthorized()` 或 `(string) $tool`。自定义覆盖 Action 的 `render()` 时，先调用 `passesAuthorizationForRendering()`，拒绝时返回 `renderAuthorizationDenied()`。
 
-多层 Tool 包装会同时检查外层和内层 Tool 的权限，`passesAuthorization()` 也遵循此规则。Grid 工具容器会在授权前逐层传递 Grid 上下文，包装的 `AbstractTool` 或 `GridAction` 可以继续访问所属 Grid。
+跳转链接、独立下载和自建接口仍需自行授权，按钮可见性不能替代接口授权。旧的 `Grid\Tools\BatchAction` 和原始 HTML 按钮不属于上述 API。
 
-在这些容器之外自行输出 Tool 时，使用 `$tool->renderAuthorized()` 或 `(string) $tool`；直接调用自定义的 `render()` 不经过容器检查。普通 Tool 的权限配置控制渲染，独立下载、跳转或 AJAX 接口仍应使用相同规则重建工具并调用 `abort_unless($tool->passesAuthorization(), 403)`，记录需由接口重新查询。如果工具需要统一的加载与提交授权，建议继承 `Actions\GridAction` 或 `Actions\Action`，使用前述签名动作流程。
+### 运行时参数
 
-### Action 加载与提交
-
-动作凭据 `_action_token` 使用精简 JSON 参数与 HMAC 签名，绑定当前用户、登录会话和后台环境，不依赖 session 动作映射，也没有动作自身的固定过期时间。仅携带动作类、模型定位、回调参数、来源页面、权限配置、允许的记录范围和必要版本信息；每次执行重新查询记录并检查权限。凭据内容可读取，不应放入密码、密钥、查询结果或完整模型。退出重登、CSRF token 轮换或升级前旧格式凭据需要刷新来源页面；动作错误为独立业务错误，不使用 CSRF 的 419。
-
-表单动作打开时调用一次 `POST _load_action_`，提交时直接调用 `_handle_action_`；普通确认框和批量确认直接提交，不再预加载、定时过期或续签。表单加载后绑定选择范围和用户看到的记录版本，冲突与失败保留输入，写请求不会自动重发。原有锁与完成标记继续使用原缓存，不新增数据库或文件存储，也不承诺缓存清空后的永久防重。
-
-动作固定属性从类定义重建；动态回调继续使用 `parameters()`。少量非敏感运行时配置通过 `protected $contextProperties = ['headerList'];` 显式声明，默认不收集任何对象状态，显式配置上限 4 KiB、完整参数上限 64 KiB。RowAction 的 row、工具栏通过 `contextModel()` 绑定的模型以及批量记录均由服务端重新查询，模型关联按需加载，不写进凭据。
-
-### 权限规则升级
-
-按钮规则自动进入签名凭据，不需要加入 `$contextProperties`，客户端传入的规则不会生效。部署时如果收紧按钮的配置（例如新增退款权限），必须同时修改宿主 `config/admin.php` 的 `actions.authorization_version`（默认 `'1'`），例如改为 `'2'`，使旧页面凭据失效并要求刷新；仅撤销用户角色、权限或修改 Policy 判定会在下次请求立即检查，无需更新版本。
+自定义 Action 中，通过 setter 设置的少量标量、数组属性会自动跨请求恢复，无需额外构造方法或属性白名单。例如在自定义类中：
 
 ```php
-// 宿主 config/admin.php；部署更严格的按钮规则时更新版本。
+private $resourceId;
+
+public function setResourceId($value)
+{
+    $this->resourceId = $value;
+    return $this;
+}
+```
+
+`form()` 和 `handle()` 可直接读取 `$this->resourceId`。自动保存支持自定义父子类中的 private/protected/public 属性；静态、readonly、未初始化属性、对象和资源不自动保存。模型应通过记录上下文绑定，并在服务端重新查询。
+
+保存时与容器新建实例的构造完成状态比较，仅保留发生变化的值；构造时计算的权限在新请求中重新计算，setter 设置的 `null`、`false`、`0` 仍可恢复。因此构造方法只做初始化，业务写操作放在 `handle()`；自动上下文 Action 不应注册为共享单例。
+
+已有显式声明继续兼容，也会参与加密：
+
+```php
+protected $contextProperties = ['resourceId'];
+```
+
+显式属性始终保存，适合明确要求恢复的配置；不要将需要逐次重新计算的授权结果列入其中。属性状态上限为 4 KiB，完整动作凭据上限为 64 KiB。
+
+### 加载、提交与凭据
+
+- 打开表单时请求 `_load_action_`，提交时请求 `_handle_action_`；普通确认操作直接提交。
+- 运行时属性加密存入 `_action_token`，动作凭据签名绑定当前用户和登录会话。
+- 其他参数和元数据可读取，`parameters()` 中不要放入密码、密钥或完整模型。
+- 参数传递不依赖 Redis 或服务端 Action 映射；执行锁与防重复提交仍使用宿主 Laravel Cache 配置。
+- 加载和执行时重新检查权限及记录版本；失败时保留输入，写请求不会自动重发。
+- 退出重登、CSRF token 轮换或不兼容的旧凭据需要重新打开来源页面。
+
+新增或收紧按钮配置时，应递增宿主 `config/admin.php` 中的 `actions.authorization_version`，使旧页面凭据失效。撤销用户角色、权限或修改 Policy 判定，会在后续请求重新检查。
+
+```php
 'actions' => [
     'authorization_version' => '2',
 ],
 ```
 
-## 上传安全
+## 文件与图片
 
-内置文件、图片、多文件和多图片字段均执行服务器类型白名单、实际 MIME、文件名及目标路径检查，包含头像接口；保存前再次校验，防止绕过表单 validator。图片允许 JPEG、PNG、GIF、WebP、BMP，普通附件白名单位于 `admin.upload.allowed_extensions`。
+文件和图片字段执行服务端扩展名、实际 MIME、文件名及目标路径检查，包含头像接口；保存前再次校验。图片支持 JPEG、PNG、GIF、WebP、BMP；附件白名单由 `admin.upload.allowed_extensions` 配置。PHP、PHTML、PHAR、HTML、SVG 等类型不能通过白名单开启。
 
-PHP、PHTML、PHAR、HTML、SVG 等危险上传类型被禁止，不能通过白名单开启。历史上传文件和业务自建上传接口需要自行检查。
+默认 `admin` 磁盘指向 `public/uploads`，宿主自定义同名磁盘优先。历史文件及自建上传接口需自行检查。
 
-默认 `admin` 磁盘为 `public/uploads`；宿主自定义同名磁盘优先。图片裁切、缩略图等功能按需安装 `intervention/image:^2.7`。
-
-#### 上传前压缩与裁剪（纯前端）
-
-`image`、`multipleImage` 可直接启用浏览器处理，不依赖 `intervention/image`：
+### 浏览器压缩与裁剪
 
 ```php
-// JPEG / WebP 编码质量 0.8，最长宽高 1920px，保持比例、不放大。
 $form->image('photo', '图片')->compress();
 $form->multipleImage('photos', '相册')->compress(0.75, 1600, 1200);
-
-// 自由裁剪；选择新图片后弹出裁剪框，多图逐张处理。
 $form->image('cover', '封面')->cropper();
-
-// 固定比例与输出尺寸；先裁剪，再压缩。
 $form->image('avatar', '头像')->cropper(400, 400)->compress(0.85, 400, 400);
-
-// 自定义 Cropper.js 2.x 选区属性，例如仅限制比例，不指定输出像素尺寸。
 $form->image('banner', '横幅')->cropper(null, null, ['aspectRatio' => 16 / 9]);
 ```
 
-处理结果以普通文件提交，原有上传验证、存储、编辑预览、删除和嵌套表单流程继续生效；不开启以上方法时沿用原有行为。处理期间阻止提交，完成后可提交；取消裁剪会清空本次文件选择，已保存图片保留。仅处理新选择的本地文件，`picker()` 选择的已有文件不进行处理。
+默认压缩质量为 0.8，最长宽高为 1920px，保持比例且不放大；同时启用时先裁剪再压缩。此功能随包提供，不依赖服务端图片扩展，仅处理新选择的本地文件。
 
-裁剪框提供放大、缩小、移动图片、调整裁剪框和重置按钮。默认选中“调整裁剪框”，可拖动选区或边缘控制点调整裁剪范围；切换“移动图片”后可用鼠标左键拖动图片，滚轮可缩放。
+处理期间阻止提交，取消裁剪会清空本次选择并保留已保存图片。JPEG、PNG、WebP 支持处理，PNG 保留透明通道；单独压缩未减小文件时保留原文件。GIF 压缩时原样上传，裁剪时提示更换格式。Canvas 重编码会移除原有 EXIF 元数据，前端处理不能替代服务端验证。
 
-需要支持 Canvas、`toBlob`、`File` 和可写 `DataTransfer` 的现代浏览器。JPEG、PNG、WebP 支持压缩与裁剪；PNG 保留透明通道，质量参数仅影响 JPEG / WebP。单独压缩时，结果不小于原文件则保留原文件；GIF 等其他格式压缩时原样上传，裁剪时提示重新选择支持的格式，避免意外丢失动画。Canvas 重编码会移除原有 EXIF 元数据。前端处理不能替代服务端验证。
-
-内置 Cropper.js 2.3.1 随资源发布，不需要额外安装 cropper 扩展。升级后需重新发布 `laravel-admin-assets` 资源。现有 `->crop()`、`->resize()`、`->thumbnail()` 等仍是服务端操作，需要可选依赖。
+需要支持 Canvas、`toBlob`、`File` 和可写 `DataTransfer` 的现代浏览器。`crop()`、`resize()`、`thumbnail()` 等服务端图片操作仍需可选依赖。
 
 ## 日志查看器
 
-内置日志查看器，无需额外安装或注册 Provider。默认入口为 `/admin/logs`（跟随后台前缀），支持文件切换、分页、异常详情、实时追加、删除当前文件和删除当前目录内的全部 `.log` 文件。
+内置日志查看器，默认入口 `/admin/logs`，跟随后台路由前缀；支持文件切换、分页、异常详情、实时追加和删除。
 
-新安装会自动创建菜单和 `ext.log-viewer` 权限；已有项目执行一次：
+新安装自动创建菜单与 `ext.log-viewer` 权限。已有项目执行一次：
 
 ```bash
 php artisan admin:import log-viewer
 ```
 
-重复执行不会重复添加菜单和权限。为普通角色分配 Logs 权限后即可访问；入口沿用后台认证、路由权限和 CSRF 中间件。操作日志仍在 `auth/logs`，应用文件日志在 `logs`。
-
-默认读取 `storage/logs`。可在宿主 `config/admin.php` 配置多个目录，页面通过目录名切换；路径由服务端配置，不接受请求传入任意路径：
+重复执行不会重复添加菜单和权限。应用文件日志入口为 `logs`，操作日志入口为 `auth/logs`。默认读取 `storage/logs`，也可在宿主配置中声明多个目录：
 
 ```php
 'log_viewer' => [
@@ -378,82 +326,62 @@ php artisan admin:import log-viewer
     'default' => 'default',
     'directories' => [
         'default' => storage_path('logs'),
-        'production' => storage_path('logs/production'),
-        'staging' => storage_path('logs/staging'),
+        'archive' => storage_path('logs/archive'),
     ],
     'max_bytes' => 1024 * 1024,
 ],
 ```
 
-支持标准 Laravel/Monolog 文本格式 `[时间] channel.LEVEL: 内容`，默认每页 20 条，较新日志在前。单次读取默认最多 1 MiB（配置上限 4 MiB），超大单条日志可能只显示部分内容。实时查看每 2 秒轮询，离开页面时停止，检测到文件缩短时从头读取。
+路径由服务端配置，不接受请求传入任意路径。支持标准 Laravel/Monolog 文本日志，默认每页 20 条；单次读取默认最多 1 MiB，上限 4 MiB，超大单条日志可能只显示部分内容。实时查看每 2 秒轮询，离开页面时停止。
 
-## 升级指南
+## 升级与迁移
 
-新增或收紧 Action 按钮权限时，同时按[权限规则升级](#权限规则升级)更新版本；升级前已打开的动作页面和分步表单需重新打开。
-
-### 更新前端资源
-
-更新包后，按需重新发布前端资源并清理缓存：
+### 更新资源
 
 ```bash
 php artisan vendor:publish --tag=laravel-admin-assets --force
 php artisan optimize:clear
 ```
 
-资源升级会覆盖宿主同路径文件，修改前请保留宿主自身定制。`happy-admin-assets` 是同一资源树的附加标签。配置、语言和迁移仍使用各自发布标签。资源地址统一为 `/vendor/laravel-admin/...`。
+发布会覆盖同路径文件，请先保留宿主自身定制。配置、语言和迁移使用各自发布标签；`happy-admin-assets` 是同一资源树的附加标签。
 
-### 从旧版导航与 API 迁移
+升级后重新打开已有 Action 页面和分步表单。此前按属性声明默认值生成的自动 Action 快照需刷新来源页面，旧的显式属性凭据仍兼容。收紧按钮权限配置时，同时更新 `actions.authorization_version`。
 
-2.0 已彻底移除 PJAX：
+### 从旧版导航迁移
 
-- 不再加载 `jquery-pjax`；
-- 不再注册 `admin.pjax` 中间件；
-- 不再支持 `X-PJAX`、`_pjax`、`#pjax-container`；
-- 表单、筛选、分页和删除通过 AJAX 更新 `#admin-content`，地址栏和前进后退同步更新；
-- iframe 标签页保留，顶层 AdminLTE 壳不刷新。
+2.0 内容导航使用 AJAX，iframe 标签页保留，顶层 AdminLTE 壳不刷新：
 
-宿主升级时：
+| 原有代码 | 迁移方式 |
+| --- | --- |
+| `$.pjax`、`pjax:*` | `$.admin.navigate(url)`、`$.admin.reload()`、`$.admin.redirect(url)` |
+| `#pjax-container` | `#admin-content` |
+| `admin.pjax`、`X-PJAX`、`_pjax` | 移除相关依赖 |
+| `Admin::disablePjax()`、`Widgets\Form::disablePjax()` | 删除调用 |
+| 表单 `pjax-container` 属性 | 删除属性 |
+| 页面清理与重新初始化 | 监听 `admin:before-navigate`、`admin:navigated` |
 
-1. 将自定义 `$.pjax` / `pjax:*` 代码改用 `$.admin.navigate(url)`、`$.admin.reload()` 或 `$.admin.redirect(url)`；
-2. 将 `#pjax-container` 选择器改为 `#admin-content`；
-3. 删除 `Admin::disablePjax()`、`Widgets\Form::disablePjax()` 调用；
-4. 表单不再需要 `pjax-container` 属性；
-5. 页面需要清理定时器时监听 `admin:before-navigate`，需要在更新后运行时监听 `admin:navigated`。
+### 其他兼容事项
 
-2.0 同时移除了旧版废弃 API：
-
-- `Admin::grid()`、`Admin::form()`、`Admin::show()`、`Admin::content()`、`Admin::registerAuthRoutes()`：直接使用 `new Grid(...)`、`new Form(...)`、`new Show(...)`、`Content` 注入控制器，或 `Admin::routes()`；
-- `_handle_selectable_` / `_handle_renderable_` 只接受 `Grid\Selectable` 子类 / 实现 `Illuminate\Contracts\Support\Renderable` 的类，并校验页面签发的组件凭据；
-- 表单 `Display` 字段默认转义 HTML，需输出富文本时显式调用 `->unescape()`；
-- 菜单树的拖拽排序通过向 `admin/auth/menu` POST `_order` JSON 完成，不再依赖旧模型保存钩子；
-- `admin:make`、`admin:export-seed` 不再需要 `doctrine/dbal`，表结构读取使用 Laravel 原生 Schema。
-
-### 从独立日志扩展迁移
-
-从独立日志查看器扩展升级时，移除旧扩展及手工注册的 `LogViewerServiceProvider`。如果宿主曾手动配置 `Encore\\Admin\\LogViewer\\` 自动加载映射，也需移除，避免覆盖本包中的类；自定义日志目录统一通过上述配置设置。
-
-原路由名 `log-viewer-index`、`log-viewer-file`、`log-viewer-tail` 保留；删除入口 `log-viewer-delete` 和 `log-viewer-deleteall` 改为 **DELETE** 请求，页面表单已包含 CSRF Token 和方法字段。旧的独立 `laravel-admin-ext/log-viewer` 扩展不能与本包同时安装。
+- 旧 `Admin::grid()`、`form()`、`show()`、`content()` 改为实例化对应类或使用 `Content` 注入；`registerAuthRoutes()` 改为 `Admin::routes()`。
+- `Display` 字段默认转义 HTML，需要富文本时显式调用 `unescape()`。
+- 菜单树排序通过向 `admin/auth/menu` POST `_order` JSON 完成。
+- `admin:make`、`admin:export-seed` 使用 Laravel 原生 Schema，无需 `doctrine/dbal`。
+- 从独立日志扩展迁移时，移除旧扩展、手工 Provider 及自动加载映射，避免覆盖包内实现。
+- 日志读取路由名保持兼容；`log-viewer-delete`、`log-viewer-deleteall` 使用 DELETE 请求，需携带 CSRF token 和方法字段。
 
 ## 常见问题
 
-### 控制台 unload 提示
+### 浏览器提示 unload 策略限制
 
-如果控制台出现 `[Violation] Permissions policy violation: unload is not allowed in this document.`，可检查当前 frame 中注册 `unload` 事件的第三方脚本、编辑器或统计组件。
+本包不注册 `unload`。出现 Permissions Policy 提示时，检查当前 iframe 中第三方脚本的事件注册；自定义逻辑可按场景使用 `pagehide` 或 `visibilitychange`。
 
-后台响应通过 `admin.permissions_policy` 配置 Permissions Policy，默认包含 `unload=self`，标签页 iframe 声明 `allow="unload"`。如需不发送该策略，将 `admin.permissions_policy` 设为 `[]`；最终行为还取决于浏览器及上层页面的策略。
+后台策略由 `admin.permissions_policy` 配置，默认包含 `unload=self`；标签页 iframe 声明 `allow="unload"`。设置为 `[]` 可不发送该策略，最终行为还取决于浏览器及上层页面策略。
 
-本包自身不注册 `unload`。定位第三方注册位置时，可在相关脚本运行前临时加入下面的诊断代码，根据调用栈排查；自定义代码可按场景改用 `pagehide` 或 `visibilitychange`：
+### 自定义 Action 的参数未恢复
 
-```js
-EventTarget.prototype.addEventListener = (raw => function (type, listener, options) {
-  if (type === 'unload') console.warn('[unload]', new Error().stack);
-  return raw.apply(this, arguments);
-})(EventTarget.prototype.addEventListener);
-```
+确认属性定义在自定义 Action 类或其父类中，值为标量或数组，Action 可通过容器创建新实例。涉及模型、服务对象或超出状态大小限制的数据，应通过 ID 查询；已有显式属性配置也可继续使用。
 
 ## 开发与分发
-
-图片、字体及其他前端资源均作为普通 Git 文件分发。发布前可使用 `source-manifest.json` 中的 SHA256 校验资源完整性。
 
 ```bash
 composer install
@@ -461,18 +389,14 @@ composer validate --strict
 composer test
 npm ci --ignore-scripts
 npm test
-composer archive --format=zip --dir=build --file=happyqu-laravel-admin-2.0.0
 ```
 
-开发时，Node.js 用于运行前端回归测试，安装本包和发布前端资源不需要 Node.js 或 npm 构建。
+Node.js 仅用于开发与前端回归测试，安装包和发布现有资源无需 npm 构建。修改内置字段资源声明后，执行 `composer build-field-assets` 更新资源元数据；修改 Flatpickr 本地适配生成逻辑后，执行 `npm run build:datepicker`。
 
-CI 配置覆盖以下 Laravel 约束与 PHP 组合；实际安装的 Laravel 版本由 Composer 解析：
+前端资源作为普通 Git 文件分发，可使用 `source-manifest.json` 中的 SHA256 校验完整性。制作 Composer 分发包：
 
-| Laravel 约束 | PHP |
-| --- | --- |
-| `^10.0` | 8.1、8.3 |
-| `^11.0` | 8.2 |
-| `^12.0` | 8.3 |
-| `^13.0` | 8.3、8.4 |
+```bash
+composer archive --format=zip --dir=build --file=laravel-admin
+```
 
-保留原代码与前端组件的版权和许可证，见 [第三方来源](THIRD_PARTY_NOTICES.md)。
+本包采用 [MIT 许可证](LICENSE)，第三方代码与资源的来源和许可证见[第三方说明](THIRD_PARTY_NOTICES.md)。

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Support\Arrayable;
 class Radio extends Field
 {
     use CanCascadeFields;
+    use HasChoiceInput;
 
     protected $inline = true;
 
@@ -102,6 +103,7 @@ class Radio extends Field
      */
     public function render()
     {
+        $this->initChoiceInput();
         $this->script = "$('{$this->getElementClassSelector()}').iCheck({radioClass:'iradio_minimal-blue'});";
 
         $this->addCascadeScript();

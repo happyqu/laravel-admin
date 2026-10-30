@@ -15,7 +15,7 @@ class RadioButton extends Radio
     {
         $script = <<<'SCRIPT'
 $(document).off('click.adminPage.adminRadioButton', '.radio-group-toggle label').on('click.adminPage.adminRadioButton', '.radio-group-toggle label', function() {
-    if ($(this).find('input').is(':disabled')) return;
+    if ($(this).find('input').is(':disabled,[readonly]')) return;
     $(this).parent().children().removeClass('active');
     $(this).addClass('active');
 });
@@ -29,6 +29,7 @@ SCRIPT;
      */
     public function render()
     {
+        $this->initChoiceInput();
         $this->addScript();
 
         $this->addCascadeScript();

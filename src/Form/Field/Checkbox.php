@@ -135,9 +135,9 @@ class Checkbox extends MultipleSelect
             $this->script .= <<<SCRIPT
 $('.{$checkAllClass}').iCheck({checkboxClass:'icheckbox_minimal-blue'}).on('ifChanged', function () {
     if (this.checked) {
-        $('{$this->getElementClassSelector()}').iCheck('check');
+        $('{$this->getElementClassSelector()}').filter(function () { return !this.readOnly && !this.matches(':disabled'); }).iCheck('check');
     } else {
-        $('{$this->getElementClassSelector()}').iCheck('uncheck');
+        $('{$this->getElementClassSelector()}').filter(function () { return !this.readOnly && !this.matches(':disabled'); }).iCheck('uncheck');
     }
 });
 SCRIPT;

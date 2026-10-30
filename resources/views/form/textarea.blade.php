@@ -6,7 +6,7 @@
 
         @include('admin::form.error')
 
-        <textarea name="{{$name}}" class="form-control {{$class}}" rows="{{ $rows }}" placeholder="{{ $placeholder }}" {!! $attributes !!} >{{ old($column, $value) }}</textarea>
+        <textarea name="{{$name}}" class="form-control {{$class}}" rows="{{ $rows }}" placeholder="{{ $placeholder }}" {!! $attributes !!} >{{ old(trim(str_replace(['[', ']'], ['.', ''], $name), '.'), $value) }}</textarea>
 
         {!! $append !!}
 

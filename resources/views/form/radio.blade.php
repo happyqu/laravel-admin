@@ -11,7 +11,7 @@
             {!! $inline ? '<span class="icheck">' : '<div class="radio icheck">'  !!}
 
                 <label @if($inline)class="radio-inline"@endif>
-                    <input type="radio" name="{{$name}}" value="{{$option}}" class="minimal {{$class}}" {{ ($option == old($column, $value)) || ($value === null && in_array($label, $checked)) ?'checked':'' }} {!! $attributes !!} />&nbsp;{{$label}}&nbsp;&nbsp;
+                    <input type="radio" name="{{$name}}" value="{{$option}}" class="minimal {{$class}}" {{ ($choiceValue !== null && $option == $choiceValue) || (!$hasOldChoiceInput && $choiceValue === null && in_array($option, $checked)) ?'checked':'' }} {!! $attributes !!} />&nbsp;{{$label}}&nbsp;&nbsp;
                 </label>
 
             {!! $inline ? '</span>' :  '</div>' !!}

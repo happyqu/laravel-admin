@@ -7,6 +7,11 @@ const { JSDOM } = require('jsdom');
 const root = path.join(__dirname, '../..');
 const read = name => fs.readFileSync(path.join(root, 'resources/assets', name), 'utf8');
 
+function type(w, input, value) {
+    input.value = value;
+    input.dispatchEvent(new w.Event('input', { bubbles: true }));
+}
+
 function page(html = '<input id="date" name="date">', editable = false, beforeLoad = () => {}) {
     const w = new JSDOM('<div id="admin-content"><form>' + html + '</form></div>', {
         runScripts: 'outside-only', url: 'http://localhost/admin/items', pretendToBeVisual: true,
@@ -559,5 +564,105 @@ test('native Flatpickr date formats, parsing callbacks and input restrictions re
         custom.date('payday');
         assert.equal(custom.input.value, '2026-10-28');
         assert.equal(custom.input.checkValidity(), true);
+    } finally { w.finish(); }
+});
+
+for (const [format, options, invalid, valid] of [
+    ['YYYY-MM-DD', { minDate: '2026-10-01', maxDate: '2026-10-31' }, '2026-11-01', '2026-10-20'],
+    ['YYYY-MM-DD', { disabledDates: ['2026-10-20'] }, '2026-10-20', '2026-10-21'],
+    ['YYYY-MM-DD', { enabledDates: ['2026-10-21'] }, '2026-10-20', '2026-10-21'],
+    ['YYYY-MM-DD HH:mm:ss', { maxDate: '2026-10-31 10:00:00' }, '2026-10-31 10:00:01', '2026-10-31 10:00:00'],
+    ['YYYY-MM-DD HH:mm:ss', { minDate: '2026-10-31 10:00:00' }, '2026-10-31 09:59:59', '2026-10-31 10:00:00'],
+    ['HH:mm:ss', { minTime: '09:00', maxTime: '17:00' }, '18:00:00', '12:00:00'],
+]) {
+    test(`manual ${format} enforces ${JSON.stringify(options)} before submit and retains invalid input on blur`, () => {
+        const w = page();
+        try {
+            const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { format, ...options });
+            const form = w.document.querySelector('form');
+            let submissions = 0;
+            form.addEventListener('submit', event => { event.preventDefault(); submissions++; });
+            p.input.focus();
+            type(w, p.input, invalid);
+            form.requestSubmit();
+            assert.equal(submissions, 0);
+            p.input.dispatchEvent(new w.FocusEvent('blur', { bubbles: true }));
+            assert.equal(p.input.value, invalid);
+            assert.equal(p.input.checkValidity(), false);
+            type(w, p.input, valid);
+            form.requestSubmit();
+            assert.equal(submissions, 1);
+            assert.equal(p.input.value, valid);
+        } finally { w.finish(); }
+    });
+}
+
+for (const [format, start, earlier, later] of [
+    ['YYYY-MM-DD', '2026-10-20', '2026-10-19', '2026-10-21'],
+    ['YYYY-MM-DD HH:mm:ss', '2026-10-20 10:00:00', '2026-10-20 09:59:59', '2026-10-20 10:00:01'],
+    ['HH:mm:ss', '10:00:00', '09:59:59', '10:00:01'],
+]) {
+    test(`${format} range validates uncommitted values and recovers after correction or clearing`, () => {
+        const w = page('<input id="start" name="start"><input id="end" name="end">');
+        try {
+            w.$.admin.datepicker.range('#start', '#end', { format });
+            const a = w.document.querySelector('#start'), b = w.document.querySelector('#end');
+            const form = w.document.querySelector('form');
+            let submissions = 0;
+            form.addEventListener('submit', event => { event.preventDefault(); submissions++; });
+            type(w, a, start); type(w, b, earlier);
+            b.focus(); form.requestSubmit();
+            assert.equal(submissions, 0);
+            assert.equal(form.checkValidity(), false);
+            b.dispatchEvent(new w.FocusEvent('blur', { bubbles: true }));
+            assert.equal(b.value, earlier);
+            type(w, b, later);
+            form.requestSubmit();
+            assert.equal(submissions, 1);
+            type(w, b, earlier); type(w, a, '');
+            assert.equal(form.checkValidity(), true);
+        } finally { w.finish(); }
+    });
+}
+
+for (const mode of ['readonly', 'disabled', 'fieldset']) {
+    test(`calendar obeys dynamic ${mode}, including a lock applied while it is open`, async () => {
+        const w = page('<fieldset><div class="input-group"><input id="date" value="2026-10-10"><span class="input-group-addon">Open</span></div></fieldset>');
+        try {
+            const input = w.document.querySelector('#date');
+            const target = mode === 'fieldset' ? w.document.querySelector('fieldset') : input;
+            const property = mode === 'readonly' ? 'readOnly' : 'disabled';
+            target[property] = true;
+            const p = w.$.admin.datepicker.init(input, {});
+            p.show();
+            assert.equal(p.instance.isOpen, false);
+            target[property] = false;
+            input.dispatchEvent(new w.FocusEvent('focus'));
+            assert.equal(p.instance.isOpen, true);
+            target[property] = true;
+            const day = [...p.instance.daysContainer.querySelectorAll('.flatpickr-day')]
+                .find(el => !el.classList.contains('prevMonthDay') && !el.classList.contains('nextMonthDay') && el.dateObj.getDate() === 11);
+            day.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+            assert.equal(input.value, '2026-10-10');
+            await Promise.resolve();
+            assert.equal(p.instance.isOpen, false);
+            w.$('.input-group-addon').trigger('click');
+            assert.equal(p.instance.isOpen, false);
+            target[property] = false;
+            await Promise.resolve();
+            p.show();
+            day.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+            assert.equal(input.value, '2026-10-11');
+        } finally { w.finish(); }
+    });
+}
+
+test('allowInput false still permits calendar selection while preventing manual editing', () => {
+    const w = page();
+    try {
+        const p = w.$.admin.datepicker.init(w.document.querySelector('#date'), { allowInput: false });
+        assert.equal(p.input.readOnly, true);
+        p.show();
+        assert.equal(p.instance.isOpen, true);
     } finally { w.finish(); }
 });

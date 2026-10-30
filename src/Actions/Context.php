@@ -48,7 +48,11 @@ class Context
         if ($versions = $this->versions($model)) $ticket['versions'] = $versions;
         $hash = hash('sha256', json_encode($ticket, JSON_THROW_ON_ERROR));
 
-        return $this->definitions[$hash] ??= ContextToken::encode($ticket + ['id' => bin2hex(random_bytes(16))]);
+        if (isset($this->definitions[$hash])) return $this->definitions[$hash];
+        if (isset($ticket['options'])) {
+            $ticket['options'] = \Illuminate\Support\Facades\Crypt::encryptString(json_encode($ticket['options'], JSON_THROW_ON_ERROR));
+        }
+        return $this->definitions[$hash] = ContextToken::encode($ticket + ['id' => bin2hex(random_bytes(16))]);
     }
 
     public function resolve(Request $request, bool $loading = false): array
@@ -62,7 +66,16 @@ class Context
         $class = $ticket['action'];
         abort_unless(is_subclass_of($class, Action::class), 400);
         $action = app($class);
-        $action->restoreContext($ticket['options'] ?? []);
+        $state = $ticket['options'] ?? [];
+        if (is_string($state)) {
+            try {
+                $state = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($state), true, 64, JSON_THROW_ON_ERROR);
+            } catch (\Illuminate\Contracts\Encryption\DecryptException | \JsonException $exception) {
+                ContextToken::fail('action_context_invalid');
+            }
+        }
+        if (!is_array($state)) ContextToken::fail('action_context_invalid');
+        $action->restoreContext($state);
         $action->restoreAuthorizationConfiguration($ticket['authorization'] ?? []);
         $batch = $action instanceof BatchAction;
         $keys = !$loading && !empty($ticket['loaded']) ? $ticket['keys'] : $request->input('_key', []);

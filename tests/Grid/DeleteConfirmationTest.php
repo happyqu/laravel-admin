@@ -233,7 +233,9 @@ class DeleteConfirmationTest extends TestCase
         $action->headers(['id', 'code']);
         $token = $context->register($action);
         $ticket = ContextToken::decode($token);
-        $this->assertSame(['headerList' => ['id', 'code']], $ticket['options']);
+        $this->assertSame(['headerList' => ['id', 'code']], json_decode(
+            \Illuminate\Support\Facades\Crypt::decryptString($ticket['options']), true, 64, JSON_THROW_ON_ERROR
+        ));
         [$resolved] = $context->resolve(Request::create('/load', 'POST', [
             '_action_token' => $token, '_key' => 2, '_class' => 'Forged', '_cb' => 'evil',
         ]), true);
