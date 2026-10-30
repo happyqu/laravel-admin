@@ -19,6 +19,62 @@
     var document = window.document;
     var live = new Set();
     var nextId = 0;
+    var modalStates = new WeakMap();
+
+    function bindModal(modal, cleanup) {
+        var element = modal[0];
+        if (!element) return null;
+        var state = modalStates.get(element);
+        if (!state) {
+            state = { users: 0, opening: !!(modal.hasClass('fade') && modal.data('bs.modal') &&
+                modal.data('bs.modal').isShown && !modal.hasClass('in')) };
+            var pressTarget = null;
+            var pressDuringOpening = false;
+            function press(event) {
+                pressTarget = event.target;
+                pressDuringOpening = state.opening;
+            }
+            function release(event) {
+                var instance = modal.data('bs.modal');
+                // Opening the calendar on focus can move mouseup into another branch.
+                // Browsers then target the click at their common ancestor: the modal.
+                var common = pressTarget;
+                while (common && !common.contains(event.target)) common = common.parentNode;
+                if (instance && (pressDuringOpening || (common === element && pressTarget !== event.target))) {
+                    instance.ignoreBackdropClick = true;
+                }
+                pressTarget = null;
+                pressDuringOpening = false;
+            }
+            function click(event) {
+                if (!state.opening || event.target !== element) return;
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                var instance = modal.data('bs.modal');
+                if (instance) instance.ignoreBackdropClick = false;
+            }
+            element.addEventListener('mousedown', press, true);
+            element.addEventListener('mouseup', release, true);
+            element.addEventListener('click', click, true);
+            modal.on('show.bs.modal.adminDatepickerBackdrop', function (event) {
+                if (event.target === element && !event.isDefaultPrevented()) state.opening = true;
+            }).on('shown.bs.modal.adminDatepickerBackdrop hide.bs.modal.adminDatepickerBackdrop', function (event) {
+                if (event.target === element && !event.isDefaultPrevented()) state.opening = false;
+            });
+            state.destroy = function () {
+                element.removeEventListener('mousedown', press, true);
+                element.removeEventListener('mouseup', release, true);
+                element.removeEventListener('click', click, true);
+                modal.off('.adminDatepickerBackdrop');
+                modalStates.delete(element);
+            };
+            modalStates.set(element, state);
+        }
+        state.users++;
+        cleanup.push(function () { if (--state.users === 0) state.destroy(); });
+        return state;
+    }
+
     var tokens = { YYYY: 'Y', YY: 'y', MMMM: 'F', MMM: 'M', MM: 'm', M: 'n', DD: 'd', D: 'j',
         dddd: 'l', ddd: 'D', d: 'w', HH: 'H', hh: 'G', h: 'h', mm: 'i',
         ss: 'S', s: 's', A: 'K', X: 'U' };
@@ -259,21 +315,17 @@
         var destroyed = false;
         var modal = $(input).closest('.modal');
         var modalNamespace = '.adminDatepickerModal' + id;
-        var modalOpening = !!(modal.hasClass('fade') && modal.data('bs.modal') &&
-            modal.data('bs.modal').isShown && !modal.hasClass('in'));
+        var modalState = bindModal(modal, cleanup);
         var pendingOpen = false;
         if (modal.length) {
-            modal.on('show.bs.modal' + modalNamespace, function (event) {
-                if (event.target === this && !event.isDefaultPrevented()) modalOpening = true;
-            }).on('shown.bs.modal' + modalNamespace, function (event) {
+            modal.on('shown.bs.modal' + modalNamespace, function (event) {
                 if (event.target !== this) return;
-                modalOpening = false;
                 if (pendingOpen && !destroyed) {
                     pendingOpen = false;
                     controller.show();
                 }
             }).on('hide.bs.modal' + modalNamespace, function (event) {
-                if (event.target === this && !event.isDefaultPrevented()) { modalOpening = false; pendingOpen = false; }
+                if (event.target === this && !event.isDefaultPrevented()) pendingOpen = false;
             });
             cleanup.push(function () { modal.off(modalNamespace); });
         }
@@ -338,7 +390,7 @@
             }].concat(options.onChange || []),
             onOpen: [function (dates, text, instance) {
                 if (locked()) { instance.close(); return; }
-                if (modalOpening) { pendingOpen = true; instance.close(); return; }
+                if (modalState && modalState.opening) { pendingOpen = true; instance.close(); return; }
                 host.trigger('dp.show');
             }].concat(options.onOpen || []),
             onClose: [function () { host.trigger('dp.hide'); }].concat(options.onClose || []),
@@ -396,7 +448,7 @@
             input: input, baseMin: baseMin, baseMax: baseMax,
             show: function () {
                 if (locked()) return controller;
-                if (modalOpening) pendingOpen = true;
+                if (modalState && modalState.opening) pendingOpen = true;
                 else fp.open();
                 return controller;
             },
@@ -450,7 +502,7 @@
         }
         function guardInput(event) {
             if (locked()) { event.stopImmediatePropagation(); return; }
-            if (modalOpening && (event.type === 'focus' || event.type === 'click')) {
+            if (modalState && modalState.opening && (event.type === 'focus' || event.type === 'click')) {
                 pendingOpen = true;
                 event.stopImmediatePropagation();
                 return;
@@ -482,8 +534,7 @@
             fp.calendarContainer.addEventListener(type, guardCalendar, true);
             cleanup.push(function () { fp.calendarContainer.removeEventListener(type, guardCalendar, true); });
         });
-        // Bootstrap protects drags that begin in .modal-dialog, but this calendar
-        // is its sibling. Give calendar presses the same backdrop-click protection.
+        // Explicit widgetParent may place the calendar outside the modal guard.
         function calendarPress() {
             if (!modal.length) return;
             modal.off('mouseup' + modalNamespace).one('mouseup' + modalNamespace, function (event) {
@@ -494,7 +545,9 @@
         function calendarKeydown(event) {
             if (event.key === 'Escape' || event.keyCode === 27) event.stopPropagation();
         }
-        fp.calendarContainer.addEventListener('mousedown', calendarPress);
+        if (modal.length && !modal[0].contains(fp.calendarContainer)) {
+            fp.calendarContainer.addEventListener('mousedown', calendarPress);
+        }
         fp.calendarContainer.addEventListener('keydown', calendarKeydown);
         cleanup.push(function () {
             fp.calendarContainer.removeEventListener('mousedown', calendarPress);

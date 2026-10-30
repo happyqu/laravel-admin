@@ -9,6 +9,51 @@ const root = path.join(__dirname, '../..');
 const payloads = JSON.parse(execFileSync('php', ['tests/Form/fixtures/action-form.php'], { cwd: root, encoding: 'utf8' }));
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 
+test('action runtime protects date gestures after loading and reopening the rendered form', async () => {
+    const w = new JSDOM('<a data-admin-action="ticket" data-admin-mode="form" data-admin-keyed="0" data-admin-load="/load" data-admin-execute="/execute">Open</a>', {
+        runScripts: 'outside-only', url: 'http://localhost/admin/items', pretendToBeVisual: true,
+    }).window;
+    for (const asset of ['AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js', 'AdminLTE/bootstrap/js/bootstrap.min.js',
+        'laravel-admin/flatpickr-local.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+        w.eval(read('resources/assets/' + asset));
+    }
+    const $ = w.jQuery;
+    $.extend($.admin, {
+        token: 'csrf', isResponseError: data => data.status === false,
+        responseMessage: () => '', toastr: { error: message => assert.fail(message) },
+    });
+    $.ajax = () => Promise.resolve({
+        mode: 'form', ticket: 'execution', assets: {}, html: payloads[0].html,
+        scripts: payloads[0].scripts.filter(script => script.includes('.adminDatepicker(')),
+    });
+    try {
+        await new Promise(resolve => w.setTimeout(resolve, 0));
+        $.support.transition = false;
+        w.eval(read('resources/assets/actions.js'));
+        for (let attempt = 0; attempt < 2; attempt++) {
+            $('a').trigger('click');
+            await new Promise(resolve => setImmediate(resolve));
+            const modal = $('[data-admin-action-shell]');
+            const input = modal.find('[name="start"]')[0];
+            const picker = $(input).data('adminDatepicker');
+            assert.ok(picker, 'The PHP-rendered initializer runs in the action shell');
+            input.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true }));
+            input.focus();
+            assert.equal(picker.instance.isOpen, true);
+            picker.instance.daysContainer.querySelector('.flatpickr-day')
+                .dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+            modal[0].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+            assert.equal(modal.data('bs.modal').isShown, true);
+            modal.find('[data-dismiss="modal"]').first().trigger('click');
+            assert.equal(modal.data('bs.modal').isShown, false);
+            assert.equal($(input).data('adminDatepicker'), undefined, 'Closing destroys the picker');
+        }
+    } finally {
+        $.admin.datepicker.destroy();
+        w.close();
+    }
+});
+
 test('date fields open from the calendar icon and from an action input without a group', () => {
     const dom = new JSDOM(payloads[0].html, { runScripts: 'outside-only', url: 'http://localhost/admin/items' });
     const w = dom.window;
