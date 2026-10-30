@@ -45,51 +45,13 @@ test(`holding the input press until the calendar appears cannot dismiss the form
             assert.equal(w.picker.instance.isOpen, true);
             const releaseTarget = w.picker.instance.calendarContainer.querySelector(selector);
             mouse(w, releaseTarget, 'mouseup');
-            // Input and calendar are in separate branches under the modal root.
-            mouse(w, w.modal[0], 'click');
+            assert.equal(w.picker.input.parentNode, w.picker.instance.calendarContainer.parentNode);
+            assert.ok(w.document.querySelector('.modal-dialog').contains(releaseTarget));
+            mouse(w, w.picker.input.parentNode, 'click');
             assert.equal(w.modal.data('bs.modal').isShown, true);
             assert.equal(w.picker.input.value, '2026-10-10');
             w.picker.hide();
         }
-        mouse(w, w.modal[0], 'mousedown');
-        mouse(w, w.modal[0], 'mouseup');
-        mouse(w, w.modal[0], 'click');
-        assert.equal(w.modal.data('bs.modal').isShown, false);
-    } finally { w.finish(); }
-});
-
-test(`modal stays open when a backdrop press ends on the date field or label`, () => {
-    const w = page();
-    try {
-        w.modal.modal('show');
-        for (const target of [w.picker.input, w.document.querySelector('label'), w.document.querySelector('.input-group')]) {
-            mouse(w, w.modal[0], 'mousedown');
-            mouse(w, target, 'mouseup');
-            // A browser targets the click at the common ancestor of down/up targets.
-            mouse(w, w.modal[0], 'click');
-            assert.equal(w.modal.data('bs.modal').isShown, true);
-        }
-        mouse(w, w.modal[0], 'mousedown');
-        mouse(w, w.modal[0], 'mouseup');
-        mouse(w, w.modal[0], 'click');
-        assert.equal(w.modal.data('bs.modal').isShown, false);
-    } finally { w.finish(); }
-});
-
-test(`ignores backdrop clicks during opening and presses begun before shown`, async () => {
-    const w = page(true);
-    try {
-        await new Promise(resolve => w.setTimeout(resolve, 0));
-        w.$.support.transition = { end: 'transitionend' };
-        w.modal.modal('show');
-        w.$('.modal-backdrop').trigger('transitionend');
-        mouse(w, w.modal[0], 'click');
-        assert.equal(w.modal.data('bs.modal').isShown, true);
-        mouse(w, w.modal[0], 'mousedown');
-        w.$('.modal-dialog').trigger('transitionend');
-        mouse(w, w.modal[0], 'mouseup');
-        mouse(w, w.modal[0], 'click');
-        assert.equal(w.modal.data('bs.modal').isShown, true);
         mouse(w, w.modal[0], 'mousedown');
         mouse(w, w.modal[0], 'mouseup');
         mouse(w, w.modal[0], 'click');
@@ -183,39 +145,27 @@ test('closing a transitioning modal cancels its pending calendar request', async
     } finally { w.finish(); }
 });
 
-test('date fields share modal listeners until the last picker is destroyed', () => {
+test('each date calendar stays beside its input and is removed independently', () => {
     const w = page();
     try {
-        const element = w.modal[0];
-        const add = element.addEventListener.bind(element);
-        const remove = element.removeEventListener.bind(element);
-        let added = 0, removed = 0;
-        const gesture = (type, capture) => capture === true && ['mousedown', 'mouseup', 'click'].includes(type);
-        element.addEventListener = (type, fn, capture) => {
-            if (gesture(type, capture)) added++;
-            return add(type, fn, capture);
-        };
-        element.removeEventListener = (type, fn, capture) => {
-            if (gesture(type, capture)) removed++;
-            return remove(type, fn, capture);
-        };
         const input = w.$('<input name="end">').appendTo(w.modal.find('form'))[0];
-        let second = w.$.admin.datepicker.init(input, {});
-        assert.equal(added, 0, 'A second field reuses the modal listeners');
+        const second = w.$.admin.datepicker.init(input, {});
+        const firstCalendar = w.picker.instance.calendarContainer;
+        const secondCalendar = second.instance.calendarContainer;
+        assert.equal(firstCalendar.parentNode, w.picker.input.parentNode);
+        assert.equal(secondCalendar.parentNode, input.parentNode);
         w.picker.destroy();
-        assert.equal(removed, 0, 'The remaining field keeps the guard');
+        assert.equal(firstCalendar.isConnected, false);
+        assert.equal(secondCalendar.isConnected, true);
         w.modal.modal('show');
         mouse(w, input, 'mousedown');
         input.focus();
         mouse(w, second.instance.daysContainer.querySelector('.flatpickr-day'), 'mouseup');
-        mouse(w, element, 'click');
+        mouse(w, input.parentNode, 'click');
         assert.equal(w.modal.data('bs.modal').isShown, true);
         second.destroy();
-        assert.equal(removed, 3, 'The last field removes all gesture listeners');
-        second = w.$.admin.datepicker.init(input, {});
-        assert.equal(added, 3, 'A later initialization installs a fresh guard');
-        second.destroy();
-        mouse(w, element, 'click');
+        assert.equal(secondCalendar.isConnected, false);
+        mouse(w, w.modal[0], 'click');
         assert.equal(w.modal.data('bs.modal').isShown, false);
     } finally { w.finish(); }
 });

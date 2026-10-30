@@ -42,7 +42,9 @@ test('action runtime protects date gestures after loading and reopening the rend
             assert.equal(picker.instance.isOpen, true);
             picker.instance.daysContainer.querySelector('.flatpickr-day')
                 .dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
-            modal[0].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+            assert.equal(picker.instance.calendarContainer.parentNode, input.parentNode);
+            assert.ok(modal.find('.modal-dialog')[0].contains(picker.instance.calendarContainer));
+            input.parentNode.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
             assert.equal(modal.data('bs.modal').isShown, true);
             modal.find('[data-dismiss="modal"]').first().trigger('click');
             assert.equal(modal.data('bs.modal').isShown, false);
