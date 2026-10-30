@@ -257,6 +257,26 @@
         var baseMax = options.maxDate;
         var cleanup = [];
         var destroyed = false;
+        var modal = $(input).closest('.modal');
+        var modalNamespace = '.adminDatepickerModal' + id;
+        var modalOpening = !!(modal.hasClass('fade') && modal.data('bs.modal') &&
+            modal.data('bs.modal').isShown && !modal.hasClass('in'));
+        var pendingOpen = false;
+        if (modal.length) {
+            modal.on('show.bs.modal' + modalNamespace, function (event) {
+                if (event.target === this && !event.isDefaultPrevented()) modalOpening = true;
+            }).on('shown.bs.modal' + modalNamespace, function (event) {
+                if (event.target !== this) return;
+                modalOpening = false;
+                if (pendingOpen && !destroyed) {
+                    pendingOpen = false;
+                    controller.show();
+                }
+            }).on('hide.bs.modal' + modalNamespace, function (event) {
+                if (event.target === this && !event.isDefaultPrevented()) { modalOpening = false; pendingOpen = false; }
+            });
+            cleanup.push(function () { modal.off(modalNamespace); });
+        }
         var ignored = ['allowInputToggle', 'useCurrent', 'useStrict', 'sideBySide', 'icons', 'tooltips', 'widgetPositioning'];
         var unsupported = ['timeZone', 'disabledTimeIntervals', 'enabledHours', 'disabledHours', 'viewMode', 'toolbarPlacement', 'extraFormats', 'parseInputDate'];
         unsupported.forEach(function (key) {
@@ -318,6 +338,7 @@
             }].concat(options.onChange || []),
             onOpen: [function (dates, text, instance) {
                 if (locked()) { instance.close(); return; }
+                if (modalOpening) { pendingOpen = true; instance.close(); return; }
                 host.trigger('dp.show');
             }].concat(options.onOpen || []),
             onClose: [function () { host.trigger('dp.hide'); }].concat(options.onClose || []),
@@ -354,7 +375,7 @@
         if (options.defaultDate === false) delete config.defaultDate;
         if (options.widgetParent) config.appendTo = $(options.widgetParent)[0];
         // Keep the calendar inside Bootstrap's focus trap, including nested Action dialogs.
-        if (!config.appendTo && !config.inline) config.appendTo = $(input).closest('.modal')[0] || undefined;
+        if (!config.appendTo && !config.inline) config.appendTo = modal[0] || undefined;
         if (config.inline) config.appendTo = input.parentNode;
         var disable = [].concat(config.disable || []);
         if (options.disabledDates) disable = disable.concat(options.disabledDates.map(function (value) {
@@ -373,8 +394,13 @@
 
         var controller = {
             input: input, baseMin: baseMin, baseMax: baseMax,
-            show: function () { if (!locked()) fp.open(); return controller; },
-            hide: function () { fp.close(); return controller; },
+            show: function () {
+                if (locked()) return controller;
+                if (modalOpening) pendingOpen = true;
+                else fp.open();
+                return controller;
+            },
+            hide: function () { pendingOpen = false; fp.close(); return controller; },
             clear: function () { invalid = null; rawValue = ''; input.setCustomValidity(''); fp.clear(); return controller; },
             date: function (value) {
                 if (!arguments.length) return fp.selectedDates.length ? new DateValue(fp.selectedDates[0], nativeFormat, locale) : null;
@@ -424,6 +450,15 @@
         }
         function guardInput(event) {
             if (locked()) { event.stopImmediatePropagation(); return; }
+            if (modalOpening && (event.type === 'focus' || event.type === 'click')) {
+                pendingOpen = true;
+                event.stopImmediatePropagation();
+                return;
+            }
+            if (event.type === 'keydown' && (event.key === 'Escape' || event.keyCode === 27) && fp && fp.isOpen) {
+                fp.close();
+                event.stopPropagation();
+            }
             if (event.type === 'blur' || (event.type === 'keydown' && event.key === 'Enter')) {
                 validate();
                 if (input.validity.customError) {
@@ -446,6 +481,24 @@
         ['click', 'mousedown', 'touchstart', 'keydown', 'input', 'change', 'increment', 'blur'].forEach(function (type) {
             fp.calendarContainer.addEventListener(type, guardCalendar, true);
             cleanup.push(function () { fp.calendarContainer.removeEventListener(type, guardCalendar, true); });
+        });
+        // Bootstrap protects drags that begin in .modal-dialog, but this calendar
+        // is its sibling. Give calendar presses the same backdrop-click protection.
+        function calendarPress() {
+            if (!modal.length) return;
+            modal.off('mouseup' + modalNamespace).one('mouseup' + modalNamespace, function (event) {
+                var instance = modal.data('bs.modal');
+                if (event.target === modal[0] && instance) instance.ignoreBackdropClick = true;
+            });
+        }
+        function calendarKeydown(event) {
+            if (event.key === 'Escape' || event.keyCode === 27) event.stopPropagation();
+        }
+        fp.calendarContainer.addEventListener('mousedown', calendarPress);
+        fp.calendarContainer.addEventListener('keydown', calendarKeydown);
+        cleanup.push(function () {
+            fp.calendarContainer.removeEventListener('mousedown', calendarPress);
+            fp.calendarContainer.removeEventListener('keydown', calendarKeydown);
         });
         var stateObserver = new MutationObserver(function (records) {
             if (records.some(function (record) { return record.target === input && record.attributeName === 'readonly'; })) managedReadonly = false;
