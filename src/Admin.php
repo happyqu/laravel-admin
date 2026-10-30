@@ -266,6 +266,7 @@ class Admin
                 $router->match(['GET', 'POST'], '_load_action_', 'HandleController@loadAction')->name('admin.load-action');
                 $router->get('_handle_selectable_', 'HandleController@handleSelectable')->name('admin.handle-selectable');
                 $router->get('_handle_renderable_', 'HandleController@handleRenderable')->name('admin.handle-renderable');
+                $router->get('_cascader_', 'CascaderController')->name('admin.cascader');
             });
 
             $authController = config('admin.auth.controller', AuthController::class);

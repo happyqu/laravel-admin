@@ -120,6 +120,15 @@ $form->multipleSelect('labels', '标签')->options([1 => '标签一', 2 => '标�
 
 选择类字段还包括 `checkbox`、`radio`、`radioButton`、`radioCard`、`checkboxButton`、`checkboxCard` 和 `listbox`。选项键是提交值，标签用于显示；数值 `0` 是有效选择。
 
+独立的 `cascader` 组件支持多级选择、跨 Model 和第三方数据源，form/filter 共用同一配置方式，详见 [Cascader 使用说明](docs/cascader.md)。
+
+省市区数据已内置，使用 `Encore\Admin\Cascader\RegionSource` 即可直接提交省、市、区名称，无需地区 Model：
+
+```php
+$form->cascader(['province', 'city', 'district'], '所属地区')
+    ->source(\Encore\Admin\Cascader\RegionSource::class);
+```
+
 `readonly()` 表示只读，`disable()` 表示禁用。内置表单在服务端过滤这些字段的客户端修改；自定义提交接口需要自行执行同等校验。数值字段允许清空，完成编辑或提交时处理上下限，业务规则仍应通过 `rules()` 声明。
 
 ### 条件联动

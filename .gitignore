@@ -16,7 +16,8 @@ Thumbs.db
 .DS_Store
 desktop.ini
 
-/examples/
+/examples/*
+!/examples/cascader/
 /test-results/
 *.zip
 

@@ -14,6 +14,7 @@ use Illuminate\Support\Arr;
  * @method Field\RadioButton    radioButton($column, $label = '')
  * @method Field\RadioCard      radioCard($column, $label = '')
  * @method Field\Select         select($column, $label = '')
+ * @method Field\Cascader       cascader($columns, $label = '')
  * @method Field\MultipleSelect multipleSelect($column, $label = '')
  * @method Field\Textarea       textarea($column, $label = '')
  * @method Field\Hidden         hidden($column, $label = '')
@@ -71,6 +72,7 @@ trait HasFields
      * @var array
      */
     public static $availableFields = [
+        'cascader'          => Field\Cascader::class,
         'button'            => Field\Button::class,
         'checkbox'          => Field\Checkbox::class,
         'checkboxButton'    => Field\CheckboxButton::class,

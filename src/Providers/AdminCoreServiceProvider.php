@@ -68,6 +68,8 @@ class AdminCoreServiceProvider extends ServiceProvider
 
     protected function registerTranslations()
     {
+        $this->loadTranslationsFrom(__DIR__.'/../../resources/lang', 'admin');
+
         $this->callAfterResolving('translator', function ($translator) {
             if ($translator->getLoader() instanceof AdminTranslationLoader) {
                 return;

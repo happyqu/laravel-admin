@@ -42,6 +42,17 @@ return array (
     array (
     ),
   ),
+  'Encore\\Admin\\Form\\Field\\Cascader' =>
+  array (
+    'css' =>
+    array (
+      0 => '/vendor/laravel-admin/laravel-admin/cascader.css',
+    ),
+    'js' =>
+    array (
+      0 => '/vendor/laravel-admin/laravel-admin/cascader.js',
+    ),
+  ),
   'Encore\\Admin\\Form\\Field\\Checkbox' => 
   array (
     'css' => 

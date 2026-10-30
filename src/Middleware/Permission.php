@@ -93,6 +93,7 @@ class Permission
             '_handle_form_',
             '_handle_selectable_',
             '_handle_renderable_',
+            '_cascader_',
         ]);
 
         return collect($excepts)

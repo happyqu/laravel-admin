@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
  * Class Filter.
  *
  * @method AbstractFilter equal($column, $label = '')
+ * @method Filter\Cascader cascader($columns, $label = '')
  * @method AbstractFilter notEqual($column, $label = '')
  * @method AbstractFilter leftLike($column, $label = '')
  * @method AbstractFilter like($column, $label = '')
@@ -51,6 +52,7 @@ class Filter implements Renderable
      * @var array
      */
     protected static $supports = [
+        'cascader'   => Filter\Cascader::class,
         'equal'      => Filter\Equal::class,
         'notEqual'   => Filter\NotEqual::class,
         'ilike'      => Filter\Ilike::class,
