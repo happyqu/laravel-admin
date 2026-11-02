@@ -88,6 +88,10 @@ class Grid
      */
     protected $builder;
 
+    protected $builderCalled = false;
+
+    protected $queryApplied = false;
+
     /**
      * Mark if the grid is builded.
      *
@@ -547,6 +551,12 @@ class Grid
      */
     public function applyQuery()
     {
+        $this->callBuilder();
+
+        if ($this->queryApplied) {
+            return;
+        }
+
         $this->applyQuickSearch();
 
         $this->applyColumnFilter();
@@ -554,6 +564,24 @@ class Grid
         $this->applyColumnSearch();
 
         $this->applySelectorQuery();
+
+        $this->queryApplied = true;
+    }
+
+    /**
+     * Configure the grid once before applying queries or exporting.
+     */
+    protected function callBuilder()
+    {
+        if ($this->builderCalled) {
+            return;
+        }
+
+        $this->builderCalled = true;
+
+        if ($this->builder) {
+            call_user_func($this->builder, $this);
+        }
     }
 
     /**
@@ -949,6 +977,8 @@ class Grid
      */
     public function render()
     {
+        $this->callBuilder();
+
         $this->handleExportRequest(true);
 
         $this->build();

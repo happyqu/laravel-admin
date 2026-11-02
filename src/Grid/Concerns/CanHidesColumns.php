@@ -73,9 +73,10 @@ trait CanHidesColumns
         $requestColumn = request(ColumnSelector::SELECT_COLUMN_NAME);
 
         $columns = $requestColumn ? explode(',', $requestColumn) : [];
+        $definedColumns = $this->columnNames ?: $this->columns->map->getName()->all();
 
         return array_filter($columns) ?:
-            array_values(array_diff($this->columnNames, $this->hiddenColumns));
+            array_values(array_diff($definedColumns, $this->hiddenColumns));
     }
 
     /**
@@ -86,10 +87,6 @@ trait CanHidesColumns
     public function visibleColumns()
     {
         $visible = $this->getVisibleColumnsFromQuery();
-
-        if (empty($visible)) {
-            return $this->columns;
-        }
 
         array_push($visible, Grid\Column::SELECT_COLUMN_NAME, Grid\Column::ACTION_COLUMN_NAME);
 
@@ -105,17 +102,7 @@ trait CanHidesColumns
      */
     public function visibleColumnNames()
     {
-        $visible = $this->getVisibleColumnsFromQuery();
-
-        if (empty($visible)) {
-            return $this->columnNames;
-        }
-
-        array_push($visible, Grid\Column::SELECT_COLUMN_NAME, Grid\Column::ACTION_COLUMN_NAME);
-
-        return collect($this->columnNames)->filter(function ($column) use ($visible) {
-            return in_array($column, $visible);
-        })->toArray();
+        return $this->visibleColumns()->map->getName()->all();
     }
 
     /**

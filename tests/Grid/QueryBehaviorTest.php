@@ -266,6 +266,77 @@ class QueryBehaviorTest extends TestCase
         $this->assertSame([['count' => '']], $column->fill([['count' => 0]]));
     }
 
+    public function test_display_supports_static_and_model_bound_callbacks_in_order(): void
+    {
+        $rows = [(new ReviewChild())->forceFill(['title' => 'a', 'id' => 7])];
+        Grid\Column::setOriginalGridModels(collect($rows));
+        $column = (new Grid(new ReviewChild()))->column('title', 'Title');
+        $column->display(static fn ($value) => strtoupper($value));
+        $column->display(function ($value, $column) {
+            return $this->id.':'.$value.':'.$column->getOriginal();
+        });
+
+        $this->assertSame([['title' => '7:A:a']], $column->fill([['title' => 'a']]));
+    }
+
+    public function test_display_dynamic_chains_are_isolated_per_row_and_preserve_following_callbacks(): void
+    {
+        $data = [['title' => 'A'], ['title' => 'B'], ['title' => 'C']];
+        Grid\Column::setOriginalGridModels(collect(array_map(
+            static fn ($row) => (new ReviewChild())->forceFill($row), $data
+        )));
+        $column = (new Grid(new ReviewChild()))->column('title', 'Title');
+        $column->display(function ($value, $column) {
+            if ($this->title === 'B') {
+                return $value;
+            }
+
+            return $column->prefix('P', '')->suffix('S', '');
+        })->display(fn ($value) => '['.$value.']');
+
+        $expected = [['title' => '[PAS]'], ['title' => '[B]'], ['title' => '[PCS]']];
+        $this->assertSame($expected, $column->fill($data));
+        $this->assertSame($expected, $column->fill($data));
+    }
+
+    public function test_display_supports_nested_dynamic_callbacks_and_column_returns_without_callbacks(): void
+    {
+        Grid\Column::setOriginalGridModels(collect([new ReviewChild()]));
+        $column = (new Grid(new ReviewChild()))->column('title', 'Title');
+        $column->display(function ($value, $column) {
+            return $column->display(function ($value, $column) {
+                return $column->prefix('P', '')->suffix('S', '');
+            })->suffix('!', '');
+        })->display(function ($value, $column) {
+            return $column->style('color:red');
+        })->display(fn ($value) => '['.$value.']');
+
+        $this->assertSame([['title' => '[PAS!]']], $column->fill([['title' => 'A']]));
+    }
+
+    public function test_display_restores_callbacks_after_an_exception(): void
+    {
+        Grid\Column::setOriginalGridModels(collect([new ReviewChild()]));
+        $column = (new Grid(new ReviewChild()))->column('title', 'Title');
+        $column->display(function ($value, $column) {
+            $column->prefix('P', '');
+            if ($value === 'fail') {
+                throw new \RuntimeException('Display failed');
+            }
+
+            return $column;
+        })->display(fn ($value) => '['.$value.']');
+
+        try {
+            $column->fill([['title' => 'fail']]);
+            $this->fail('Expected the display callback to throw.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Display failed', $exception->getMessage());
+        }
+
+        $this->assertSame([['title' => '[PA]']], $column->fill([['title' => 'A']]));
+    }
+
     public function test_editable_attributes_preserve_quotes_and_ampersands(): void
     {
         $grid = new Grid(new ReviewChild());
@@ -278,6 +349,180 @@ class QueryBehaviorTest extends TestCase
         $dom->loadHTML($html);
         $this->assertSame($value, $dom->getElementsByTagName('a')->item(0)->getAttribute('data-value'));
         \Encore\Admin\Admin::$script = [];
+    }
+
+    public function test_constructor_builder_runs_once_before_list_query_conditions(): void
+    {
+        $this->request(['__search__' => 'needle', 'status' => '1']);
+        $calls = 0;
+        $grid = new Grid(new ReviewChild(), function ($grid) use (&$calls) {
+            $calls++;
+            $grid->column('title', 'Title');
+            $grid->column('status', 'Status')->filter();
+            $grid->quickSearch('title');
+            $grid->model()->where('tenant_id', 7);
+        });
+
+        $grid->applyQuery();
+        $grid->applyQuery();
+
+        $this->assertSame(1, $calls);
+        $this->assertSame([7, '%needle%', '1'], $grid->model()->getQueryBuilder()->getBindings());
+    }
+
+    public function test_rendered_export_runs_builder_and_keeps_its_row_constraints(): void
+    {
+        $this->request(['_export_' => 'all']);
+        Grid\Exporter::reset();
+        $calls = 0;
+        $grid = new Grid(new ReviewChild(), function ($grid) use (&$calls) {
+            $calls++;
+            $grid->column('title', 'Title');
+            $grid->model()->where('tenant_id', 7);
+        });
+
+        try {
+            $queries = $this->connection->pretend(function () use ($grid, &$csv) {
+                $csv = $this->captureCsv(fn () => $grid->render());
+            });
+            $this->assertSame("\xEF\xBB\xBFTitle\n", $csv);
+            $this->assertSame(1, $calls);
+            $this->assertStringContainsString('where `tenant_id` = ', $queries[0]['query']);
+            $this->assertSame([7], $queries[0]['bindings']);
+        } finally {
+            Grid\Exporter::reset();
+        }
+    }
+
+    public function test_query_export_applies_search_column_and_selector_conditions_once(): void
+    {
+        $this->request(['__search__' => 'needle', 'status' => '1', '_selector' => ['kind' => '2']]);
+        $grid = new Grid(new ReviewChild());
+        $grid->model()->where('tenant_id', 7);
+        $grid->column('title', 'Title');
+        $grid->column('status', 'Status')->filter();
+        $grid->quickSearch('title');
+        $grid->selector(function ($selector) { $selector->select('kind', 'Kind', [2 => 'Two']); });
+        $exporter = new class($grid) extends Grid\Exporters\AbstractExporter {
+            public function export() {}
+        };
+
+        $query = $exporter->getQuery();
+        $this->assertSame([7, '%needle%', '1', '2'], $query->getBindings());
+        $this->assertSame($query->toSql(), $exporter->getQuery()->toSql());
+        $this->assertSame($query->getBindings(), $exporter->getQuery()->getBindings());
+    }
+
+    public function test_csv_respects_hidden_columns_before_building_the_grid(): void
+    {
+        $grid = new Grid(new ReviewChild());
+        $grid->column('title', 'Title');
+        $grid->column('secret', 'Secret')->hide();
+        $exporter = new class($grid) extends Grid\Exporters\CsvExporter {
+            public function chunk(callable $callback, $count = 100)
+            {
+                $callback(collect([(new ReviewChild())->forceFill(['title' => 'Visible', 'secret' => 'hidden-value'])]));
+            }
+        };
+
+        $this->assertSame("\xEF\xBB\xBFTitle\nVisible\n", $this->captureCsv(fn () => $exporter->export()));
+
+        // A user can still explicitly select a column that is only hidden by default.
+        $this->request(['_columns_' => 'secret']);
+        $this->assertSame("\xEF\xBB\xBFSecret\nhidden-value\n", $this->captureCsv(fn () => $exporter->export()));
+
+        $this->request([]);
+        $grid->hideColumns(['title']);
+        $this->assertSame([], $grid->visibleColumnNames());
+        $this->assertTrue($grid->visibleColumns()->isEmpty());
+        $this->assertStringNotContainsString('hidden-value', $this->captureCsv(fn () => $exporter->export()));
+    }
+
+    public function test_default_values_escape_plain_text_without_double_encoding_renderers(): void
+    {
+        Grid\Column::setOriginalGridModels(collect([new ReviewChild()]));
+        $grid = new Grid(new ReviewChild());
+        $value = '<img src=x onerror=alert(1)> & text';
+        $column = $grid->column('title', 'Title')->default('-');
+        $this->assertSame([['title' => e($value)]], $column->fill([['title' => $value]]));
+        $this->assertSame([['title' => '-']], $column->fill([['title' => null]]));
+        $column->default('fallback');
+        $this->assertSame([['title' => e($value)]], $column->fill([['title' => $value]]));
+
+        $column = $grid->column('label', 'Label')->default('-')->label();
+        $this->assertSame([['label' => "<span class='label label-success'>".e($value).'</span>']], $column->fill([['label' => $value]]));
+
+        $column = $grid->column('html', 'HTML')->display(fn ($value) => '<b>'.e($value).'</b>')->default('-');
+        $this->assertSame([['html' => '<b>'.e($value).'</b>']], $column->fill([['html' => $value]]));
+        $column = $grid->column('fallback', 'Fallback')->default(new \Illuminate\Support\HtmlString('<b>Empty</b>'));
+        $result = $column->fill([['fallback' => null]]);
+        $this->assertSame('<b>Empty</b>', (string) $result[0]['fallback']);
+    }
+
+    public function test_dynamic_defaults_are_escaped_only_after_the_complete_display_chain(): void
+    {
+        Grid\Column::setOriginalGridModels(collect([new ReviewChild()]));
+        $grid = new Grid(new ReviewChild());
+        $value = '<img src=x onerror=alert(1)> & text';
+        $dynamicDefault = function ($value, $column) {
+            return $column->default('-');
+        };
+
+        $column = $grid->column('plain')->display($dynamicDefault);
+        $this->assertSame([['plain' => e($value)]], $column->fill([['plain' => $value]]));
+        $this->assertSame([['plain' => '-']], $column->fill([['plain' => null]]));
+
+        $column = $grid->column('label')->display($dynamicDefault)->label()->default('-');
+        $this->assertSame([['label' => "<span class='label label-success'>".e($value).'</span>']], $column->fill([['label' => $value]]));
+        $this->assertSame([['label' => "<span class='label label-success'>-</span>"]], $column->fill([['label' => null]]));
+
+        $column = $grid->column('nested')->display(function ($value, $column) use ($dynamicDefault) {
+            return $column->display($dynamicDefault);
+        })->label();
+        $this->assertSame([['nested' => "<span class='label label-success'>".e($value).'</span>']], $column->fill([['nested' => $value]]));
+
+        $column = $grid->column('html')->display(function ($value, $column) {
+            return $column->default(new \Illuminate\Support\HtmlString('<b>Empty</b>'));
+        });
+        $result = $column->fill([['html' => null]]);
+        $this->assertSame('<b>Empty</b>', (string) $result[0]['html']);
+    }
+
+    public function test_named_grid_pagination_preserves_names_and_explicit_arguments(): void
+    {
+        foreach ([[], ['comments_per_page' => '30'], ['comments_per_page' => '999']] as $input) {
+            $this->request($input);
+            $grid = (new Grid(new ReviewChild()))->setName('comments')->paginate(10);
+            $this->connection->pretend(function () use ($grid) { $grid->model()->buildData(false); });
+            $paginator = $grid->model()->eloquent();
+            $this->assertSame('comments_page', $paginator->getPageName());
+            $this->assertSame(isset($input['comments_per_page']) && $input['comments_per_page'] === '30' ? 30 : 10, $paginator->perPage());
+            $this->assertStringContainsString('comments_page=2', $paginator->url(2));
+        }
+
+        $this->request([]);
+        $grid = (new Grid(new ReviewChild()))->setName('comments');
+        $grid->model()->paginate(15, ['title'], 'custom_page');
+        $this->connection->pretend(function () use ($grid) { $grid->model()->buildData(false); });
+        $this->assertSame('custom_page', $grid->model()->eloquent()->getPageName());
+        $this->assertSame(15, $grid->model()->eloquent()->perPage());
+    }
+
+    private function captureCsv(callable $export): string
+    {
+        try {
+            $export();
+            $this->fail('Expected a streamed export response.');
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $exception) {
+            ob_start();
+            try {
+                ($exception->getResponse()->getCallback())();
+
+                return str_replace("\r\n", "\n", ob_get_contents());
+            } finally {
+                ob_end_clean();
+            }
+        }
     }
 
     public function test_invalid_export_scopes_return_a_client_error(): void

@@ -61,6 +61,8 @@ abstract class AbstractExporter implements ExporterInterface
      */
     public function getData($toArray = true)
     {
+        $this->grid->applyQuery();
+
         return $this->grid->getFilter()->execute($toArray);
     }
 
@@ -90,6 +92,8 @@ abstract class AbstractExporter implements ExporterInterface
      */
     public function getQuery()
     {
+        $this->grid->applyQuery();
+
         $model = $this->grid->getFilter()->getModel();
 
         $queryBuilder = $model->getQueryBuilder();

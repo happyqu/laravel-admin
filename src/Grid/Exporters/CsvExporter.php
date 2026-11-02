@@ -155,6 +155,8 @@ class CsvExporter extends AbstractExporter
      */
     public function export()
     {
+        $this->grid?->applyQuery();
+
         if ($this->callback) {
             call_user_func($this->callback, $this);
         }

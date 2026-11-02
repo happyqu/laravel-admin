@@ -7,6 +7,7 @@ use Encore\Admin\Actions\RowAction;
 use Encore\Admin\Grid;
 use Encore\Admin\Grid\Displayers\AbstractDisplayer;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model as BaseModel;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -87,6 +88,13 @@ class Column
      * @var []Closure
      */
     protected $displayCallbacks = [];
+
+    /**
+     * Callbacks that leave their output as plain text until another renderer runs.
+     *
+     * @var Closure[]
+     */
+    protected $textCallbacks = [];
 
     /**
      * Defined columns.
@@ -544,18 +552,40 @@ class Column
      */
     protected function callDisplayCallbacks($value, $key)
     {
-        foreach ($this->displayCallbacks as $callback) {
-            $previous = $value;
+        $escapeOutput = true;
+        $value = $this->evaluateDisplayCallbacks($value, $key, $escapeOutput);
 
-            $callback = $this->bindOriginalRowModel($callback, $key);
-            $value = call_user_func_array($callback, [$value, $this]);
+        return $escapeOutput && !$value instanceof Htmlable ? $this->htmlEntityEncode($value) : $value;
+    }
 
-            if (($value instanceof static) &&
-                ($last = array_pop($this->displayCallbacks))
-            ) {
-                $last = $this->bindOriginalRowModel($last, $key);
-                $value = call_user_func_array($last, [$previous, $this]);
+    /**
+     * Evaluate nested chains without encoding values needed by later renderers.
+     */
+    protected function evaluateDisplayCallbacks($value, $key, bool &$escapeOutput)
+    {
+        $callbacks = $this->displayCallbacks;
+        $textCallbacks = $this->textCallbacks;
+
+        try {
+            foreach ($callbacks as $callback) {
+                $textOutput = in_array($callback, $textCallbacks, true);
+                // Keep callbacks added while displaying a row local to this invocation.
+                $this->displayCallbacks = [];
+                $this->textCallbacks = [];
+                $previous = $value;
+
+                $callback = $this->bindOriginalRowModel($callback, $key);
+                $value = call_user_func_array($callback, [$value, $this]);
+
+                if ($value instanceof static) {
+                    $value = $this->evaluateDisplayCallbacks($previous, $key, $escapeOutput);
+                } else {
+                    $escapeOutput = $escapeOutput && $textOutput;
+                }
             }
+        } finally {
+            $this->displayCallbacks = $callbacks;
+            $this->textCallbacks = $textCallbacks;
         }
 
         return $value;
@@ -571,6 +601,10 @@ class Column
      */
     protected function bindOriginalRowModel(Closure $callback, $key)
     {
+        if ((new \ReflectionFunction($callback))->isStatic()) {
+            return $callback;
+        }
+
         $rowModel = static::$originalGridModels[$key];
 
         return $callback->bindTo($rowModel);
@@ -624,6 +658,7 @@ class Column
     {
         // clear all display callbacks.
         $this->displayCallbacks = [];
+        $this->textCallbacks = [];
 
         $class = static::$defined[$this->name];
 

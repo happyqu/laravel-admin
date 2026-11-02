@@ -312,9 +312,13 @@ trait ExtendDisplay
      */
     public function default($default = '-')
     {
-        return $this->display(function ($value) use ($default) {
+        $callback = function ($value) use ($default) {
             return $value ?: $default;
-        });
+        };
+
+        $this->textCallbacks[] = $callback;
+
+        return $this->display($callback);
     }
 
     /**

@@ -78,6 +78,12 @@ class UploadPolicy
         }
         if (in_array($extension, ['docx', 'xlsx', 'pptx'], true)) {
             $allowed[] = 'application/zip';
+
+            // fileinfo may report Office ZIP files as generic binary data.
+            if ($mime === 'application/octet-stream'
+                && file_get_contents($file->getPathname(), false, null, 0, 4) === "PK\x03\x04") {
+                $mime = 'application/zip';
+            }
         }
         if (!$mime || !in_array($mime, $allowed, true)) {
             $this->reject($attribute);

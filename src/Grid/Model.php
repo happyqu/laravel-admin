@@ -465,28 +465,21 @@ class Model
      */
     protected function resolvePerPage($paginate)
     {
+        $arguments = $paginate['arguments'] ?? [$this->perPage];
         $perPage = request($this->perPageName);
         $perPage = is_numeric($perPage) ? (int) $perPage : 0;
 
         if ($perPage >= 1 && $perPage <= 500) {
-            if (is_array($paginate)) {
-                $paginate['arguments'][0] = $perPage;
-
-                return $paginate['arguments'];
-            }
-
             $this->perPage = $perPage;
+            $arguments[0] = $perPage;
         }
 
-        if (isset($paginate['arguments'][0])) {
-            return $paginate['arguments'];
+        if (($name = $this->grid?->getName()) && !isset($arguments[2])) {
+            $arguments[1] = $arguments[1] ?? ['*'];
+            $arguments[2] = "{$name}_page";
         }
 
-        if ($name = $this->grid?->getName()) {
-            return [$this->perPage, ['*'], "{$name}_page"];
-        }
-
-        return [$this->perPage];
+        return $arguments;
     }
 
     /**

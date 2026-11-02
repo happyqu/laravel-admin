@@ -299,6 +299,8 @@ protected $contextProperties = ['resourceId'];
 
 文件和图片字段执行服务端扩展名、实际 MIME、文件名及目标路径检查，包含头像接口；保存前再次校验。图片支持 JPEG、PNG、GIF、WebP、BMP；附件白名单由 `admin.upload.allowed_extensions` 配置。PHP、PHTML、PHAR、HTML、SVG 等类型不能通过白名单开启。
 
+DOCX、XLSX、PPTX 被识别为 `application/octet-stream` 时，会检查 ZIP 文件头并按已有的 `application/zip` 规则处理，无需 PHP `zip` 扩展。该检查不验证 Office 包内部结构。
+
 默认 `admin` 磁盘指向 `public/uploads`，宿主自定义同名磁盘优先。历史文件及自建上传接口需自行检查。
 
 ### 浏览器压缩与裁剪
