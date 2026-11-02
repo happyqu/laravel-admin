@@ -6,13 +6,19 @@ $.fn.editable.defaults.params = function (params) {
 };
 
 $.fn.editable.defaults.error = function (data) {
-    var msg = '';
-    if (data.responseJSON.errors) {
-        $.each(data.responseJSON.errors, function (k, v) {
-            msg += v + "\n";
+    var response = (data && data.responseJSON) || {};
+    var errors = response.errors || response.validation;
+    var messages = [];
+    if (errors && typeof errors === 'object') {
+        $.each(errors, function (key, value) {
+            if (value !== null && value !== undefined) {
+                messages.push($.isArray(value) ? value.join('\n') : String(value));
+            }
         });
     }
-    return msg
+    var message = response.message || response.msg;
+    return messages.join('\n') || (typeof message === 'string' ? message : '') ||
+        $('meta[name="admin-loading-text"]').attr('data-failed') || 'Request failed, please try again.';
 };
 
 toastr.options = {

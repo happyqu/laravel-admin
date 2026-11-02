@@ -180,6 +180,7 @@ class Editable extends AbstractDisplayer
         $this->options['name'] = $column = $this->getName();
 
         $class = 'grid-editable-'.preg_replace('/[^A-Za-z0-9_-]/', '-', (string) $column);
+        $editableClass = $class.'-'.substr(sha1($this->grid->tableID.':'.$column), 0, 12);
 
         $this->buildEditableOptions(func_get_args());
 
@@ -188,22 +189,28 @@ class Editable extends AbstractDisplayer
         $options = substr($options, 0, -1).<<<'STR'
     ,
     "success":function(response, newValue){
-        if (response.status){
+        if (response && response.status){
             $.admin.toastr.success(response.message, '', {positionClass:"toast-top-center"});
         } else {
-            $.admin.toastr.error(response.message, '', {positionClass:"toast-top-center"});
+            var message = response && (response.message || response.msg);
+            if (typeof message !== 'string' || !message) {
+                message = $('meta[name="admin-loading-text"]').attr('data-failed') || 'Request failed, please try again.';
+            }
+            $.admin.toastr.error(message, '', {positionClass:"toast-top-center"});
+            // X-Editable keeps the old value and the editor open when an error string is returned.
+            return message;
         }
     }
 }
 STR;
 
-        Admin::script("$('.$class').editable($options);");
+        Admin::script("$('.$editableClass').editable($options);");
 
         $value = e($this->value ?? '');
 
         $attributes = [
             'href'       => '#',
-            'class'      => $class,
+            'class'      => $class.' '.$editableClass,
             'data-type'  => $this->type,
             'data-pk'    => (string) $this->getKey(),
             'data-url'   => "{$this->getResource()}/{$this->getKey()}",
