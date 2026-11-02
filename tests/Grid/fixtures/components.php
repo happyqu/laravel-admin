@@ -9,6 +9,11 @@ $app->instance('config', new \Illuminate\Config\Repository([
 $app->instance('request', \Illuminate\Http\Request::create('/admin/records'));
 $app->instance('files', new \Illuminate\Filesystem\Filesystem());
 $app->register(\Illuminate\Translation\TranslationServiceProvider::class);
+$translations = require dirname(__DIR__, 3).'/resources/lang/en/admin.php';
+$app['translator']->addLines([
+    'admin.request_failed' => $translations['request_failed'],
+    'admin.refresh' => $translations['refresh'],
+], 'en');
 $app->register(\Illuminate\View\ViewServiceProvider::class);
 $app['view']->addNamespace('admin', dirname(__DIR__, 3).'/resources/views');
 

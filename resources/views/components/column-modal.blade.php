@@ -33,15 +33,28 @@
 <script>
     var modal = $('#grid-modal-{{ $name }}');
     var modalBody = modal.find('.modal-body');
+    var loadId = 0;
 
     var load = function (url) {
+        var currentLoad = ++loadId;
 
         modalBody.html("<div class='loading text-center' style='height:200px;'>\
                 <i class='fa fa-spinner fa-pulse fa-3x fa-fw' style='margin-top: 80px;'></i>\
             </div>");
 
         $.get(url, function (data) {
+            if (currentLoad !== loadId) return;
             modalBody.html(data);
+        }).fail(function () {
+            if (currentLoad !== loadId) return;
+
+            var error = $('<div class="alert alert-danger text-center" role="alert">');
+            $('<p>').text(@json(trans('admin.request_failed'))).appendTo(error);
+            $('<button type="button" class="btn btn-default modal-load-retry">')
+                .text(@json(trans('admin.refresh')))
+                .on('click', function () { load(url); })
+                .appendTo(error);
+            modalBody.empty().append(error);
         });
     };
 
