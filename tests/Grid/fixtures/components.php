@@ -4,7 +4,7 @@ require dirname(__DIR__, 3).'/vendor/autoload.php';
 
 $app = new \Illuminate\Foundation\Application(dirname(__DIR__, 3));
 $app->instance('config', new \Illuminate\Config\Repository([
-    'app' => ['locale' => 'en'], 'view' => ['paths' => [], 'compiled' => sys_get_temp_dir()],
+    'app' => ['locale' => 'en', 'timezone' => 'Asia/Shanghai'], 'view' => ['paths' => [], 'compiled' => sys_get_temp_dir()],
 ]));
 $app->instance('request', \Illuminate\Http\Request::create('/admin/records'));
 $app->instance('files', new \Illuminate\Filesystem\Filesystem());
@@ -33,6 +33,20 @@ foreach (['input', 'radio', 'multiple-select', 'upload', 'datetime'] as $type) {
         'script' => implode("\n", \Encore\Admin\Admin::$script),
     ];
 }
+// Render the real date column so browser tests exercise its initial value too.
+\Encore\Admin\Admin::$script = [];
+\Encore\Admin\Admin::$html = [];
+$row = new class extends \Illuminate\Database\Eloquent\Model {};
+$row->id = 7;
+$grid = (new \Encore\Admin\Grid($row))->setResource('/admin/records');
+\Encore\Admin\Grid\Column::setOriginalGridModels(collect([$row]));
+$column = $grid->column('field_date', 'Date')->date();
+$html = $column->fill([['field_date' => '2026-11-01T16:30:00.000000Z']])[0]['field_date'];
+$components['date'] = [
+    'html' => $html.implode("\n", \Encore\Admin\Admin::$html),
+    'script' => implode("\n", \Encore\Admin\Admin::$script),
+];
+
 foreach (['expand', 'modal'] as $type) {
     foreach (['001', 'row&2/#'] as $index => $key) {
         \Encore\Admin\Admin::$script = [];

@@ -160,6 +160,15 @@ $form->timeRange('start_time', 'end_time');
 $form->DateMultiple('dates')->format('DD/MM/YYYY');
 ```
 
+Grid 列传入 PHP 日期格式时只读展示；不传格式的 `date()` 保留行内编辑行为。展示按 `app.timezone` 转换，空值显示为空。
+
+```php
+$grid->column('created_at')->date('Y-m-d');    // 只读日期，例如 2026-11-02
+$grid->column('created_at')->date('Y/m/d');    // 只读日期，例如 2026/11/02
+$grid->column('published_at')->date();        // 行内日期编辑，YYYY-MM-DD
+$grid->column('scheduled_at')->datetime('YYYY-MM-DD HH:mm:ss'); // 行内编辑使用兼容格式
+```
+
 范围组件提交两个独立字段。手工输入会检查日期格式、配置边界及范围顺序；无效输入保留在页面中，并阻止正常表单提交。服务端业务校验仍需通过 `rules()` 配置。
 
 - `format()` 使用兼容格式，例如 `YYYY-MM-DD`、`HH:mm:ss`，支持方括号字面量。

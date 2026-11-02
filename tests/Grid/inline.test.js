@@ -13,7 +13,12 @@ function page(types) {
         runScripts: 'outside-only', url: 'http://localhost/',
     }).window;
     w.eval(fs.readFileSync(path.join(root, 'resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'), 'utf8'));
-    w.$.fn.popover = function () { return this; };
+    w.$.fn.popover = function (options) {
+        if (options && typeof options === 'object') {
+            this.each(function () { w.$(this).data('testPopoverOptions', options); });
+        }
+        return this;
+    };
     w.LA = { token: 'csrf' };
     w.toastr = { success() {}, error() {} };
     w.$.admin = { isResponseError: data => data.status === false, responseMessage: data => data && data.message, notifyThenNavigate() {} };
@@ -24,8 +29,9 @@ function page(types) {
 }
 
 function open(w, type) {
-    const trigger = w.$('.trigger-' + type);
-    const tip = w.$('<div class="popover in">').append(w.$('#target-' + type).html()).appendTo('body');
+    const trigger = w.$('[data-toggle="popover"][data-name="field_' + type + '"]');
+    const options = trigger.data('testPopoverOptions');
+    const tip = w.$('<div class="popover in">').append(options.content.call(trigger[0])).appendTo('body');
     trigger.data('bs.popover', { $tip: tip });
     trigger.trigger('shown.bs.popover');
     return tip.find('.ie-content');
@@ -87,6 +93,34 @@ test('inline failures preserve the value and render validation messages as text'
         assert.match(content.find('.error').text(), /<img/);
         assert.equal(content.find('.ie-submit').prop('disabled'), false);
     } finally { w.close(); }
+});
+
+test('inline date starts formatted, skips unchanged saves, and submits a changed date', () => {
+    const { w, calls } = page(['date']);
+    try {
+        const trigger = w.$('[data-name="field_date"]');
+        assert.equal(trigger.find('.ie-display').text(), '2026-11-02');
+        assert.equal(trigger.data('original'), '2026-11-02');
+        for (const asset of ['laravel-admin/flatpickr-local.js', 'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+            w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
+        }
+        const content = open(w, 'date');
+        const input = content.find('.ie-input');
+        const picker = input.data('adminDatepicker');
+        assert.equal(picker.instance.config.dateFormat, 'Y-m-d');
+        assert.equal(input.val(), '2026-11-02');
+        content.find('.ie-submit').trigger('click');
+        assert.equal(calls.length, 0, 'opening a timestamp as a date must not save an unchanged value');
+
+        picker.date('2026-11-03');
+        content.find('.ie-submit').trigger('click');
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].data.field_date, '2026-11-03');
+        calls[0].success({ status: true, message: 'Saved' });
+        calls[0].complete();
+        assert.equal(trigger.find('.ie-display').text(), '2026-11-03');
+        assert.equal(trigger.data('original'), '2026-11-03');
+    } finally { if (w.$.admin.datepicker) w.$.admin.datepicker.destroy(); w.close(); }
 });
 
 test('inline datetime normalizes manual input before an AJAX save without blur', () => {

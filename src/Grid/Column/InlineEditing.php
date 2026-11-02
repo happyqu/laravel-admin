@@ -67,14 +67,18 @@ trait InlineEditing
     }
 
     /**
-     * Grid inline date picker.
+     * Format a read-only date with PHP tokens, or keep the legacy inline picker without a format.
      *
-     * @param string $format
+     * @param string|null $format
      *
      * @return $this
      */
-    public function date()
+    public function date($format = null)
     {
+        if ($format !== null) {
+            return $this->displayUsing(Displayers\Date::class, [$format]);
+        }
+
         return $this->datetime('YYYY-MM-DD');
     }
 
