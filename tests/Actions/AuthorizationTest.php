@@ -114,6 +114,31 @@ class AuthorizationTest extends TestCase
         ]), $loading);
     }
 
+    public function test_configurable_callback_and_dialog_survive_signed_context_resolution(): void
+    {
+        $grid = $this->createMock(\Encore\Admin\Grid::class);
+        $gridModel = $this->createMock(\Encore\Admin\Grid\Model::class);
+        $gridModel->method('getOriginalModel')->willReturn($this->rows[0]);
+        $grid->method('model')->willReturn($gridModel);
+        $action = (new \Encore\Admin\Actions\CallbackRowAction())->setGrid($grid)
+            ->setRow($this->rows->first())->setName('Approve')->setDialog('Continue?')
+            ->setCallback(self::class, 'configuredCallback');
+        $token = $this->context->register($action);
+        [$rebuilt, $model] = $this->context->resolve(Request::create('/execute', 'POST', [
+            '_action_token' => $token, '_key' => 1, '_class' => 'Invalid', '_cb' => 'invalid',
+        ]));
+        $this->assertSame('Approve', $rebuilt->name());
+        $this->assertSame('Continue?', $rebuilt->loadInteraction()['settings']['title']);
+        $response = $rebuilt->handle($model, request());
+        $this->assertTrue($response->status);
+        $this->assertSame('Approved 1', $response->getPlugin()->getOptions()['swal']['title']);
+    }
+
+    public static function configuredCallback($model, Request $request)
+    {
+        return (new \Encore\Admin\Actions\Response())->swal()->success('Approved '.$model->getKey());
+    }
+
     public function test_runtime_setters_are_encrypted_and_restored_for_loading_and_submission(): void
     {
         $action = new AuthorizationRuntimeForm();

@@ -261,6 +261,10 @@ $form->tools(function ($tools) {
 
 跳转链接、独立下载和自建接口仍需自行授权，按钮可见性不能替代接口授权。旧的 `Grid\Tools\BatchAction` 和原始 HTML 按钮不属于上述 API。
 
+### 可配置 Action
+
+服务端可直接用 `CallbackRowAction`、`CallbackBatchAction` 和 `CallbackAction` 绑定公共静态回调，无需为每个按钮声明子类；`setName()`、`setDialog()` 和 `ButtonAction` 分别提供名称、确认弹窗与工具栏按钮配置，详见 [可配置 Action 说明](docs/configurable-actions.md)。
+
 ### 运行时参数
 
 自定义 Action 中，通过 setter 设置的少量标量、数组属性会自动跨请求恢复，无需额外构造方法或属性白名单。例如在自定义类中：

@@ -128,7 +128,11 @@ class Dialog extends Interactor
     public function settings(): array
     {
         $this->settings = [];
-        $this->action->dialog();
+        if ($this->action->getDialog() !== null) {
+            $this->confirm($this->action->getDialog());
+        } else {
+            $this->action->dialog();
+        }
         return array_merge($this->defaultSettings(), $this->settings);
     }
 

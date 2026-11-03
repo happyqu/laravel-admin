@@ -44,6 +44,9 @@ abstract class Action implements Renderable
 
     private const AUTOMATIC_CONTEXT_PREFIX = 'runtime2:';
 
+    /** Framework properties that only hold setter configuration and must survive a rebuild. */
+    private const CONFIGURABLE_CONTEXT_PROPERTIES = ['dialogMessage', 'nameConfiguration', 'link', 'hrefTarget'];
+
     /**
      * @var Response
      */
@@ -85,13 +88,52 @@ abstract class Action implements Renderable
     protected $contextProperties = [];
 
     /**
-     * @var array
-     */
-
-    /**
      * @var string
      */
     public $name;
+
+    /**
+     * Confirmation message configured with setDialog() for actions without a declared dialog().
+     *
+     * @var string|null
+     */
+    protected $dialogMessage;
+
+    /**
+     * Name configured with setName().
+     *
+     * Public $name stays the rendering source so display strings never enter the signed
+     * ticket, but a configured name must survive the rebuild of the executing action.
+     *
+     * @var string|null
+     */
+    protected $nameConfiguration;
+
+    public function setName($name)
+    {
+        $this->name = $name;
+        $this->nameConfiguration = $name;
+
+        return $this;
+    }
+
+    public function setDialog($message)
+    {
+        // A declared dialog() is the class's own configuration; a setter must not silently replace it.
+        if (method_exists($this, 'form') || method_exists($this, 'dialog')) {
+            throw new \LogicException('A form or dialog action cannot use setDialog().');
+        }
+
+        $this->dialogMessage = $message;
+        $this->initInteractor();
+
+        return $this;
+    }
+
+    public function getDialog()
+    {
+        return $this->dialogMessage;
+    }
 
     /**
      * Action constructor.
@@ -111,20 +153,26 @@ abstract class Action implements Renderable
     }
 
     /**
+     * Build the interactor from the class definition and the configured dialog.
+     *
      * @throws \Exception
      */
     protected function initInteractor()
     {
-        if ($hasForm = method_exists($this, 'form')) {
+        $hasForm = method_exists($this, 'form');
+        $hasDialog = method_exists($this, 'dialog');
+
+        if ($hasForm && ($hasDialog || $this->dialogMessage !== null)) {
+            throw new \LogicException('Can only define one of the methods in `form` and `dialog`');
+        }
+
+        $this->interactor = null;
+        if ($hasForm) {
             $this->interactor = new Interactor\Form($this);
         }
 
-        if ($hasDialog = method_exists($this, 'dialog')) {
+        if ($hasDialog || $this->dialogMessage !== null) {
             $this->interactor = new Interactor\Dialog($this);
-        }
-
-        if ($hasForm && $hasDialog) {
-            throw new \Exception('Can only define one of the methods in `form` and `dialog`');
         }
     }
 
@@ -209,7 +257,7 @@ abstract class Action implements Renderable
             $this->response = new Response();
         }
 
-        if (method_exists($this, 'dialog')) {
+        if ($this->interaction() === 'dialog') {
             $this->response->swal();
         } else {
             $this->response->toastr();
@@ -376,7 +424,9 @@ abstract class Action implements Renderable
                     if (isset($visible[$property->getName()])) continue;
                     $visible[$property->getName()] = true;
                 }
-                if (in_array($class->getName(), [self::class, GridAction::class, RowAction::class, BatchAction::class], true)) continue;
+                // Framework properties are rebuilt from the ticket instead of being signed as state,
+                // except for the configurable values that only exist because of a setter.
+                if ($this->isFrameworkContext($class, $property)) continue;
                 $properties[self::AUTOMATIC_CONTEXT_PREFIX.$class->getName().'::'.$property->getName()] = $property;
             }
         }
@@ -386,6 +436,15 @@ abstract class Action implements Renderable
             unset($properties[self::AUTOMATIC_CONTEXT_PREFIX.$property->getDeclaringClass()->getName().'::'.$property->getName()]);
         }
         return $properties;
+    }
+
+    /** Framework base classes own their rendering state and must not be restored from the client. */
+    private function isFrameworkContext(\ReflectionClass $class, \ReflectionProperty $property): bool
+    {
+        $framework = [self::class, GridAction::class, RowAction::class, BatchAction::class];
+        if (!in_array($class->getName(), $framework, true)) return false;
+
+        return !in_array($property->getName(), self::CONFIGURABLE_CONTEXT_PROPERTIES, true);
     }
 
     private function contextProperty(string $name): \ReflectionProperty
@@ -410,6 +469,10 @@ abstract class Action implements Renderable
             if ($property->isStatic() || !$this->isContextValue($value)) ContextToken::fail('action_context_invalid');
             $property->setValue($this, $value);
         }
+        // setName() is the authoritative configuration once it is used.
+        if ($this->nameConfiguration !== null) $this->name = $this->nameConfiguration;
+        // The interactor depends on the restored dialog configuration, not on the declaration alone.
+        $this->initInteractor();
     }
 
     public function loadInteraction(): array

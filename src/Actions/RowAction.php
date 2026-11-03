@@ -28,6 +28,42 @@ abstract class RowAction extends GridAction
     protected $asColumn = false;
 
     /**
+     * Link target rendered instead of the runtime action.
+     *
+     * @var string
+     */
+    protected $link = '';
+
+    /**
+     * @var string|null
+     */
+    protected $hrefTarget;
+
+    /**
+     * @param string      $value
+     * @param string|null $target
+     *
+     * @return $this
+     */
+    public function setHref($value, $target = null)
+    {
+        $this->link = $value;
+        $this->hrefTarget = $target;
+
+        return $this;
+    }
+
+    /**
+     * Get the effective link of this action, including the href() declared by subclasses.
+     *
+     * @return string
+     */
+    public function getHref()
+    {
+        return (string) $this->href();
+    }
+
+    /**
      * Get primary key value of current row.
      *
      * @return mixed
@@ -101,6 +137,7 @@ abstract class RowAction extends GridAction
      */
     public function href()
     {
+        return $this->link;
     }
 
     /**
@@ -131,7 +168,7 @@ abstract class RowAction extends GridAction
         }
 
         if ($href = $this->href()) {
-            return "<a href='".e($href)."'>".e($this->name()).'</a>';
+            return sprintf('<a %s>%s</a>', $this->formatLinkAttributes($href), e($this->name()));
         }
 
         $this->addScript();
@@ -144,5 +181,32 @@ abstract class RowAction extends GridAction
             e($this->getElementClass()),
             $this->asColumn ? $this->display($this->row($this->column->getName())) : e($this->name())
         );
+    }
+
+    /**
+     * Build the attributes of a plain link, keeping configured attributes escaped.
+     *
+     * @param string $href
+     *
+     * @return string
+     */
+    protected function formatLinkAttributes($href)
+    {
+        $attributes = $this->attributes;
+        $attributes['href'] = $href;
+
+        if ($this->hrefTarget !== null) {
+            $attributes['target'] = $this->hrefTarget;
+            if ($this->hrefTarget === '_blank') {
+                $attributes['rel'] = trim(($attributes['rel'] ?? '').' noopener noreferrer');
+            }
+        }
+
+        $html = [];
+        foreach ($attributes as $name => $value) {
+            $html[] = $name.'="'.e($value).'"';
+        }
+
+        return implode(' ', $html);
     }
 }

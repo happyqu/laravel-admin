@@ -50,9 +50,7 @@ abstract class GridAction extends Action
      */
     protected function getModelClass()
     {
-        $model = $this->parent->model()->getOriginalModel();
-
-        return get_class($model);
+        return $this->parent ? get_class($this->parent->model()->getOriginalModel()) : '';
     }
 
     /**
@@ -60,7 +58,9 @@ abstract class GridAction extends Action
      */
     public function parameters()
     {
-        return ['_model' => $this->getModelClass()];
+        // A grid action may be registered before it is bound to a grid (for example in tests
+        // or when the ticket is rebuilt outside a grid render).
+        return $this->parent ? ['_model' => $this->getModelClass()] : [];
     }
 
     /**
