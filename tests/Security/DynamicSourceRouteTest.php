@@ -88,6 +88,25 @@ class DynamicSourceRouteTest extends TestCase
         $this->assertSame($this->request, request());
     }
 
+    public function test_subdirectory_sources_keep_the_front_controller_for_static_and_dynamic_routes(): void
+    {
+        foreach (['/myapp', '/myapp/index.php'] as $baseUrl) {
+            $this->request = Request::create('http://localhost'.$baseUrl.'/admin/_handle_action_', 'POST', [], [], [], [
+                'SCRIPT_NAME' => '/myapp/index.php', 'SCRIPT_FILENAME' => '/var/www/myapp/index.php',
+                'PHP_SELF' => '/myapp/index.php',
+            ]);
+            $this->app->instance('request', $this->request);
+            Facade::clearResolvedInstance('request');
+            $this->assertSame($baseUrl, request()->getBaseUrl());
+            FormSubmission::authorizeSource('http://localhost'.$baseUrl.'/admin/settings', 'GET');
+            $this->assertSame($this->request, request());
+        }
+        $this->app['router']->get('admin/settings', fn () => null)->middleware('admin.permission:check,manage-settings');
+        config(['test.route_load_error' => true]);
+        FormSubmission::authorizeSource('http://localhost/myapp/index.php/admin/settings', 'GET');
+        $this->assertSame($this->request, request());
+    }
+
     public function test_route_registration_failure_also_restores_request_and_routes(): void
     {
         config(['test.route_load_error' => true]);

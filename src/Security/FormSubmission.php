@@ -44,7 +44,11 @@ class FormSubmission
 
     public static function authorizeSource(string $url, string $method, bool $reusePermissions = false): void
     {
-        $request = Request::create($url, $method);
+        // Preserve the front controller so pathInfo excludes a deployment subdirectory.
+        $server = array_intersect_key(request()->server->all(), array_flip([
+            'SCRIPT_NAME', 'SCRIPT_FILENAME', 'PHP_SELF',
+        ]));
+        $request = Request::create($url, $method, [], [], [], $server);
         try {
             $route = app('router')->getRoutes()->match($request);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {

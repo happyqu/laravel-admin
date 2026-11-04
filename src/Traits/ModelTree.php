@@ -5,7 +5,6 @@ namespace Encore\Admin\Traits;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Request;
 
 trait ModelTree
 {
@@ -402,10 +401,17 @@ trait ModelTree
                 ->get();
 
             foreach ($children as $child) {
-                $child->delete();
+                if ($child->delete() === false) {
+                    throw new \RuntimeException('Tree node deletion was cancelled.');
+                }
             }
 
-            return parent::delete();
+            $deleted = parent::delete();
+            if ($deleted === false) {
+                throw new \RuntimeException('Tree node deletion was cancelled.');
+            }
+
+            return $deleted;
         });
     }
 
@@ -419,8 +425,29 @@ trait ModelTree
         static::saving(function (Model $branch) {
             $parentColumn = $branch->getParentColumn();
 
-            if (Request::has($parentColumn) && Request::input($parentColumn) == $branch->getKey()) {
-                throw new \Exception(trans('admin.parent_select_error'));
+            if ($branch->exists && !$branch->isDirty($parentColumn)) {
+                return $branch;
+            }
+
+            $seen = [];
+            if ($branch->getKey() !== null) {
+                $seen[(string) $branch->getKey()] = true;
+            }
+            $parent = $branch->getAttribute($parentColumn);
+            while ($parent !== null && $parent !== '' && (string) $parent !== '0') {
+                $ancestor = $branch->newQuery()->find($parent);
+                // Resolve aliases such as "01" using the database's key semantics.
+                $key = (string) ($ancestor ? $ancestor->getKey() : $parent);
+                if (isset($seen[$key])) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        $parentColumn => trans('admin.parent_select_error'),
+                    ]);
+                }
+                if (!$ancestor) {
+                    break;
+                }
+                $seen[$key] = true;
+                $parent = $ancestor->getAttribute($parentColumn);
             }
 
             return $branch;

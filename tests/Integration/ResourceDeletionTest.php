@@ -232,6 +232,35 @@ class ResourceDeletionTest extends TestCase
         $this->assertTrue(Storage::exists('document.txt'));
     }
 
+    public function test_signed_deletion_works_under_a_subdirectory_and_still_rejects_another_resource(): void
+    {
+        $this->user->methods[] = 'DELETE';
+        foreach (['/myapp', '/myapp/index.php'] as $baseUrl) {
+            $record = $this->record();
+            $server = ['HTTP_ACCEPT' => 'application/json', 'SCRIPT_NAME' => '/myapp/index.php',
+                'SCRIPT_FILENAME' => '/var/www/myapp/index.php', 'PHP_SELF' => '/myapp/index.php'];
+            $request = Request::create('http://localhost'.$baseUrl.'/admin/records', 'GET', [], [], [], $server);
+            $request->setLaravelSession($this->app['session']);
+            $this->app->instance('request', $request);
+            Facade::clearResolvedInstance('request');
+            $action = (new Delete())->setGrid((new Grid(new DeletionRecord()))->resource($baseUrl.'/admin/records'))->setRow($record);
+            $token = $this->ticket($action);
+            $submit = function ($resource) use ($record, $baseUrl, $server, $token) {
+                $request = Request::create('http://localhost'.$baseUrl.'/admin/'.$resource.'/'.$record->id, 'DELETE',
+                    ['_action_token' => $token, '_key' => $record->id], [], [], $server);
+                $request->setLaravelSession($this->app['session']);
+                $this->app->instance('request', $request);
+                Facade::clearResolvedInstance('request');
+                return $this->app['router']->dispatch($request);
+            };
+            $this->forbidden(fn () => $submit('hard-records'));
+            $response = $submit('records')->getData(true);
+            $this->assertTrue($response['status']);
+            $this->assertSame('refresh', $response['then']['action']);
+            $this->assertTrue(DeletionRecord::withTrashed()->findOrFail($record->id)->trashed());
+        }
+    }
+
     public function test_resource_controller_protection_cannot_be_bypassed_by_a_signed_action(): void
     {
         $this->user->methods[] = 'DELETE';

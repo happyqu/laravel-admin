@@ -43,7 +43,7 @@ trait HasResourceActions
                 abort_unless($action instanceof \Encore\Admin\Grid\Actions\Delete
                     && $model instanceof \Illuminate\Database\Eloquent\Model
                     && (string) $model->getKey() === (string) $id
-                    && parse_url($action->resourceUrl($model), PHP_URL_PATH) === request()->getPathInfo(), 403);
+                    && parse_url($action->resourceUrl($model), PHP_URL_PATH) === request()->getBaseUrl().request()->getPathInfo(), 403);
 
                 $form = $this->form();
                 abort_unless(get_class($form->model()) === get_class($model)
