@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Request;
 
-/** Signed action parameters, without serialized objects or expiring session entries. */
+/** Signed action parameters, without serialized objects or server-side definition maps. */
 class Context
 {
     private array $definitions = [];
@@ -25,8 +25,7 @@ class Context
             $response = $callback();
             if ($response instanceof \Illuminate\Http\JsonResponse && ($response->getData(true)['status'] ?? false) === true
                 && $ticket['mode'] !== 'direct') {
-                // Tickets remain valid for the login session, so completion cannot expire sooner.
-                \Illuminate\Support\Facades\Cache::forever($key.':completed', true);
+                $this->complete($ticket);
             }
             return $response;
         } finally {
@@ -52,7 +51,9 @@ class Context
         if (isset($ticket['options'])) {
             $ticket['options'] = \Illuminate\Support\Facades\Crypt::encryptString(json_encode($ticket['options'], JSON_THROW_ON_ERROR));
         }
-        return $this->definitions[$hash] = ContextToken::encode($ticket + ['id' => bin2hex(random_bytes(16))]);
+        return $this->definitions[$hash] = ContextToken::encode($ticket + [
+            'id' => bin2hex(random_bytes(16)), 'expires' => $this->expiresAt(),
+        ]);
     }
 
     public function resolve(Request $request, bool $loading = false): array
@@ -100,6 +101,12 @@ class Context
             $expected = array_intersect_key($ticket['versions'], array_fill_keys(array_map('strval', $keys), true));
             if ($expected !== $this->versions($model)) ContextToken::fail('action_record_changed');
         }
+        $request->attributes->set('_admin_audit_action', [
+            'class' => get_class($action),
+            'model' => $model instanceof Model ? get_class($model) : ($ticket['record']['class'] ?? null),
+            'records' => array_slice(array_map('strval', $keys), 0, 100),
+            'record_count' => count($keys),
+        ]);
         $values = $request->input();
         foreach (['_action', '_model', '_class', '_cb', '_key'] as $key) unset($values[$key]);
         $values = array_replace($values, $ticket['parameters']);
@@ -123,6 +130,7 @@ class Context
         $ticket['keys'] = array_map('strval', $keys);
         $ticket['loaded'] = true;
         $ticket['id'] = bin2hex(random_bytes(16));
+        $ticket['expires'] = $this->expiresAt();
         unset($ticket['versions']);
         if ($versions = $this->versions($model)) $ticket['versions'] = $versions;
 
@@ -131,7 +139,22 @@ class Context
 
     public function forget(string $token): void
     {
-        \Illuminate\Support\Facades\Cache::forever($this->executionKey($this->read($token)).':completed', true);
+        $this->complete($this->read($token));
+    }
+
+    private function expiresAt(): int
+    {
+        $seconds = max(60, min(604800, (int) config('admin.actions.ticket_ttl', 86400)));
+
+        return \Illuminate\Support\Carbon::now()->getTimestamp() + $seconds;
+    }
+
+    private function complete(array $ticket): void
+    {
+        // Keep a margin for cache drivers that round absolute TTLs down to seconds.
+        $key = $this->executionKey($ticket).':completed';
+        \Illuminate\Support\Facades\Cache::put($key, CompletionCache::marker($key),
+            \Illuminate\Support\Carbon::createFromTimestamp($ticket['expires'])->addMinute());
     }
 
     private function read($token): array
@@ -140,6 +163,12 @@ class Context
         $ticket = ContextToken::decode($token);
         if (($ticket['authorization_version'] ?? '1') !== (string) config('admin.actions.authorization_version', '1')) {
             ContextToken::fail('action_context_invalid');
+        }
+        if (!isset($ticket['expires']) || !is_int($ticket['expires'])) {
+            ContextToken::fail('action_context_invalid');
+        }
+        if ($ticket['expires'] <= \Illuminate\Support\Carbon::now()->getTimestamp()) {
+            ContextToken::fail('action_context_expired');
         }
         return $ticket;
     }

@@ -248,13 +248,33 @@ class Form implements Renderable
      */
     public function destroy($id)
     {
+        return $this->destroyRecords($id, false);
+    }
+
+    /** Explicit permanent deletion; hosts must expose a separate protected route. */
+    public function forceDestroy($id)
+    {
+        abort_unless($this->isSoftDeletes, 400);
+
+        // Authorize the whole selection before any user-defined deletion hook runs.
+        foreach (array_filter(explode(',', (string) $id)) as $key) {
+            $model = $this->model()->newQuery()->withTrashed()->findOrFail($key);
+            abort_unless($model->trashed(), 409, 'Only trashed records can be permanently deleted.');
+            \Illuminate\Support\Facades\Gate::forUser(\Encore\Admin\Facades\Admin::user())->authorize('forceDelete', $model);
+        }
+
+        return $this->destroyRecords($id, true);
+    }
+
+    protected function destroyRecords($id, bool $forceDelete)
+    {
         try {
             if (($ret = $this->callDeleting($id)) instanceof Response) {
                 return $ret;
             }
 
-            app(Form\UploadTransaction::class)->run($this->model->getConnection(), function () use ($id) {
-                collect(explode(',', $id))->filter()->each(function ($id) {
+            app(Form\UploadTransaction::class)->run($this->model->getConnection(), function () use ($id, $forceDelete) {
+                collect(explode(',', $id))->filter()->each(function ($id) use ($forceDelete) {
                     $builder = $this->model()->newQuery();
 
                     if ($this->isSoftDeletes) {
@@ -264,6 +284,10 @@ class Form implements Renderable
                     $model = $builder->with($this->getRelations())->findOrFail($id);
 
                     if ($this->isSoftDeletes && $model->trashed()) {
+                        if (!$forceDelete) {
+                            return;
+                        }
+                        \Illuminate\Support\Facades\Gate::forUser(\Encore\Admin\Facades\Admin::user())->authorize('forceDelete', $model);
                         $this->deleteFiles($model, true);
                         if ($model->forceDelete() === false) {
                             throw new \RuntimeException('Model deletion was cancelled.');
@@ -271,6 +295,8 @@ class Form implements Renderable
 
                         return;
                     }
+
+                    abort_if($forceDelete, 409, 'Only trashed records can be permanently deleted.');
 
                     $this->deleteFiles($model);
                     if ($model->delete() === false) {
@@ -287,6 +313,8 @@ class Form implements Renderable
                 'status'  => true,
                 'message' => trans('admin.delete_succeeded'),
             ];
+        } catch (\Illuminate\Auth\Access\AuthorizationException $exception) {
+            throw $exception;
         } catch (\Throwable $exception) {
             report($exception);
 

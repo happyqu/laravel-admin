@@ -18,6 +18,7 @@ class AdminConsoleServiceProvider extends ServiceProvider
         Console\ImportCommand::class,
         Console\CreateUserCommand::class,
         Console\ResetPasswordCommand::class,
+        Console\PruneActionCacheCommand::class,
         Console\ExtendCommand::class,
         Console\ExportSeedCommand::class,
         Console\MinifyCommand::class,

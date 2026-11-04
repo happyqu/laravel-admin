@@ -47,7 +47,9 @@ php artisan vendor:publish --tag=laravel-admin-assets
 php artisan admin:install
 ```
 
-`admin:install` 会运行迁移、初始化后台目录和基础数据，并初始化内置菜单与权限。默认访问地址为 `/admin`。初始化账号定义见[基础数据初始化代码](src/Auth/Database/AdminTablesSeeder.php)，对外开放后台前请更新初始密码。
+`admin:install` 会运行迁移、初始化后台目录和基础数据，并初始化内置菜单与权限。默认访问地址为 `/admin`，初始用户名为 `admin`。安装时会隐藏输入并确认初始密码，要求 8–20 位，包含大小写字母、数字和 `$@!%*?&` 中的符号，不再提供固定初始密码。
+
+自动化安装须通过密钥管理器向进程注入 `ADMIN_INITIAL_PASSWORD`；缺失或不符合强度要求时会停止初始化，程序不输出密码。宿主代码直接调用基础 seeder 时，也可显式传入密码：`app(\Encore\Admin\Auth\Database\AdminTablesSeeder::class)->run($password)`。重复执行该 seeder 会保留已有管理员及权限数据。
 
 后台用户表已有数据时，不重复执行基础数据初始化；后台目录已存在时，不覆盖该目录。
 
@@ -293,11 +295,13 @@ protected $contextProperties = ['resourceId'];
 
 ### 加载、提交与凭据
 
-- 打开表单时请求 `_load_action_`，提交时请求 `_handle_action_`；普通确认操作直接提交。
+- 打开表单时请求 `_load_action_`，提交时请求 `_handle_action_`；普通确认操作直接提交。内置行删除直接提交资源的 DELETE 路由。
 - 运行时属性加密存入 `_action_token`，动作凭据签名绑定当前用户和登录会话。
 - 其他参数和元数据可读取，`parameters()` 中不要放入密码、密钥或完整模型。
 - 参数传递不依赖 Redis 或服务端 Action 映射；执行锁与防重复提交仍使用宿主 Laravel Cache 配置。
 - 加载和执行时重新检查权限及记录版本；失败时保留输入，写请求不会自动重发。
+- 凭据默认有效 24 小时；打开 Action 表单时签发新的执行凭据。过期后不能执行，需刷新来源页重新打开；不会自动重新提交。
+- `admin.actions.ticket_ttl` 可配置有效秒数，范围为 60–604800 秒。完成标记保留至凭据过期后至少 60 秒，防止缓存清理后旧凭据再次执行；不再新增永久完成标记。
 - 退出重登、CSRF token 轮换或不兼容的旧凭据需要重新打开来源页面。
 
 新增或收紧按钮配置时，应递增宿主 `config/admin.php` 中的 `actions.authorization_version`，使旧页面凭据失效。撤销用户角色、权限或修改 Policy 判定，会在后续请求重新检查。
@@ -305,8 +309,41 @@ protected $contextProperties = ['resourceId'];
 ```php
 'actions' => [
     'authorization_version' => '2',
+    'ticket_ttl' => 86400,
 ],
 ```
+
+Redis、Memcached 会自动回收过期项。使用 Laravel 文件或数据库缓存时，可定期运行以下命令，回收已经过期且能识别为本包完成标记的文件或行；不会清空共享缓存。`--store` 指定宿主缓存配置名称，省略时使用默认缓存。
+
+```bash
+php artisan admin:prune-action-cache --dry-run
+php artisan admin:prune-action-cache
+```
+
+### 内置写操作与删除
+
+内置行删除同时检查资源 `DELETE /资源/{id}` 的权限；管理员列表中的重置密码检查 `PUT /资源/{id}` 的权限及该路由声明的 `can` Policy。只有列表 GET 权限的用户不会显示这些按钮。打开、执行时会重新检查权限，不能仅凭访问过列表页执行写操作。
+
+内置行删除和批量删除均通过资源控制器的 `destroy()`，默认由 `HasResourceActions` 调用 Form 的删除流程，执行 `deleting` / `deleted` 钩子，并在模型数据库连接的事务提交后清理文件。自定义控制器重写 `destroy()` 时，应保留对父方法的调用，以继续校验行删除凭据。继承内置 Delete 并重写 `handle()` 的自定义 Action 仍执行自己的处理逻辑。
+
+普通 `Form::destroy($id)` 对软删除模型只执行软删除；重复请求会保留已软删除的记录和附件。永久删除通过独立的 `Form::forceDestroy($id)` 调用，且只接受已软删除记录，并逐条检查当前后台用户的 `forceDelete` Gate / Policy。包不会自动开放永久删除路由或按钮。
+
+宿主需要此功能时，应添加独立的 DELETE 路由、路由权限和确认入口，并在对应控制器方法中调用：
+
+```php
+public function forceDestroy($id)
+{
+    return $this->form()->forceDestroy($id);
+}
+```
+
+同时为该模型注册 Policy 并实现 `forceDelete($user, $record)`；普通删除权限不会自动授予永久删除权限。
+
+### 操作日志结果
+
+`auth/logs` 的“结果”列展示 HTTP 状态、执行结果和耗时。详情中保留脱敏后的原始请求参数，以及 `_admin_audit` 中的路由、参数和已验证的 Action 目标记录（最多展示 100 个 ID）。`status: false` 的 JSON 业务响应会记为失败；普通响应记为已完成，重定向单独标记，不据此推断业务写入成功。
+
+结果在请求执行后写入现有 `input` JSON 字段，无需新增数据库列；旧日志仍可查看。异常只记录类型，不保存异常消息或完整响应。日志写入失败不会影响业务响应。超大输入保留有效 JSON 和结果信息，并标记截断。此日志不自动采集模型修改前后值。
 
 ## 文件与图片
 
@@ -370,6 +407,10 @@ php artisan optimize:clear
 发布会覆盖同路径文件，请先保留宿主自身定制。配置、语言和迁移使用各自发布标签；`happy-admin-assets` 是同一资源树的附加标签。
 
 升级后重新打开已有 Action 页面和分步表单。此前按属性声明默认值生成的自动 Action 快照需刷新来源页面，旧的显式属性凭据仍兼容。收紧按钮权限配置时，同时更新 `actions.authorization_version`。
+
+内置行删除已切换到资源 DELETE 路由，须重新发布前端资源并刷新列表页。旧页面的通用 Action 删除请求会被拒绝。此前依赖“再次删除即永久删除”的代码应改为独立调用 `forceDestroy()`，并配置 `forceDelete` Policy。检查账号权限中是否已授予目标资源的 DELETE / PUT 权限。
+
+新增凭据有效期后，旧版未携带过期时间的 Action 凭据须刷新页面后重新生成。历史永久缓存标记不会自动扫描删除，本次调整约束后续生成的标记。已有管理员密码不会因升级改变；新安装须设置初始密码。
 
 ### 从旧版导航迁移
 

@@ -112,7 +112,8 @@ class DeleteConfirmationTest extends TestCase
         $this->assertSame(ConfirmationDelete::class, $ticket['action']);
         $this->assertSame(['2'], $ticket['keys']);
         $this->assertSame('2026-01-01 12:00:00', $ticket['versions'][2]);
-        foreach (['expires', 'phase', 'state', 'identity', 'definition'] as $key) $this->assertArrayNotHasKey($key, $ticket);
+        foreach (['phase', 'state', 'identity', 'definition'] as $key) $this->assertArrayNotHasKey($key, $ticket);
+        $this->assertGreaterThan(time(), $ticket['expires']);
         [$action, $model] = $this->app[Context::class]->resolve(Request::create('/execute', 'POST', [
             '_action_token' => $token, '_key' => 2, '_input' => true,
         ]));
@@ -247,7 +248,7 @@ class DeleteConfirmationTest extends TestCase
         $this->assertStringContainsString('value="2"', $payload['html']);
     }
 
-    public function test_form_load_binds_selection_and_versions_without_expiry_or_renewal_metadata(): void
+    public function test_form_load_binds_selection_and_versions_with_a_fresh_bounded_lifetime(): void
     {
         $context = $this->app[Context::class];
         $token = $context->register((new ConfirmationImportRow())->setRow($this->row));
@@ -260,7 +261,7 @@ class DeleteConfirmationTest extends TestCase
         $this->assertArrayNotHasKey('expires_in', $payload);
         $loaded = ContextToken::decode($payload['ticket']);
         $this->assertTrue($loaded['loaded']);
-        $this->assertArrayNotHasKey('expires', $loaded);
+        $this->assertGreaterThan(time(), $loaded['expires']);
         [, $model] = $context->resolve(Request::create('/execute', 'POST', ['_action_token' => $payload['ticket'], '_key' => 99]));
         $this->assertSame(2, $model->getKey());
         $this->row->setRawAttributes(['id' => 2, 'updated_at' => 'changed'], true);
@@ -307,6 +308,51 @@ class DeleteConfirmationTest extends TestCase
         }
     }
 
+    public function test_completion_markers_expire_only_after_their_signed_tickets(): void
+    {
+        config(['admin.actions.ticket_ttl' => 60]);
+        [, $token] = $this->render();
+        $ticket = ContextToken::decode($token);
+        $key = 'admin-action:'.hash('sha256', $ticket['id']).':completed';
+        $context = $this->app[Context::class];
+        $request = Request::create('/execute', 'POST', ['_action_token' => $token]);
+        $calls = 0;
+        $run = function () use (&$calls) { $calls++; return response()->json(['status' => true]); };
+        $context->execute($request, $run);
+        $this->assertTrue(\Illuminate\Support\Facades\Cache::has($key));
+        try {
+            \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::createFromTimestamp($ticket['expires']));
+            $this->assertTrue(\Illuminate\Support\Facades\Cache::has($key));
+            $this->assertActionError(fn () => $context->execute($request, $run), 'action_context_expired');
+            \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::createFromTimestamp($ticket['expires'])->addSeconds(61));
+            $this->assertFalse(\Illuminate\Support\Facades\Cache::has($key));
+            $this->assertActionError(fn () => $context->execute($request, $run), 'action_context_expired');
+            $this->assertSame(1, $calls);
+        } finally {
+            \Illuminate\Support\Carbon::setTestNow();
+        }
+    }
+
+    public function test_expired_unsubmitted_tickets_cannot_execute_and_legacy_tickets_require_refresh(): void
+    {
+        [, $token] = $this->render();
+        $context = $this->app[Context::class];
+        $ticket = ContextToken::decode($token);
+        try {
+            \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::createFromTimestamp($ticket['expires']));
+            $this->assertActionError(fn () => $context->resolve(Request::create('/load', 'POST', [
+                '_action_token' => $token, '_key' => 2,
+            ]), true), 'action_context_expired');
+        } finally {
+            \Illuminate\Support\Carbon::setTestNow();
+        }
+        unset($ticket['expires']);
+        $legacy = ContextToken::encode($ticket);
+        $this->assertActionError(fn () => $context->execute(Request::create('/execute', 'POST', [
+            '_action_token' => $legacy,
+        ]), fn () => $this->fail('Legacy ticket executed.')), 'action_context_invalid');
+    }
+
     public function test_business_errors_allow_a_retry_without_consuming_the_form_ticket(): void
     {
         $this->app['view']->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
@@ -350,13 +396,9 @@ class DeleteConfirmationTest extends TestCase
         $this->assertArrayNotHasKey('unexpected', RetryableFormAction::$input);
     }
 
-    public function test_a_cancelled_model_deletion_returns_an_error(): void
+    public function test_old_action_endpoint_cannot_bypass_the_resource_controller(): void
     {
-        $database = $this->createMock(\Illuminate\Database\DatabaseManager::class);
-        $database->method('__call')->with('transaction', $this->anything())
-            ->willReturnCallback(static fn ($method, $arguments) => $arguments[0]());
-        \Illuminate\Support\Facades\DB::swap($database);
-        $model = new class extends Model { public function delete() { return false; } };
+        $model = new class extends Model { public function delete() { throw new \LogicException('Must use resource deletion.'); } };
         $response = (new ConfirmationDelete())->handle($model)->send()->getData(true);
         $this->assertFalse($response['status']);
         $this->assertSame('error', $response['swal']['type']);
@@ -381,6 +423,8 @@ class DeleteConfirmationTest extends TestCase
 class ConfirmationDelete extends Delete
 {
     public function parameters() { return []; }
+    // These tests exercise generic action tickets without a resource controller.
+    public function authorize($user, Model $model) { return true; }
 }
 
 class ConfirmationRow extends Model {

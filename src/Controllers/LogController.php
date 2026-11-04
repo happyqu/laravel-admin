@@ -3,6 +3,7 @@
 namespace Encore\Admin\Controllers;
 
 use Encore\Admin\Auth\Database\OperationLog;
+use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Widgets\OperationLogInput;
 use Illuminate\Support\Arr;
@@ -39,6 +40,9 @@ class LogController extends AdminController
             return '<span title="'.e($path).'" style="display:block;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'.e($path).'</span>';
         });
         $grid->column('ip')->label('primary');
+        $grid->column('_result', trans('admin.operation_log_result'))->display(function () {
+            return e(OperationLogInput::result($this->input));
+        });
         $grid->column('input', trans('admin.operation_log_input'))->display(function ($input) {
             return OperationLogInput::preview($input);
         })->modal(trans('admin.operation_log_input'), OperationLogInput::class)->width(300);
@@ -65,27 +69,8 @@ class LogController extends AdminController
         return $grid;
     }
 
-    /**
-     * @param mixed $id
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function destroy($id)
+    protected function form()
     {
-        $ids = explode(',', $id);
-
-        if (OperationLog::destroy(array_filter($ids))) {
-            $data = [
-                'status'  => true,
-                'message' => trans('admin.delete_succeeded'),
-            ];
-        } else {
-            $data = [
-                'status'  => false,
-                'message' => trans('admin.delete_failed'),
-            ];
-        }
-
-        return response()->json($data);
+        return new Form(new OperationLog());
     }
 }

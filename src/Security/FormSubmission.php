@@ -42,7 +42,7 @@ class FormSubmission
         return $ticket['context'];
     }
 
-    public static function authorizeSource(string $url, string $method): void
+    public static function authorizeSource(string $url, string $method, bool $reusePermissions = false): void
     {
         $request = Request::create($url, $method);
         try {
@@ -75,8 +75,25 @@ class FormSubmission
             $hasPermissionMiddleware = true;
         }
         if (!$hasPermissionMiddleware && config('admin.check_route_permission') !== false) {
-            abort_unless($user->allPermissions()->contains(static fn ($permission) => $permission->shouldPassThrough($request)), 403);
+            abort_unless(static::sourcePermissions($user, $reusePermissions)->contains(static fn ($permission) => $permission->shouldPassThrough($request)), 403);
         }
+    }
+
+    /** Reuse only render-time permission collections; execution always reads them again. */
+    private static function sourcePermissions($user, bool $reusePermissions)
+    {
+        if (!$reusePermissions) {
+            return $user->allPermissions();
+        }
+
+        $attributes = app('request')->attributes;
+        $permissions = $attributes->get('_admin_render_permissions');
+        if (!$permissions instanceof \WeakMap) {
+            $permissions = new \WeakMap();
+            $attributes->set('_admin_render_permissions', $permissions);
+        }
+
+        return $permissions[$user] ??= $user->allPermissions();
     }
 
     /** Recheck Laravel policy middleware using the source route and its bound models. */

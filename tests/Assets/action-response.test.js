@@ -130,3 +130,33 @@ test('action success dialog follows confirmation and refresh waits for acknowled
         dom.window.close();
     }
 });
+
+test('resource delete confirmation posts multipart data with the DELETE override and signed ticket', async () => {
+    const dom = new JSDOM('<a data-admin-action="signed" data-admin-mode="dialog" data-admin-execute="/admin/records/7" data-admin-method="DELETE" data-admin-dialog="{}" data-_key="7">Delete</a>', {
+        url: 'http://localhost/admin/records', runScripts: 'outside-only',
+    });
+    try {
+        const window = dom.window;
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'), 'utf8'));
+        const $ = window.jQuery;
+        let settings, sent;
+        $.admin = {
+            token: 'csrf', isResponseError: data => data.status === false,
+            responseMessage: () => '', toastr: { error: message => assert.fail(message) },
+            swal: value => { settings = value; return new Promise(() => {}); },
+        };
+        $.ajax = options => { sent = options; return Promise.resolve({status: true}); };
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/actions.js'), 'utf8'));
+        $('a').trigger('click');
+        await settings.preConfirm(true);
+        assert.equal(sent.url, '/admin/records/7');
+        assert.equal(sent.method, 'POST');
+        assert.equal(sent.contentType, false);
+        assert.equal(sent.data.get('_method'), 'DELETE');
+        assert.equal(sent.data.get('_token'), 'csrf');
+        assert.equal(sent.data.get('_action_token'), 'signed');
+        assert.equal(sent.data.get('_key[0]'), '7');
+    } finally {
+        dom.window.close();
+    }
+});

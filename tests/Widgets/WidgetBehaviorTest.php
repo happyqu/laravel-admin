@@ -113,6 +113,19 @@ class WidgetBehaviorTest extends TestCase
         $this->assertSame(0, $this->dom($html)->query('//script')->length);
     }
 
+    public function test_operation_log_result_handles_legacy_logs_and_keeps_metadata_out_of_the_parameter_preview(): void
+    {
+        $formatter = \Encore\Admin\Widgets\OperationLogInput::class;
+        $this->assertSame('', $formatter::result('{truncated'));
+        $this->assertSame('', $formatter::result('{"title":"legacy"}'));
+        $input = ['_admin_audit' => ['http_status' => 200, 'outcome' => 'succeeded', 'duration_ms' => 12.5], 'title' => 'Edited'];
+        $this->assertStringContainsString('HTTP 200', $formatter::result($input));
+        $this->assertStringContainsString('12.5 ms', $formatter::result($input));
+        $this->assertStringContainsString('Edited', $formatter::preview(json_encode($input)));
+        $this->assertStringNotContainsString('_admin_audit', $formatter::preview(json_encode($input)));
+        $this->assertStringContainsString('_admin_audit', $formatter::format($input));
+    }
+
     public function test_operation_log_detail_preserves_truncated_json_and_empty_parameters(): void
     {
         $formatter = \Encore\Admin\Widgets\OperationLogInput::class;

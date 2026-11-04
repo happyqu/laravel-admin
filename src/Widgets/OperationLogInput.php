@@ -10,6 +10,20 @@ use Illuminate\Support\Str;
 /** Load full request parameters only when the log's detail modal is opened. */
 class OperationLogInput implements Renderable
 {
+    public static function result($input): string
+    {
+        $data = is_string($input) ? json_decode($input, true) : $input;
+        $result = is_array($data) ? ($data['_admin_audit'] ?? null) : null;
+        if (!is_array($result) || !isset($result['http_status'], $result['outcome'], $result['duration_ms'])
+            || !is_numeric($result['http_status']) || !is_numeric($result['duration_ms'])
+            || !in_array($result['outcome'], ['failed', 'succeeded', 'redirected', 'completed'], true)) {
+            return '';
+        }
+
+        return 'HTTP '.(int) $result['http_status'].' · '.trans('admin.operation_log_'.$result['outcome'])
+            .' · '.(float) $result['duration_ms'].' ms';
+    }
+
     public static function format($input, bool $pretty = true): string
     {
         if (is_string($input)) {
@@ -30,6 +44,12 @@ class OperationLogInput implements Renderable
 
     public static function preview($input): string
     {
+        $decoded = is_string($input) ? json_decode($input, true) : $input;
+        if (is_array($decoded)) {
+            unset($decoded['_admin_audit']);
+            $input = $decoded;
+        }
+
         return Str::limit(preg_replace('/\s+/u', ' ', static::format($input, false)) ?? '', 100);
     }
 

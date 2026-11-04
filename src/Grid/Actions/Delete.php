@@ -5,10 +5,35 @@ namespace Encore\Admin\Grid\Actions;
 use Encore\Admin\Actions\Response;
 use Encore\Admin\Actions\RowAction;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class Delete extends RowAction
 {
+    use HasResourceAuthorization;
+
+    public function authorize($user, Model $model)
+    {
+        return $this->allowsResourceOperation($model, 'DELETE');
+    }
+
+    public function getHandleRoute()
+    {
+        return $this->usesResourceEndpoint() ? $this->resourceUrl($this->getRow()) : parent::getHandleRoute();
+    }
+
+    protected function addScript()
+    {
+        parent::addScript();
+        if ($this->usesResourceEndpoint()) {
+            $this->attribute('data-admin-method', 'DELETE');
+        }
+    }
+
+    protected function usesResourceEndpoint(): bool
+    {
+        return $this->resourcePath
+            && (new \ReflectionMethod($this, 'handle'))->getDeclaringClass()->getName() === self::class;
+    }
+
     /**
      * @return array|null|string
      */
@@ -24,22 +49,8 @@ class Delete extends RowAction
      */
     public function handle(Model $model)
     {
-        $trans = [
-            'failed'    => trans('admin.delete_failed'),
-            'succeeded' => trans('admin.delete_succeeded'),
-        ];
-
-        try {
-            DB::transaction(function () use ($model) {
-                if ($model->delete() === false) {
-                    throw new \RuntimeException('Model deletion was cancelled.');
-                }
-            });
-        } catch (\Exception $exception) {
-            return $this->response()->error("{$trans['failed']} : {$exception->getMessage()}");
-        }
-
-        return $this->response()->success($trans['succeeded'])->refresh();
+        // Old open pages must refresh; deleting here would bypass the resource controller.
+        return $this->response()->error(trans('admin.action_context_invalid'));
     }
 
     /**

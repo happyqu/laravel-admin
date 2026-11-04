@@ -425,6 +425,8 @@ return [
     // Bump when deploying stricter button authorization to invalidate previously issued tickets.
     'actions' => [
         'authorization_version' => '1',
+        // Signed tickets and completion markers expire together (60 seconds to 7 days).
+        'ticket_ttl' => 86400,
     ],
 
     /*

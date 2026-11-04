@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\Hash;
  */
 class ResetPassword extends RowAction
 {
+    use HasResourceAuthorization;
+
+    public function authorize($user, Model $model)
+    {
+        return $this->allowsResourceOperation($model, 'PUT');
+    }
+
     /**
      * @return array|null|string
      */
@@ -67,6 +74,8 @@ class ResetPassword extends RowAction
     protected function applyPassword(Model $model, $password)
     {
         $model->password = Hash::make($password);
-        $model->save();
+        if ($model->save() === false) {
+            throw new \RuntimeException('Password update was cancelled.');
+        }
     }
 }

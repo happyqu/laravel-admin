@@ -4,6 +4,7 @@ namespace Encore\Admin\Auth\Database;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Encore\Admin\Rules\Password;
 
 class AdminTablesSeeder extends Seeder
 {
@@ -12,13 +13,19 @@ class AdminTablesSeeder extends Seeder
      *
      * @return void
      */
-    public function run()
+    public function run(?string $password = null)
     {
+        // A direct db:seed must not reset an already initialized administrator.
+        if (Administrator::query()->exists()) {
+            return;
+        }
+        $password = $this->initialPassword($password);
+
         // create a user.
         Administrator::truncate();
         Administrator::create([
             'username' => 'admin',
-            'password' => Hash::make('admin'),
+            'password' => Hash::make($password),
             'name'     => 'Administrator',
         ]);
 
@@ -125,5 +132,25 @@ class AdminTablesSeeder extends Seeder
 
         // add role to menu.
         Menu::find(2)->roles()->save(Role::first());
+    }
+
+    protected function initialPassword(?string $password): string
+    {
+        if ($password === null) {
+            $environment = getenv('ADMIN_INITIAL_PASSWORD');
+            $password = $environment === false ? null : $environment;
+        }
+        if ($password === null && $this->command) {
+            $password = $this->command->secret('Set the initial administrator password', false);
+            $confirmation = $this->command->secret('Confirm the initial administrator password', false);
+            if (!is_string($password) || $password !== $confirmation) {
+                throw new \InvalidArgumentException('The initial administrator passwords do not match.');
+            }
+        }
+        if (!is_string($password) || !(new Password())->passesValue($password)) {
+            throw new \InvalidArgumentException('Set a strong initial administrator password (8-20 characters, including lowercase, uppercase, a digit and a symbol from $@!%*?&). For unattended installation, inject ADMIN_INITIAL_PASSWORD into the process environment.');
+        }
+
+        return $password;
     }
 }

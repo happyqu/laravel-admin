@@ -145,7 +145,13 @@
         if (command) { runThen(command); }
     }
     function send(current, data, multipart, deferDialogResponse) {
-        return Promise.resolve($.ajax({ url: current.url, method: 'POST', data: multipart ? data : JSON.stringify(data),
+        var method = current.method || 'POST';
+        // PHP only parses multipart bodies on POST; Laravel applies the method override.
+        if (multipart && method !== 'POST') {
+            data.set('_method', method);
+            method = 'POST';
+        }
+        return Promise.resolve($.ajax({ url: current.url, method: method, data: multipart ? data : JSON.stringify(data),
             processData: false, contentType: multipart ? false : 'application/json', dataType: 'json' }))
             .then(function (result) {
                 if (!(deferDialogResponse && result.swal && !$.admin.isResponseError(result))) {
@@ -206,7 +212,7 @@
         if (sequence === null) return;
         var keys = selected(button), mode = button.attr('data-admin-mode');
         if (button.attr('data-admin-batch') === '1' && !keys.length) { $.admin.toastr.warning('No data selected!'); return; }
-        var current = { target: button, url: button.attr('data-admin-execute'), ticket: button.attr('data-admin-action'), mode: mode,
+        var current = { target: button, url: button.attr('data-admin-execute'), method: button.attr('data-admin-method') || 'POST', ticket: button.attr('data-admin-action'), mode: mode,
             keys: keys };
         var inlineDialog = button.attr('data-admin-dialog');
         if (mode === 'dialog' && inlineDialog) {

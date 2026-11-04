@@ -19,28 +19,106 @@ class LogOperation
      */
     public function handle(Request $request, \Closure $next)
     {
-        if ($this->shouldLogOperation($request)) {
-            $input = json_encode(
-                $this->redact($request->input()),
-                JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
-            );
+        if (!$this->shouldLogOperation($request)) {
+            return $next($request);
+        }
 
-            $log = [
-                'user_id' => Admin::user()->id,
-                'path'    => substr($request->path(), 0, 255),
-                'method'  => $request->method(),
-                'ip'      => $request->getClientIp(),
-                'input'   => is_string($input) ? substr($input, 0, 65535) : '{}',
-            ];
-
+        // Capture before a controller sanitizes input or changes the authenticated user.
+        $input = $this->redact($request->input());
+        unset($input['_admin_audit']);
+        $log = [
+            'user_id' => Admin::user()->getAuthIdentifier(),
+            'path'    => substr($request->path(), 0, 255),
+            'method'  => $request->method(),
+            'ip'      => $request->getClientIp(),
+        ];
+        $started = hrtime(true);
+        $response = null;
+        $failure = null;
+        try {
+            return $response = $next($request);
+        } catch (\Throwable $exception) {
+            $failure = $exception;
+            throw $exception;
+        } finally {
             try {
-                OperationLogModel::create($log);
+                $log['input'] = $this->encodeInput($input, $this->result($request, $response, $failure, $started));
+                $this->persist($log);
             } catch (\Throwable $exception) {
                 // Logging must never break the admin request.
             }
         }
+    }
 
-        return $next($request);
+    protected function persist(array $log): void
+    {
+        OperationLogModel::create($log);
+    }
+
+    protected function result(Request $request, $response, ?\Throwable $failure, int $started): array
+    {
+        if ($failure instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
+            $response = $failure->getResponse();
+        }
+        $status = $response instanceof \Symfony\Component\HttpFoundation\Response ? $response->getStatusCode() : 200;
+        if ($failure instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
+            $status = $failure->getResponse()->getStatusCode();
+        } elseif ($failure instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+            $status = $failure->getStatusCode();
+        } elseif ($failure instanceof \Illuminate\Auth\Access\AuthorizationException) {
+            $status = $failure->status() ?? 403;
+        } elseif ($failure instanceof \Illuminate\Validation\ValidationException) {
+            $status = $failure->status;
+        } elseif ($failure instanceof \Illuminate\Auth\AuthenticationException) {
+            $status = 401;
+        } elseif ($failure) {
+            $status = 500;
+        }
+
+        $data = $response instanceof \Symfony\Component\HttpFoundation\JsonResponse ? json_decode($response->getContent(), true) : null;
+        $businessStatus = is_array($data) && is_bool($data['status'] ?? null) ? $data['status'] : null;
+        $exceptionFailure = $failure && !$failure instanceof \Illuminate\Http\Exceptions\HttpResponseException;
+        $outcome = $exceptionFailure || $status >= 400 || $businessStatus === false ? 'failed'
+            : ($businessStatus === true ? 'succeeded' : ($status >= 300 ? 'redirected' : 'completed'));
+        $result = [
+            'http_status' => $status,
+            'outcome' => $outcome,
+            'duration_ms' => round((hrtime(true) - $started) / 1000000, 2),
+        ];
+        if ($businessStatus !== null) $result['business_status'] = $businessStatus;
+        if ($failure) $result['exception'] = get_class($failure);
+        if ($route = $request->route()) {
+            $result['route'] = $route->getName();
+            $result['parameters'] = [];
+            foreach ($route->parameters() as $name => $value) {
+                $result['parameters'][$name] = $value instanceof \Illuminate\Database\Eloquent\Model
+                    ? $value->getKey() : (is_scalar($value) ? $value : '[OBJECT]');
+            }
+        }
+        if ($action = $request->attributes->get('_admin_audit_action')) {
+            $result['action'] = $action;
+        }
+
+        return $this->redact($result);
+    }
+
+    protected function encodeInput(array $input, array $result): string
+    {
+        $flags = JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
+        if (strlen(json_encode($result, $flags) ?: '') > 16000) {
+            $result = array_intersect_key($result, array_flip(['http_status', 'outcome', 'duration_ms', 'business_status']))
+                + ['metadata_truncated' => true];
+        }
+        $json = json_encode(['_admin_audit' => $result] + $input, $flags);
+        if (is_string($json) && strlen($json) <= 65535) {
+            return $json;
+        }
+
+        // Preserve valid JSON and outcome metadata even when many small fields exceed TEXT.
+        $result['input_truncated'] = true;
+        $preview = mb_strcut(json_encode($input, $flags) ?: '{}', 0, 16000, 'UTF-8');
+
+        return json_encode(['_admin_audit' => $result, '_admin_input_preview' => $preview], $flags) ?: '{}';
     }
 
     /**
@@ -137,7 +215,7 @@ class LogOperation
      */
     protected function inExceptArray($request)
     {
-        foreach (config('admin.operation_log.except') as $except) {
+        foreach (config('admin.operation_log.except', []) as $except) {
             if ($except !== '/') {
                 $except = trim($except, '/');
             }
