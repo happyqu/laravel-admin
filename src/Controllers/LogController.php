@@ -44,7 +44,8 @@ class LogController extends AdminController
             return e(OperationLogInput::result($this->input));
         });
         $grid->column('input', trans('admin.operation_log_input'))->display(function ($input) {
-            return OperationLogInput::preview($input);
+            // display() output is rendered as html, so the request parameters must be escaped.
+            return e(OperationLogInput::preview($input));
         })->modal(trans('admin.operation_log_input'), OperationLogInput::class)->width(300);
 
         $grid->column('created_at', trans('admin.created_at'))->sortable()->style('white-space:nowrap');

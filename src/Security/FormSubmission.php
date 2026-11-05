@@ -83,6 +83,33 @@ class FormSubmission
         }
     }
 
+    /**
+     * Whether any configured route serves this url and method.
+     *
+     * Used to tell "this page has no resource route" apart from "this user may not use it":
+     * an absent route must not be reported as an authorization failure. Only the routes already
+     * registered for the current request are inspected.
+     */
+    public static function hasSourceRoute(string $url, string $method): bool
+    {
+        // Preserve the front controller so pathInfo excludes a deployment subdirectory.
+        $server = array_intersect_key(request()->server->all(), array_flip([
+            'SCRIPT_NAME', 'SCRIPT_FILENAME', 'PHP_SELF',
+        ]));
+
+        try {
+            app('router')->getRoutes()->match(Request::create($url, $method, [], [], [], $server));
+
+            return true;
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+            if (in_array($exception->getStatusCode(), [404, 405], true)) {
+                return false;
+            }
+
+            throw $exception;
+        }
+    }
+
     /** Reuse only render-time permission collections; execution always reads them again. */
     private static function sourcePermissions($user, bool $reusePermissions)
     {

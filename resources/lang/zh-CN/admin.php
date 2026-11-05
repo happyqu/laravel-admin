@@ -61,6 +61,8 @@ return [
     'delete_confirm'        => '确认删除?',
     'delete_succeeded'      => '删除成功 !',
     'delete_failed'         => '删除失败 !',
+    'force_delete_requires_soft_deletes' => '永久删除要求模型使用软删除。',
+    'force_delete_trashed_only'          => '只有已软删除的记录可以永久删除。',
     'update_succeeded'      => '更新成功 !',
     'save_succeeded'        => '保存成功 !',
     'refresh_succeeded'     => '刷新成功 !',

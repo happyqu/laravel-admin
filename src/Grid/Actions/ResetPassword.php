@@ -73,9 +73,21 @@ class ResetPassword extends RowAction
      */
     protected function applyPassword(Model $model, $password)
     {
-        $model->password = Hash::make($password);
+        // A host model may define a mutator that hashes the password itself.
+        $model->password = $this->hashesOnSet($model) ? $password : Hash::make($password);
+
         if ($model->save() === false) {
             throw new \RuntimeException('Password update was cancelled.');
         }
+    }
+
+    /** Whether the model defines a setter for the password attribute. */
+    protected function hashesOnSet(Model $model): bool
+    {
+        if (method_exists($model, 'hasAttributeSetMutator')) {
+            return $model->hasAttributeSetMutator('password');
+        }
+
+        return method_exists($model, 'hasSetMutator') && $model->hasSetMutator('password');
     }
 }

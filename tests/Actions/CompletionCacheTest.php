@@ -99,6 +99,14 @@ class CompletionCacheTest extends TestCase
         }
     }
 
+    public function test_stores_with_a_native_ttl_need_no_manual_pruning(): void
+    {
+        // Redis/Memcached/Apc/DynamoDB drop expired entries themselves; the command must report
+        // success instead of failing with an unsupported-store error.
+        $redis = new \Illuminate\Cache\RedisStore($this->createMock(\Illuminate\Contracts\Redis\Factory::class));
+        $this->assertSame(0, (new CompletionCache())->prune($redis));
+    }
+
     public function test_console_command_resolves_the_selected_store_and_honors_dry_run(): void
     {
         $previous = \Illuminate\Container\Container::getInstance();

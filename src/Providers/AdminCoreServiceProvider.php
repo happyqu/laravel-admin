@@ -76,11 +76,18 @@ class AdminCoreServiceProvider extends ServiceProvider
             }
 
             // A translator constructed before package registration still holds its original loader.
-            foreach (['en', 'zh-CN'] as $locale) {
-                $fallbacks = require __DIR__.'/../../resources/lang/'.$locale.'/admin.php';
+            // Complete the active locale from English so a partial translation file never renders
+            // a raw key when the configured fallback locale does not provide it either.
+            $english = require __DIR__.'/../../resources/lang/en/admin.php';
+            $locales = array_unique([$translator->getLocale(), $translator->getFallback(), 'en']);
+            foreach (array_filter($locales, 'is_string') as $locale) {
+                $file = __DIR__.'/../../resources/lang/'.$locale.'/admin.php';
                 $existing = $translator->get('admin', [], $locale, false);
+                $defaults = $locale === 'en' || !is_file($file)
+                    ? $english
+                    : $this->mergeDefaults($english, (array) require $file);
                 $lines = [];
-                foreach ($this->mergeDefaults($fallbacks, is_array($existing) ? $existing : []) as $key => $value) {
+                foreach ($this->mergeDefaults($defaults, is_array($existing) ? $existing : []) as $key => $value) {
                     $lines['admin.'.$key] = $value;
                 }
                 $translator->addLines($lines, $locale);

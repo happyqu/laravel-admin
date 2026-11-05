@@ -15,8 +15,9 @@ class AdminTablesSeeder extends Seeder
      */
     public function run(?string $password = null)
     {
-        // A direct db:seed must not reset an already initialized administrator.
-        if (Administrator::query()->exists()) {
+        // Only an empty installation may be seeded. Truncating lookup tables next to an
+        // existing administrator would erase host-defined roles, permissions and menus.
+        if ($this->isInitialized()) {
             return;
         }
         $password = $this->initialPassword($password);
@@ -134,11 +135,26 @@ class AdminTablesSeeder extends Seeder
         Menu::find(2)->roles()->save(Role::first());
     }
 
+    /**
+     * Whether any admin table already holds data that seeding would truncate.
+     */
+    protected function isInitialized(): bool
+    {
+        foreach ([Administrator::class, Role::class, Permission::class, Menu::class] as $model) {
+            if ($model::query()->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected function initialPassword(?string $password): string
     {
         if ($password === null) {
-            $environment = getenv('ADMIN_INITIAL_PASSWORD');
-            $password = $environment === false ? null : $environment;
+            // env() also sees values that were loaded without the putenv adapter.
+            $environment = env('ADMIN_INITIAL_PASSWORD');
+            $password = is_string($environment) && $environment !== '' ? $environment : null;
         }
         if ($password === null && $this->command) {
             $password = $this->command->secret('Set the initial administrator password', false);

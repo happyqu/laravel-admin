@@ -4,7 +4,9 @@ namespace Encore\Admin\Tests\Integration;
 
 use Encore\Admin\Auth\Database\Administrator;
 use Encore\Admin\Auth\Database\AdminTablesSeeder;
+use Encore\Admin\Auth\Database\Menu;
 use Encore\Admin\Auth\Database\OperationLog;
+use Encore\Admin\Auth\Database\Permission;
 use Encore\Admin\Auth\Database\Role;
 use Encore\Admin\Facades\Admin;
 use Illuminate\Config\Repository;
@@ -82,15 +84,28 @@ class InitialAdminPasswordTest extends TestCase
         $this->assertTrue(Role::where('slug', 'business')->exists());
     }
 
-    public function test_invalid_initial_password_cannot_truncate_existing_lookup_data(): void
+    public function test_initialization_skips_when_any_admin_table_already_holds_data(): void
     {
+        // A host may customize roles, permissions or menus before (or without) an administrator.
+        // Running the seeder again must not truncate them.
         Role::create(['name' => 'Preserve role', 'slug' => 'preserve']);
+        Permission::insert(['name' => 'Preserve permission', 'slug' => 'preserve', 'http_method' => '', 'http_path' => '/preserved']);
+        Menu::insert(['parent_id' => 0, 'order' => 1, 'title' => 'Preserved menu', 'icon' => 'fa-star', 'uri' => 'preserved']);
+        (new AdminTablesSeeder())->run('InitialStrong123!');
+        $this->assertSame(0, Administrator::count());
+        $this->assertTrue(Role::where('slug', 'preserve')->exists());
+        $this->assertTrue(Permission::where('slug', 'preserve')->exists());
+        $this->assertTrue(Menu::where('title', 'Preserved menu')->exists());
+    }
+
+    public function test_invalid_initial_password_does_not_truncate_fresh_lookup_tables(): void
+    {
         try {
             (new AdminTablesSeeder())->run('weak');
             $this->fail('Weak initialization password was accepted.');
         } catch (\InvalidArgumentException $exception) {
             $this->assertSame(0, Administrator::count());
-            $this->assertTrue(Role::where('slug', 'preserve')->exists());
+            $this->assertSame(0, Role::count());
         }
     }
 

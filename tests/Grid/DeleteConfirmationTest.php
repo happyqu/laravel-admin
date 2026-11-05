@@ -398,11 +398,33 @@ class DeleteConfirmationTest extends TestCase
 
     public function test_old_action_endpoint_cannot_bypass_the_resource_controller(): void
     {
-        $model = new class extends Model { public function delete() { throw new \LogicException('Must use resource deletion.'); } };
-        $response = (new ConfirmationDelete())->handle($model)->send()->getData(true);
+        // A grid that owns a DELETE route must never delete through the generic endpoint.
+        $this->app['router']->delete('admin/users/{id}', fn () => 'deleted');
+        $grid = (new \Encore\Admin\Grid(new ConfirmationRow()))->resource('/admin/users');
+        $action = (new ConfirmationDelete())->setGrid($grid)->setRow($this->row);
+        $this->assertSame('/admin/users/2', $action->getHandleRoute());
+        $response = $action->handle($this->row)->send()->getData(true);
         $this->assertFalse($response['status']);
         $this->assertSame('error', $response['swal']['type']);
         $this->assertSame([], $response['then']);
+    }
+
+    public function test_grids_without_a_resource_route_keep_the_generic_action_endpoint(): void
+    {
+        // A relation panel or dashboard grid has no resource route of its own: the fallback in
+        // Grid::resource() is the embedding page, which serves no DELETE route for this model.
+        $this->app['router']->delete('admin/users/{id}', fn () => 'deleted');
+        $this->app->instance('request', Request::create('http://localhost/admin/posts/1'));
+        Facade::clearResolvedInstance('request');
+        $embedded = new \Encore\Admin\Grid(new ConfirmationRow());
+        $action = (new ConfirmationDelete())->setGrid($embedded)->setRow($this->row);
+        $this->assertSame(admin_url('_handle_action_'), $action->getHandleRoute());
+        $this->assertStringContainsString('data-admin-action=', $action->render());
+        $this->assertStringNotContainsString('data-admin-method', $action->render());
+
+        // Explicitly selecting the model resource restores the resource endpoint.
+        $owned = (new \Encore\Admin\Grid(new ConfirmationRow()))->resource('/admin/users');
+        $this->assertSame('/admin/users/2', (new ConfirmationDelete())->setGrid($owned)->setRow($this->row)->getHandleRoute());
     }
 
     public function test_explicit_options_and_total_payload_have_size_limits(): void

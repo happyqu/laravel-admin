@@ -126,6 +126,28 @@ class WidgetBehaviorTest extends TestCase
         $this->assertStringContainsString('_admin_audit', $formatter::format($input));
     }
 
+    public function test_operation_log_preview_column_escapes_stored_request_parameters(): void
+    {
+        // Administrators open auth/logs, so a stored payload must never reach the page as html.
+        config(['admin.database.operation_log_table' => 'admin_operation_log']);
+        $row = new \Encore\Admin\Auth\Database\OperationLog();
+        $row->setRawAttributes(['id' => 9, 'input' => json_encode([
+            'title' => '<img src=x onerror=alert(1)>',
+            'note'  => '"><script>alert(2)</script>',
+        ])]);
+        \Encore\Admin\Grid\Column::setOriginalGridModels(new \Illuminate\Database\Eloquent\Collection([$row]));
+        $grid = new \Encore\Admin\Grid($row);
+        $column = $grid->column('input')->display(function ($input) {
+            return e(\Encore\Admin\Widgets\OperationLogInput::preview($input));
+        });
+        $cell = $column->fill([$row->toArray()])[0]['input'];
+        $this->assertStringNotContainsString('<img src=x', $cell);
+        $this->assertStringNotContainsString('<script>', $cell);
+        $this->assertStringContainsString('&lt;img', $cell);
+        $this->assertSame(0, $this->dom('<td>'.$cell.'</td>')->query('//img')->length);
+        $this->assertSame(0, $this->dom('<td>'.$cell.'</td>')->query('//script')->length);
+    }
+
     public function test_operation_log_detail_preserves_truncated_json_and_empty_parameters(): void
     {
         $formatter = \Encore\Admin\Widgets\OperationLogInput::class;

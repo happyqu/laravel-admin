@@ -41,6 +41,7 @@ trait HasResourceActions
             return $contexts->execute(request(), function () use ($contexts, $id) {
                 [$action, $model] = $contexts->resolve(request());
                 abort_unless($action instanceof \Encore\Admin\Grid\Actions\Delete
+                    && $action->deletesThroughResource()
                     && $model instanceof \Illuminate\Database\Eloquent\Model
                     && (string) $model->getKey() === (string) $id
                     && parse_url($action->resourceUrl($model), PHP_URL_PATH) === request()->getBaseUrl().request()->getPathInfo(), 403);

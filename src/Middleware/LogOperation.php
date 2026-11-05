@@ -45,8 +45,22 @@ class LogOperation
                 $log['input'] = $this->encodeInput($input, $this->result($request, $response, $failure, $started));
                 $this->persist($log);
             } catch (\Throwable $exception) {
-                // Logging must never break the admin request.
+                // Logging must never break the admin request, but a broken log table would
+                // otherwise stay invisible.
+                $this->reportLoggingFailure($exception);
             }
+        }
+    }
+
+    /** Report without requiring an exception handler (for example in minimal containers). */
+    protected function reportLoggingFailure(\Throwable $exception): void
+    {
+        try {
+            if (app()->bound(\Illuminate\Contracts\Debug\ExceptionHandler::class)) {
+                report($exception);
+            }
+        } catch (\Throwable $ignored) {
+            // Nothing else may run while unwinding a response.
         }
     }
 
@@ -57,27 +71,26 @@ class LogOperation
 
     protected function result(Request $request, $response, ?\Throwable $failure, int $started): array
     {
-        if ($failure instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
+        // A short-circuit response already describes the outcome; keep the status it carries.
+        $isHttpResponse = $failure instanceof \Illuminate\Http\Exceptions\HttpResponseException;
+        if ($isHttpResponse) {
             $response = $failure->getResponse();
         }
         $status = $response instanceof \Symfony\Component\HttpFoundation\Response ? $response->getStatusCode() : 200;
-        if ($failure instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
-            $status = $failure->getResponse()->getStatusCode();
-        } elseif ($failure instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
-            $status = $failure->getStatusCode();
-        } elseif ($failure instanceof \Illuminate\Auth\Access\AuthorizationException) {
-            $status = $failure->status() ?? 403;
-        } elseif ($failure instanceof \Illuminate\Validation\ValidationException) {
-            $status = $failure->status;
-        } elseif ($failure instanceof \Illuminate\Auth\AuthenticationException) {
-            $status = 401;
-        } elseif ($failure) {
-            $status = 500;
+        if (!$isHttpResponse) {
+            $status = match (true) {
+                $failure instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface => $failure->getStatusCode(),
+                $failure instanceof \Illuminate\Auth\Access\AuthorizationException => $failure->status() ?? 403,
+                $failure instanceof \Illuminate\Validation\ValidationException => $failure->status,
+                $failure instanceof \Illuminate\Auth\AuthenticationException => 401,
+                (bool) $failure => 500,
+                default => $status,
+            };
         }
 
         $data = $response instanceof \Symfony\Component\HttpFoundation\JsonResponse ? json_decode($response->getContent(), true) : null;
         $businessStatus = is_array($data) && is_bool($data['status'] ?? null) ? $data['status'] : null;
-        $exceptionFailure = $failure && !$failure instanceof \Illuminate\Http\Exceptions\HttpResponseException;
+        $exceptionFailure = $failure && !$isHttpResponse;
         $outcome = $exceptionFailure || $status >= 400 || $businessStatus === false ? 'failed'
             : ($businessStatus === true ? 'succeeded' : ($status >= 300 ? 'redirected' : 'completed'));
         $result = [

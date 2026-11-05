@@ -29,8 +29,18 @@ class CompletionCache
     {
         if ($store instanceof FileStore) return $this->pruneFiles($store, $dryRun);
         if ($store instanceof DatabaseStore) return $this->pruneDatabase($store, $table, $dryRun);
+        if ($this->expiresAutomatically($store)) return 0;
 
         throw new \InvalidArgumentException('Manual pruning supports Laravel file and database cache stores only.');
+    }
+
+    /** Stores with a built-in TTL drop expired markers on their own; nothing to reclaim. */
+    private function expiresAutomatically($store): bool
+    {
+        return $store instanceof \Illuminate\Cache\RedisStore
+            || $store instanceof \Illuminate\Cache\MemcachedStore
+            || $store instanceof \Illuminate\Cache\DynamoDbStore
+            || $store instanceof \Illuminate\Cache\ApcStore;
     }
 
     private function pruneFiles(FileStore $store, bool $dryRun): int

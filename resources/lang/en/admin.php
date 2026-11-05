@@ -61,6 +61,8 @@ return [
     'delete_confirm'        => 'Are you sure to delete this item ?',
     'delete_succeeded'      => 'Delete succeeded !',
     'delete_failed'         => 'Delete failed !',
+    'force_delete_requires_soft_deletes' => 'Permanent deletion requires a model that uses soft deletes.',
+    'force_delete_trashed_only'          => 'Only trashed records can be permanently deleted.',
     'update_succeeded'      => 'Update succeeded !',
     'save_succeeded'        => 'Save succeeded !',
     'refresh_succeeded'     => 'Refresh succeeded !',

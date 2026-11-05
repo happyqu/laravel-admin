@@ -28,10 +28,18 @@ class Delete extends RowAction
         }
     }
 
-    protected function usesResourceEndpoint(): bool
+    /**
+     * Whether the built-in deletion flow is still in use (a subclass may replace handle()).
+     */
+    public function usesResourceEndpoint(): bool
     {
-        return $this->resourcePath
-            && (new \ReflectionMethod($this, 'handle'))->getDeclaringClass()->getName() === self::class;
+        return $this->deletesThroughResource() && $this->resourceRouteExists($this->getRow(), 'DELETE');
+    }
+
+    /** Whether handle() is the built-in one that delegates to the resource controller. */
+    public function deletesThroughResource(): bool
+    {
+        return (new \ReflectionMethod($this, 'handle'))->getDeclaringClass()->getName() === self::class;
     }
 
     /**
@@ -49,8 +57,46 @@ class Delete extends RowAction
      */
     public function handle(Model $model)
     {
-        // Old open pages must refresh; deleting here would bypass the resource controller.
-        return $this->response()->error(trans('admin.action_context_invalid'));
+        if ($this->usesResourceEndpoint()) {
+            // Pages rendered against the resource route must refresh: deleting here would
+            // bypass the resource controller and its deletion hooks.
+            return $this->response()->error(trans('admin.action_context_invalid'));
+        }
+
+        $trans = [
+            'failed'    => trans('admin.delete_failed'),
+            'succeeded' => trans('admin.delete_succeeded'),
+        ];
+
+        try {
+            $connection = $model->getConnection();
+
+            $connection->transaction(function () use ($model) {
+                if ($model->delete() === false) {
+                    throw new \RuntimeException('Model deletion was cancelled.');
+                }
+            });
+        } catch (\Throwable $exception) {
+            $this->reportFailure($exception);
+
+            return $this->response()->error(
+                config('app.debug') ? "{$trans['failed']} : {$exception->getMessage()}" : $trans['failed']
+            );
+        }
+
+        return $this->response()->success($trans['succeeded'])->refresh();
+    }
+
+    /** Report without requiring an exception handler (for example in minimal containers). */
+    protected function reportFailure(\Throwable $exception): void
+    {
+        try {
+            if (app()->bound(\Illuminate\Contracts\Debug\ExceptionHandler::class)) {
+                report($exception);
+            }
+        } catch (\Throwable $ignored) {
+            // The action still returns its error response.
+        }
     }
 
     /**
