@@ -5,15 +5,10 @@ namespace Encore\Admin\Middleware;
 use Encore\Admin\Auth\Permission as Checker;
 use Encore\Admin\Facades\Admin;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Routing\Route;
 
 class Permission
 {
-    /**
-     * @var string
-     */
-    protected $middlewarePrefix = 'admin.permission:';
-
     /**
      * Handle an incoming request.
      *
@@ -63,16 +58,30 @@ class Permission
     public function checkRoutePermission(Request $request)
     {
         $found = false;
-        foreach ($request->route()->gatherMiddleware() as $middleware) {
-            if (!is_string($middleware) || !Str::startsWith($middleware, $this->middlewarePrefix)) {
-                continue;
-            }
-
-            $this->checkPermissions(explode(',', substr($middleware, strlen($this->middlewarePrefix))));
+        foreach (static::routePermissionArguments($request->route()) as $args) {
+            $this->checkPermissions($args);
             $found = true;
         }
 
         return $found;
+    }
+
+    /** Resolve groups, aliases and exclusions exactly as the route pipeline does. */
+    public static function routePermissionArguments(Route $route): array
+    {
+        $conditions = [];
+        foreach (app('router')->gatherRouteMiddleware($route) as $middleware) {
+            if (!is_string($middleware)) {
+                continue;
+            }
+
+            [$class, $parameters] = array_pad(explode(':', $middleware, 2), 2, null);
+            if ($parameters !== null && ($class === 'admin.permission' || is_a($class, self::class, true))) {
+                $conditions[] = explode(',', $parameters);
+            }
+        }
+
+        return $conditions;
     }
 
     protected function checkPermissions(array $args): void

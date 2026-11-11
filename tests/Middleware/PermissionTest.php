@@ -34,6 +34,7 @@ class PermissionTest extends TestCase
         $user = new class {
             public function isRole($role) { return false; }
             public function cannot($permission) { return $permission !== 'read'; }
+            public function can($permission) { return !$this->cannot($permission); }
             public function inRoles($roles) { return in_array('operator', $roles, true); }
             public function allPermissions() { return collect(); }
         };
@@ -100,6 +101,54 @@ class PermissionTest extends TestCase
         $this->app['router']->get('admin/records', [PermissionTestController::class, 'index'])->middleware('admin.permission');
         $this->expectException(HttpException::class);
         $this->dispatch([]);
+    }
+
+    public function test_excluded_permission_conditions_are_not_checked(): void
+    {
+        $this->app['router']->get('admin/records', fn () => 'passed')
+            ->middleware(['admin.permission', 'admin.permission:check,read', 'admin.permission:check,secret'])
+            ->withoutMiddleware('admin.permission:check,secret');
+
+        $this->assertSame('passed', $this->dispatch([])->getContent());
+        \Encore\Admin\Security\FormSubmission::authorizeSource('http://localhost/admin/records', 'GET');
+    }
+
+    public function test_excluded_free_condition_does_not_grant_access(): void
+    {
+        $this->app['router']->get('admin/records', fn () => 'passed')
+            ->middleware(['admin.permission', 'admin.permission:free'])
+            ->withoutMiddleware('admin.permission:free');
+
+        $this->expectException(HttpException::class);
+        $this->dispatch([]);
+    }
+
+    public function test_excluded_free_condition_does_not_grant_source_access(): void
+    {
+        $this->app['router']->get('admin/records', fn () => 'passed')
+            ->middleware(['admin.permission', 'admin.permission:free'])
+            ->withoutMiddleware('admin.permission:free');
+        $this->app->instance('request', Request::create('/admin/records'));
+
+        $this->expectException(HttpException::class);
+        \Encore\Admin\Security\FormSubmission::authorizeSource('http://localhost/admin/records', 'GET');
+    }
+
+    public function test_permission_conditions_in_nested_groups_and_aliases_are_resolved(): void
+    {
+        $router = $this->app['router'];
+        $router->aliasMiddleware('permission-alias', Permission::class);
+        $router->middlewareGroup('inner-permissions', ['permission-alias:check,read']);
+        $router->middlewareGroup('outer-permissions', ['inner-permissions']);
+
+        $this->assertSame('passed', $this->dispatch(['admin.permission', 'outer-permissions'])->getContent());
+        \Encore\Admin\Security\FormSubmission::authorizeSource('http://localhost/admin/records', 'GET');
+    }
+
+    public function test_class_based_permission_conditions_are_resolved(): void
+    {
+        $this->assertSame('passed', $this->dispatch(['admin.permission', Permission::class.':check,read'])->getContent());
+        \Encore\Admin\Security\FormSubmission::authorizeSource('http://localhost/admin/records', 'GET');
     }
 }
 

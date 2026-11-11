@@ -5,7 +5,6 @@ namespace Encore\Admin\Security;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Widgets\Form;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 /** A session-bound form ticket records the server-rendered class and source route. */
 class FormSubmission
@@ -62,11 +61,7 @@ class FormSubmission
             return;
         }
         $hasPermissionMiddleware = false;
-        foreach ($route->gatherMiddleware() as $middleware) {
-            if (!is_string($middleware) || !Str::startsWith($middleware, 'admin.permission:')) {
-                continue;
-            }
-            $args = explode(',', substr($middleware, strlen('admin.permission:')));
+        foreach (\Encore\Admin\Middleware\Permission::routePermissionArguments($route) as $args) {
             $method = array_shift($args);
             $allowed = match ($method) {
                 'free' => true,
