@@ -29,7 +29,13 @@ class Permission
             return $next($request);
         }
 
-        if (!Admin::user() || !empty($args) || $this->shouldPassThrough($request)) {
+        if (!Admin::user() || $this->shouldPassThrough($request)) {
+            return $next($request);
+        }
+
+        if (!empty($args)) {
+            $this->checkPermissions($args);
+
             return $next($request);
         }
 
@@ -47,8 +53,8 @@ class Permission
     }
 
     /**
-     * If the route of current request contains a middleware prefixed with 'admin.permission:',
-     * then it has a manually set permission middleware, we need to handle it first.
+     * Check every explicit permission condition, including controller middleware,
+     * before falling back to HTTP path permissions.
      *
      * @param Request $request
      *
@@ -56,23 +62,28 @@ class Permission
      */
     public function checkRoutePermission(Request $request)
     {
-        if (!$middleware = collect($request->route()->middleware())->first(function ($middleware) {
-            return Str::startsWith($middleware, $this->middlewarePrefix);
-        })) {
-            return false;
+        $found = false;
+        foreach ($request->route()->gatherMiddleware() as $middleware) {
+            if (!is_string($middleware) || !Str::startsWith($middleware, $this->middlewarePrefix)) {
+                continue;
+            }
+
+            $this->checkPermissions(explode(',', substr($middleware, strlen($this->middlewarePrefix))));
+            $found = true;
         }
 
-        $args = explode(',', str_replace($this->middlewarePrefix, '', $middleware));
+        return $found;
+    }
 
+    protected function checkPermissions(array $args): void
+    {
         $method = array_shift($args);
 
-        if (!method_exists(Checker::class, $method)) {
+        if (!in_array($method, ['check', 'allow', 'deny', 'free'], true)) {
             throw new \InvalidArgumentException("Invalid permission method [$method].");
         }
 
         call_user_func_array([Checker::class, $method], [$args]);
-
-        return true;
     }
 
     /**

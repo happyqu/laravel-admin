@@ -107,6 +107,7 @@ class Role extends Model
             $model->administrators()->detach();
 
             $model->permissions()->detach();
+            $model->menus()->detach();
         });
     }
 }

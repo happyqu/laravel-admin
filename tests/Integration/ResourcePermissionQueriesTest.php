@@ -116,6 +116,35 @@ class ResourcePermissionQueriesTest extends TestCase
         $this->assertCount(2, $connection->getQueryLog(), 'Roles and role permissions should each be queried once per rendered request.');
     }
 
+    public function test_deleting_permissions_removes_both_direct_and_role_assignments(): void
+    {
+        $this->operator->permissions()->attach($this->permission);
+        $other = Permission::create(['name' => 'Other', 'slug' => 'other', 'http_path' => '/other']);
+        $this->operator->permissions()->attach($other);
+        $this->permission->delete();
+
+        $this->assertFalse($this->app['db']->table(config('admin.database.user_permissions_table'))->where('permission_id', $this->permission->id)->exists());
+        $this->assertFalse($this->app['db']->table(config('admin.database.role_permissions_table'))->where('permission_id', $this->permission->id)->exists());
+        $this->assertSame([$other->id], $this->operator->fresh()->permissions->modelKeys());
+        $this->assertTrue($this->role->exists());
+    }
+
+    public function test_deleting_roles_removes_user_permission_and_menu_assignments(): void
+    {
+        $menu = \Encore\Admin\Auth\Database\Menu::create(['title' => 'Records', 'icon' => 'fa-list', 'uri' => 'query-records']);
+        $menu->roles()->attach($this->role);
+        $other = Role::create(['name' => 'Other', 'slug' => 'other']);
+        $menu->roles()->attach($other);
+        $this->role->delete();
+
+        foreach (['role_users_table', 'role_permissions_table', 'role_menu_table'] as $table) {
+            $this->assertFalse($this->app['db']->table(config('admin.database.'.$table))->where('role_id', $this->role->id)->exists());
+        }
+        $this->assertSame([$other->id], $menu->fresh()->roles->modelKeys());
+        $this->assertTrue($this->permission->exists());
+        $this->assertTrue($this->operator->exists());
+    }
+
     public function test_render_snapshot_does_not_cross_users_requests_or_execution_checks(): void
     {
         $action = $this->action($this->operator);

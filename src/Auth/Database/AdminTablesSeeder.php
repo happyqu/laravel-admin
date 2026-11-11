@@ -71,7 +71,7 @@ class AdminTablesSeeder extends Seeder
                 'name'        => 'Auth management',
                 'slug'        => 'auth.management',
                 'http_method' => '',
-                'http_path'   => "/auth/roles\r\n/auth/permissions\r\n/auth/menu\r\n/auth/logs",
+                'http_path'   => "/auth/users\n/auth/users/*\n/auth/roles\n/auth/roles/*\n/auth/permissions\n/auth/permissions/*\n/auth/menu\n/auth/menu/*\n/auth/logs\n/auth/logs/*",
             ],
         ]);
 

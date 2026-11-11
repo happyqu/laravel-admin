@@ -98,6 +98,21 @@ class InitialAdminPasswordTest extends TestCase
         $this->assertTrue(Menu::where('title', 'Preserved menu')->exists());
     }
 
+    public function test_management_permission_covers_resource_operations_without_matching_similar_paths(): void
+    {
+        (new AdminTablesSeeder())->run('InitialStrong123!');
+        config(['admin.route.prefix' => 'admin']);
+        $permission = Permission::where('slug', 'auth.management')->firstOrFail();
+        foreach (['users', 'roles', 'permissions', 'menu', 'logs'] as $resource) {
+            foreach ([['GET', ''], ['POST', ''], ['GET', '/create'], ['GET', '/2'],
+                ['GET', '/2/edit'], ['PUT', '/2'], ['PATCH', '/2'], ['DELETE', '/2']] as [$method, $suffix]) {
+                $this->assertTrue($permission->shouldPassThrough(\Illuminate\Http\Request::create('/admin/auth/'.$resource.$suffix, $method)));
+            }
+            $this->assertFalse($permission->shouldPassThrough(\Illuminate\Http\Request::create('/admin/auth/'.$resource.'-other')));
+        }
+        $this->assertFalse($permission->shouldPassThrough(\Illuminate\Http\Request::create('/admin/orders')));
+    }
+
     public function test_invalid_initial_password_does_not_truncate_fresh_lookup_tables(): void
     {
         try {

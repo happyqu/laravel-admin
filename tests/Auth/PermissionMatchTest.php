@@ -39,6 +39,20 @@ class PermissionMatchTest extends TestCase
         }
     }
 
+    public function test_empty_paths_do_not_grant_route_access_or_match_the_admin_root(): void
+    {
+        foreach ([null, '', " \r\n\t", "GET: \n"] as $path) {
+            foreach ([[], ['GET']] as $methods) {
+                $permission = new Permission(['http_method' => $methods, 'http_path' => $path]);
+                $this->assertFalse($permission->shouldPassThrough(Request::create('/admin', 'GET')));
+                $this->assertFalse($permission->shouldPassThrough(Request::create('/admin/auth/users/1', 'DELETE')));
+            }
+        }
+        $permission = new Permission(['http_method' => ['GET'], 'http_path' => "\n/users\n"]);
+        $this->assertFalse($permission->shouldPassThrough(Request::create('/admin')));
+        $this->assertTrue($permission->shouldPassThrough(Request::create('/admin/users')));
+    }
+
     public function test_plain_paths_keep_the_default_methods_with_or_without_a_prefix(): void
     {
         foreach (['admin', ''] as $prefix) {

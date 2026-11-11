@@ -54,6 +54,17 @@ class Permission extends Model
         return $this->belongsToMany($relatedModel, $pivotTable, 'permission_id', 'role_id');
     }
 
+    /** Users with this permission assigned directly. */
+    public function administrators(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            config('admin.database.users_model'),
+            config('admin.database.user_permissions_table'),
+            'permission_id',
+            'user_id'
+        );
+    }
+
     /**
      * If request should pass through the current permission.
      *
@@ -63,10 +74,6 @@ class Permission extends Model
      */
     public function shouldPassThrough(Request $request): bool
     {
-        if (empty($this->http_method) && empty($this->http_path)) {
-            return true;
-        }
-
         $matches = [];
         $prefix = trim(config('admin.route.prefix'), '/');
         foreach (explode("\n", $this->http_path) as $path) {
@@ -76,6 +83,12 @@ class Permission extends Model
             if (Str::contains($path, ':')) {
                 list($method, $path) = explode(':', $path, 2);
                 $method = explode(',', $method);
+            }
+
+            // An empty path grants no route access; use '/' for the root or '*' for all routes.
+            $path = trim($path);
+            if ($path === '') {
+                continue;
             }
 
             if ($path === '*' && $prefix !== '') {
@@ -102,7 +115,7 @@ class Permission extends Model
      */
     public function getHttpPathAttribute($path)
     {
-        return str_replace("\r\n", "\n", $path);
+        return str_replace(["\r\n", "\r"], "\n", (string) $path);
     }
 
     /**
@@ -167,6 +180,7 @@ class Permission extends Model
 
         static::deleting(function ($model) {
             $model->roles()->detach();
+            $model->administrators()->detach();
         });
     }
 }
