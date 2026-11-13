@@ -449,8 +449,6 @@ php artisan optimize:clear
 
 本包不注册 `unload`。出现 Permissions Policy 提示时，检查当前 iframe 中第三方脚本的事件注册；自定义逻辑可按场景使用 `pagehide` 或 `visibilitychange`。
 
-后台策略由 `admin.permissions_policy` 配置，默认包含 `unload=self`；标签页 iframe 声明 `allow="unload"`。设置为 `[]` 可不发送该策略，最终行为还取决于浏览器及上层页面策略。
-
 ### 自定义 Action 的参数未恢复
 
 确认属性定义在自定义 Action 类或其父类中，值为标量或数组，Action 可通过容器创建新实例。涉及模型、服务对象或超出状态大小限制的数据，应通过 ID 查询；已有显式属性配置也可继续使用。

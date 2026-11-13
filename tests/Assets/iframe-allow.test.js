@@ -23,12 +23,13 @@ function page() {
     return window;
 }
 
-test('tab iframes delegate the unload policy to their document', () => {
+test('tab iframes use the browser default permissions policy', () => {
     const window = page();
 
     window.addTabs({ id: 'users', url: 'users', title: 'Users' });
 
     const iframe = window.document.querySelector('#tab-content iframe');
     assert.ok(iframe, 'the tab iframe is created');
-    assert.equal(iframe.getAttribute('allow'), 'unload');
+    assert.equal(iframe.hasAttribute('allow'), false);
+    window.close();
 });

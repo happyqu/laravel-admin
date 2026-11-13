@@ -101,30 +101,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Permissions-Policy
-    |--------------------------------------------------------------------------
-    |
-    | Directives merged into the `Permissions-Policy` header of every admin
-    | response. Chrome 115+ blocks the deprecated `unload` event by default and
-    | prints "[Violation] Permissions policy violation: unload is not allowed in
-    | this document." once per registered handler, including handlers added by
-    | third-party scripts or widgets used by your own pages.
-    |
-    | Allowing `unload` here restores those handlers and removes the console
-    | violation. The trade-off is documented by the browser: a page that has an
-    | unload handler no longer qualifies for the back/forward cache. Remove the
-    | `unload` entry (or set this array to []) to keep Chrome's default and let
-    | the deprecated handlers be ignored.
-    |
-    | @see https://developer.chrome.com/blog/deprecating-unload
-    |
-    */
-    'permissions_policy' => [
-        'unload' => 'self',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Laravel-admin auth setting
     |--------------------------------------------------------------------------
     |
@@ -263,11 +239,6 @@ return [
          */
         'except' => [
             env('ADMIN_ROUTE_PREFIX', 'admin').'/auth/logs*',
-            // Read-only action/picker loaders are skipped in code too; listing
-            // them here documents the behaviour for hosts that override config.
-            env('ADMIN_ROUTE_PREFIX', 'admin').'/_load_action_',
-            env('ADMIN_ROUTE_PREFIX', 'admin').'/_handle_selectable_',
-            env('ADMIN_ROUTE_PREFIX', 'admin').'/_handle_renderable_',
         ],
     ],
 
@@ -413,6 +384,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'menu_exclude' => [
+        '_load_action_',
         '_handle_selectable_',
         '_handle_renderable_',
     ],
@@ -450,11 +422,10 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Settings for extensions.
+    | Frontend styles
     |--------------------------------------------------------------------------
     |
-    | You can find all available extensions here
-    | https://github.com/laravel-admin-extensions.
+    | Load the custom stylesheet and the iframe stylesheet for JWT requests.
     |
     */
     'frontend' => [
@@ -474,7 +445,6 @@ return [
 
     'iframe_tabs' => [
         'enable' => true,
-        'home_closable' => false,
         'home_action' => \Encore\Admin\IframeTabs\Http\Controllers\IframeTabsController::class.'@dashboard',
         'home_title' => 'Home',
         'home_icon' => 'fa-home',
@@ -499,5 +469,14 @@ return [
         'max_bytes' => 1024 * 1024,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Settings for extensions.
+    |--------------------------------------------------------------------------
+    |
+    | You can find all available extensions here
+    | https://github.com/laravel-admin-extensions.
+    |
+    */
     'extensions' => [],
 ];
