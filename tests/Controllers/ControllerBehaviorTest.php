@@ -4,6 +4,7 @@ namespace Encore\Admin\Tests\Controllers;
 
 use Encore\Admin\Controllers\AuthController;
 use Encore\Admin\Controllers\HandleController;
+use Encore\Admin\Controllers\MenuController;
 use Encore\Admin\Controllers\RoleController;
 use Encore\Admin\Controllers\UserController;
 use Encore\Admin\Facades\Admin;
@@ -201,6 +202,32 @@ class ControllerBehaviorTest extends TestCase
         }
     }
 
+    public function test_menu_edit_links_use_popups_for_parent_and_child_nodes(): void
+    {
+        config(['admin.database.menu_model' => ControllerMenu::class]);
+        $this->request([], 'GET', '/admin/auth/menu');
+        app('view')->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
+        $controller = new class extends MenuController {
+            public function tree() { return $this->treeView(); }
+        };
+
+        $html = $controller->tree()->render();
+        $document = new \DOMDocument();
+        @$document->loadHTML($html);
+        $xpath = new \DOMXPath($document);
+        $links = $xpath->query('//a[contains(concat(" ", normalize-space(@class), " "), " popup ")]');
+        $this->assertCount(2, $links);
+        foreach ($links as $index => $link) {
+            $this->assertStringEndsWith('/admin/auth/menu/'.($index + 1).'/edit', $link->getAttribute('href'));
+            $this->assertSame(trans('admin.edit'), $link->getAttribute('title'));
+        }
+
+        $ordinary = view('admin::tree.branch', [
+            'branch' => ControllerMenu::nodes()[0], 'branchView' => 'admin::tree.branch',
+        ])->render();
+        $this->assertStringNotContainsString('class="popup"', $ordinary);
+    }
+
     private function component(array $payload = [7], string $kind = 'renderable'): array
     {
         $class = $kind === 'renderable' ? ControllerPreview::class : ControllerSelectable::class;
@@ -304,6 +331,18 @@ class ControllerUser extends Model {
     protected $keyType = 'string';
     public $incrementing = false;
 }
+class ControllerMenu extends Model
+{
+    public function withQuery($callback) { return $this; }
+    public function toTree() { return static::nodes(); }
+    public static function nodes(): array
+    {
+        return [['id' => 1, 'title' => 'Parent', 'icon' => 'fa-bars', 'uri' => '', 'children' => [
+            ['id' => 2, 'title' => 'Child', 'icon' => 'fa-file', 'uri' => 'users'],
+        ]]];
+    }
+}
+
 class ControllerLookup extends Model
 {
     public static bool $protected = true;

@@ -15,8 +15,8 @@ function boot(w, payload = {}) {
     })));
 }
 
-function page(t) {
-    const w = new JSDOM('<a class="edit" href="/admin/sys/config/1/edit">Edit</a>', {
+function page(t, options = {}) {
+    const w = new JSDOM(options.html || '<a class="edit" href="/admin/sys/config/1/edit">Edit</a>', {
         url: 'https://doublec.test/admin/sys/config', runScripts: 'outside-only',
     }).window;
     t.after(() => w.close());
@@ -30,8 +30,8 @@ function page(t) {
         getFrameIndex() { return 3; },
         close(index) { events.push('close-popup:' + index); },
     };
-    boot(w);
-    w.$('a.edit').trigger('click');
+    boot(w, {bindSelecter: options.selector || 'a.edit'});
+    w.$(options.link || 'a.edit').trigger('click');
     const url = new URL(opened.content, w.location.href);
     const openerId = url.searchParams.get('_iframe_id_');
     const frame = w.document.createElement('iframe');
@@ -51,6 +51,21 @@ test('standalone list popup AJAX save refreshes its opener and closes the editor
     const form = editor.document.getElementById('edit');
     assert.equal(editor.$(form).find('[name="_iframe_id_"]').val(), openerId);
     assert.equal(editor.$.admin.afterFormSaved(form, { message: 'Saved', after_save: '' }), true);
+    assert.deepEqual(events, ['refresh-list', 'notify', 'close-popup:3']);
+});
+
+test('menu tree editing uses the configured popup selector and returns to the list after saving', t => {
+    const config = fs.readFileSync(path.join(root, 'config/admin.php'), 'utf8');
+    const selector = config.match(/'bind_selecter'\s*=>\s*'([^']+)'/)[1];
+    const { w, editor, events, openerId } = page(t, {
+        html: '<div class="dd"><a class="popup" title="Edit menu" href="/admin/auth/menu/7/edit"><i class="fa fa-edit"></i></a></div>',
+        selector, link: '.dd a.popup',
+    });
+    assert.ok(openerId);
+    assert.equal(new URL(editor.location.href).pathname, '/admin/auth/menu/7/edit');
+    assert.equal(w.location.pathname, '/admin/sys/config');
+    boot(editor, {iframeId: openerId});
+    assert.equal(editor.$.admin.afterFormSaved(editor.document.getElementById('edit'), {message: 'Saved', after_save: ''}), true);
     assert.deepEqual(events, ['refresh-list', 'notify', 'close-popup:3']);
 });
 
