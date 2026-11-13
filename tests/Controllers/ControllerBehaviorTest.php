@@ -162,6 +162,21 @@ class ControllerBehaviorTest extends TestCase
         $this->assertStringNotContainsString('unique:.', $rule);
     }
 
+    public function test_password_forms_display_configured_help_without_old_browser_limits(): void
+    {
+        config(['admin.password' => ['regex' => '/\A[a-z]{24}\z/', 'message' => 'Use <24> lowercase letters.']]);
+        foreach ($this->forms() as $form) {
+            $field = $form->fields()->first(fn ($field) => $field->column() === 'password');
+            $attributes = (new \ReflectionProperty(Form\Field::class, 'attributes'))->getValue($field);
+            $this->assertSame('Use <24> lowercase letters.', $attributes['title']);
+            foreach (['pattern', 'minlength', 'maxlength'] as $attribute) {
+                $this->assertArrayNotHasKey($attribute, $attributes);
+            }
+            $help = (new \ReflectionProperty(Form\Field::class, 'help'))->getValue($field);
+            $this->assertSame('Use &lt;24&gt; lowercase letters.', $help['text']);
+        }
+    }
+
     public function test_settings_use_the_auth_identifier(): void
     {
         $form = $this->getMockBuilder(Form::class)->disableOriginalConstructor()->onlyMethods(['update'])->getMock();

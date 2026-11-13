@@ -2,6 +2,7 @@
 
 namespace Encore\Admin\Console;
 
+use Encore\Admin\Rules\Password;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
@@ -38,8 +39,14 @@ class ResetPasswordCommand extends Command
             goto askForUserName;
         }
 
+        $rule = new Password();
         enterPassword:
         $password = $this->secret('Please enter a password');
+
+        if (!is_string($password) || $password === '' || !$rule->passesValue($password)) {
+            $this->error($rule->message());
+            goto enterPassword;
+        }
 
         if ($password !== $this->secret('Please confirm the password')) {
             $this->error('The passwords entered twice do not match, please re-enter');

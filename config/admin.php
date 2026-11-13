@@ -167,6 +167,15 @@ return [
         ],
     ],
 
+    'password' => [
+        // Full PHP/PCRE expression, including delimiters. Anchor the entire value
+        // with \A and \z. This policy applies when setting a password, not logging in.
+        'regex' => '/\A(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[$@!%*?&])[A-Za-z0-9$@!%*?&]{8,20}\z/',
+        // Plain-text help/error message. Null uses the translated default message
+        // (or a generic message for a custom regex). Update alongside the regex.
+        'message' => '密码须为8–20位，包含大小写字母、数字及特殊字符（$@!%*?&）。',
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Laravel-admin upload setting

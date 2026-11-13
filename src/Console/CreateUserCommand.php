@@ -2,6 +2,7 @@
 
 namespace Encore\Admin\Console;
 
+use Encore\Admin\Rules\Password;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
@@ -31,7 +32,15 @@ class CreateUserCommand extends Command
 
         $username = $this->ask('Please enter a username to login');
 
-        $password = Hash::make($this->secret('Please enter a password to login'));
+        $rule = new Password();
+        do {
+            $plainPassword = $this->secret('Please enter a password to login');
+            $valid = is_string($plainPassword) && $plainPassword !== '' && $rule->passesValue($plainPassword);
+            if (!$valid) {
+                $this->error($rule->message());
+            }
+        } while (!$valid);
+        $password = Hash::make($plainPassword);
 
         $name = $this->ask('Please enter a name to display');
 

@@ -113,7 +113,7 @@ class UserController extends AdminController
                 ->customFormat(static fn () => '')
                 ->attribute($rule->htmlConstraints())
                 ->rules(['required', 'string', $rule->rule(), 'confirmed'])
-                ->help($rule->message());
+                ->help(e($rule->message()));
             $form->password('password_confirmation', trans('admin.password_confirmation'))
                 ->customFormat(static fn () => '')
                 ->rules('required');

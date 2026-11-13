@@ -121,6 +121,7 @@ return [
     'authentication_expired' => '登录已过期，请重新登录。',
     'request_failed'         => '请求失败，请重试。',
     'reset_password'         => '修改密码',
+    'password_invalid'       => '密码不符合配置的要求。',
     'password_rule'          => '密码必须是 :min 至 :max 位字符，至少包含 1 个大写字母、1 个小写字母、1 个数字和 1 个特殊字符（:symbols）。',
     'operation_log_user'     => '操作人',
     'operation_log_input'    => '请求参数',

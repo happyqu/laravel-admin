@@ -43,7 +43,7 @@ class ResetPassword extends RowAction
             ->attribute($rule->htmlConstraints())
             ->required()
             ->rules(['required', $rule->rule(), 'confirmed'])
-            ->help($rule->message());
+            ->help(e($rule->message()));
         $this->password('password_confirmation', trans('admin.password_confirmation'))
             ->attribute('autocomplete', 'new-password')
             ->required()

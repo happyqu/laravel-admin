@@ -154,7 +154,7 @@ class AuthController extends Controller
         $form->password('password', trans('admin.password'))->rules(['nullable', 'string', $rule->rule(), 'confirmed'])
             ->customFormat(static fn () => '')
             ->attribute($rule->htmlConstraints())
-            ->help($rule->message());
+            ->help(e($rule->message()));
         $form->password('password_confirmation', trans('admin.password_confirmation'))
             ->rules('nullable|string|required_with:password');
 

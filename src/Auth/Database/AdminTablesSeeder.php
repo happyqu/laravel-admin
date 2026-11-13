@@ -163,8 +163,9 @@ class AdminTablesSeeder extends Seeder
                 throw new \InvalidArgumentException('The initial administrator passwords do not match.');
             }
         }
-        if (!is_string($password) || !(new Password())->passesValue($password)) {
-            throw new \InvalidArgumentException('Set a strong initial administrator password (8-20 characters, including lowercase, uppercase, a digit and a symbol from $@!%*?&). For unattended installation, inject ADMIN_INITIAL_PASSWORD into the process environment.');
+        $rule = new Password();
+        if (!is_string($password) || $password === '' || !$rule->passesValue($password)) {
+            throw new \InvalidArgumentException($rule->message().' For unattended installation, inject ADMIN_INITIAL_PASSWORD into the process environment.');
         }
 
         return $password;

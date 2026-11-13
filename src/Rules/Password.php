@@ -2,6 +2,7 @@
 
 namespace Encore\Admin\Rules;
 
+use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -28,6 +29,14 @@ class Password
      */
     public const DEFAULT_SYMBOLS = '$@!%*?&';
 
+    public const DEFAULT_REGEX = '/\A(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[$@!%*?&])[A-Za-z0-9$@!%*?&]{8,20}\z/';
+
+    protected $regex;
+
+    protected $configuredMessage;
+
+    protected $usesConfiguration;
+
     /**
      * @var string
      */
@@ -53,26 +62,34 @@ class Password
         $this->symbols = (string) $symbols;
         $this->min = (int) $min;
         $this->max = (int) $max;
+        $this->usesConfiguration = func_num_args() === 0;
+
+        if ($this->usesConfiguration && Container::getInstance()->bound('config')) {
+            $this->regex = config('admin.password.regex', self::DEFAULT_REGEX);
+            $this->configuredMessage = config('admin.password.message');
+        } else {
+            $this->regex = $this->usesConfiguration ? self::DEFAULT_REGEX : '/\A(?:'.$this->pattern().')\z/';
+        }
+
+        if (!is_string($this->regex) || $this->regex === '' || @preg_match($this->regex, '') === false) {
+            throw new \InvalidArgumentException('admin.password.regex must be a valid, non-empty PHP regular expression.');
+        }
+        if ($this->configuredMessage !== null && (!is_string($this->configuredMessage) || trim($this->configuredMessage) === '')) {
+            throw new \InvalidArgumentException('admin.password.message must be a non-empty string or null.');
+        }
     }
 
     /**
-     * Register the `admin_password` validator extension once.
+     * Register the `admin_password` validator extension on the current factory.
      *
      * @return void
      */
     public static function register()
     {
-        static $registered = false;
-
-        if ($registered) {
-            return;
-        }
-        $registered = true;
-
         Validator::extend(
             self::RULE,
             static function ($attribute, $value, $parameters = []) {
-                return (new static(static::symbolFrom($parameters), ...static::boundsFrom($parameters)))->passesValue($value);
+                return static::fromParameters($parameters)->passesValue($value);
             },
             'admin.password_rule'
         );
@@ -80,9 +97,14 @@ class Password
         Validator::replacer(
             self::RULE,
             static function ($message, $attribute, $rule, $parameters = []) {
-                return (new static(static::symbolFrom($parameters), ...static::boundsFrom($parameters)))->message();
+                return static::fromParameters($parameters)->message();
             }
         );
+    }
+
+    protected static function fromParameters(array $parameters)
+    {
+        return $parameters === [] ? new static() : new static(static::symbolFrom($parameters), ...static::boundsFrom($parameters));
     }
 
     /**
@@ -122,7 +144,16 @@ class Password
      */
     public function passesValue($value)
     {
-        return is_string($value) && preg_match('/^'.$this->pattern().'$/', $value) === 1;
+        if (!is_string($value)) {
+            return false;
+        }
+
+        $result = @preg_match($this->regex, $value);
+        if ($result === false) {
+            throw new \RuntimeException('Password regular expression evaluation failed.');
+        }
+
+        return $result === 1;
     }
 
     /**
@@ -145,6 +176,11 @@ class Password
      */
     public function htmlConstraints()
     {
+        // Arbitrary PCRE patterns cannot safely be converted to HTML patterns.
+        if ($this->usesConfiguration) {
+            return ['title' => $this->message()];
+        }
+
         return [
             'pattern'    => $this->pattern(),
             'minlength'  => $this->min,
@@ -160,7 +196,7 @@ class Password
      */
     public function rule()
     {
-        if ($this->symbols === self::DEFAULT_SYMBOLS && $this->min === 8 && $this->max === 20) {
+        if ($this->usesConfiguration) {
             return self::RULE;
         }
 
@@ -192,6 +228,20 @@ class Password
      */
     public function message()
     {
+        if ($this->configuredMessage !== null) {
+            return $this->configuredMessage;
+        }
+
+        $custom = $this->usesConfiguration && $this->regex !== self::DEFAULT_REGEX;
+        // Installation can also run before a translator has been bootstrapped.
+        if (!Container::getInstance()->bound('translator')) {
+            return $custom ? 'The password does not meet the configured requirements.'
+                : 'The password must be '.$this->min.' to '.$this->max.' characters long and contain a lowercase letter, an uppercase letter, a digit and a special character ('.$this->symbols.').';
+        }
+        if ($custom) {
+            return trans('admin.password_invalid');
+        }
+
         return trans('admin.password_rule', [
             'min'     => $this->min,
             'max'     => $this->max,
