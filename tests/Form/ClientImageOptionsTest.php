@@ -74,4 +74,18 @@ class ClientImageOptionsTest extends TestCase
             }
         }
     }
+
+    public function test_removed_server_processing_methods_are_not_silently_accepted(): void
+    {
+        foreach ($this->fields() as $field) {
+            foreach (['crop', 'resize', 'fit', 'thumbnail'] as $method) {
+                try {
+                    $field->$method(100, 100);
+                    $this->fail('Removed server processing method was accepted.');
+                } catch (\BadMethodCallException $exception) {
+                    $this->assertStringContainsString($method, $exception->getMessage());
+                }
+            }
+        }
+    }
 }

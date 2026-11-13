@@ -3,10 +3,6 @@
 namespace Encore\Admin\Form\Field;
 
 use Illuminate\Support\Str;
-use Intervention\Image\Constraint;
-use Intervention\Image\Facades\Image as InterventionImage;
-use Intervention\Image\ImageManagerStatic;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 trait ImageField
 {
@@ -70,18 +66,7 @@ trait ImageField
         }
     }
 
-    /**
-     * Intervention calls.
-     *
-     * @var array
-     */
-    protected $interventionCalls = [];
-
-    /**
-     * Thumbnail settings.
-     *
-     * @var array
-     */
+    /** Names of historical thumbnails to remove with their original image. */
     protected $thumbnails = [];
 
     /**
@@ -92,69 +77,6 @@ trait ImageField
     public function defaultDirectory()
     {
         return config('admin.upload.directory.image');
-    }
-
-    /**
-     * Execute Intervention calls.
-     *
-     * @param string $target
-     *
-     * @return mixed
-     */
-    public function callInterventionMethods($target)
-    {
-        if (!empty($this->interventionCalls)) {
-            $this->ensureIntervention();
-
-            $image = ImageManagerStatic::make($target);
-
-            foreach ($this->interventionCalls as $call) {
-                call_user_func_array(
-                    [$image, $call['method']],
-                    $call['arguments']
-                )->save($target);
-            }
-        }
-
-        return $target;
-    }
-
-    /**
-     * Fail clearly when optional image processing is requested but unavailable.
-     */
-    protected function ensureIntervention(): void
-    {
-        if (!class_exists(ImageManagerStatic::class)) {
-            throw new \RuntimeException('To use image handling and manipulation, install [intervention/image:^2.7].');
-        }
-    }
-
-    /**
-     * Call intervention methods.
-     *
-     * @param string $method
-     * @param array  $arguments
-     *
-     * @throws \Exception
-     *
-     * @return $this
-     */
-    public function __call($method, $arguments)
-    {
-        if (static::hasMacro($method)) {
-            return $this->macroCall($method, $arguments);
-        }
-
-        if (!class_exists(ImageManagerStatic::class)) {
-            throw new \Exception('To use image handling and manipulation, please install [intervention/image] first.');
-        }
-
-        $this->interventionCalls[] = [
-            'method'    => $method,
-            'arguments' => $arguments,
-        ];
-
-        return $this;
     }
 
     /**
@@ -169,24 +91,10 @@ trait ImageField
         return parent::render();
     }
 
-    /**
-     * @param string|array $name
-     * @param int          $width
-     * @param int          $height
-     *
-     * @return $this
-     */
-    public function thumbnail($name, ?int $width = null, ?int $height = null)
+    /** Register historical thumbnail names for cleanup; no new thumbnails are generated. */
+    public function cleanupThumbnails(array $names)
     {
-        if (func_num_args() == 1 && is_array($name)) {
-            foreach ($name as $key => $size) {
-                if (count($size) >= 2) {
-                    $this->thumbnails[$key] = $size;
-                }
-            }
-        } elseif (func_num_args() == 3) {
-            $this->thumbnails[$name] = [$width, $height];
-        }
+        $this->thumbnails = array_fill_keys($names, true);
 
         return $this;
     }
@@ -242,56 +150,5 @@ trait ImageField
         if ($this->storage->exists($path)) {
             $this->deleteStoredFile($path);
         }
-    }
-
-    /**
-     * Upload file and delete original thumbnail files.
-     *
-     * @param UploadedFile $file
-     *
-     * @return $this
-     */
-    protected function uploadAndDeleteOriginalThumbnail(UploadedFile $file)
-    {
-        if (empty($this->thumbnails)) {
-            return $this;
-        }
-
-        $this->ensureIntervention();
-
-        $directory = (string) $this->getDirectory();
-        foreach ($this->thumbnails as $name => $size) {
-            // We need to get extension type ( .jpeg , .png ...)
-            $ext = pathinfo($this->name, PATHINFO_EXTENSION);
-
-            // We remove extension from file name so we can append thumbnail type
-            $path = Str::replaceLast('.'.$ext, '', $this->name);
-
-            // We merge original name + thumbnail name + extension
-            $path = $path.'-'.$name.'.'.$ext;
-
-            $this->validateUploadDestination($file, $path, $directory);
-            app(\Encore\Admin\Form\UploadTransaction::class)->uploaded($this->storage, "{$directory}/{$path}");
-
-            /** @var \Intervention\Image\Image $image */
-            $image = InterventionImage::make($file);
-
-            $action = $size[2] ?? 'resize';
-            // Resize image with aspect ratio
-            $image->$action($size[0], $size[1], function (Constraint $constraint) {
-                $constraint->aspectRatio();
-            })->resizeCanvas($size[0], $size[1], 'center', false, '#ffffff');
-
-            if (!is_null($this->storagePermission)) {
-                $stored = $this->storage->put("{$directory}/{$path}", $image->encode(), $this->storagePermission);
-            } else {
-                $stored = $this->storage->put("{$directory}/{$path}", $image->encode());
-            }
-            if ($stored === false) {
-                throw new \RuntimeException('Unable to store image thumbnail.');
-            }
-        }
-
-        return $this;
     }
 }

@@ -19,7 +19,6 @@
         "encore/laravel-admin": "1.8.19"
     },
     "suggest": {
-        "intervention/image": "Required for image handling and manipulation (^2.7).",
         "spatie/eloquent-sortable": "Required for orderable grids.",
         "maatwebsite/excel": "Required for Excel exports (^3.1).",
         "matthiasmullie/minify": "Required for the admin:minify command (^1.3)."

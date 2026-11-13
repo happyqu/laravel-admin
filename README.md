@@ -29,7 +29,6 @@
 
 | 功能 | 可选依赖 |
 | --- | --- |
-| 服务端图片裁切、缩略图 | `intervention/image:^2.7` |
 | Orderable Grid | `spatie/eloquent-sortable` |
 | Excel 导出 | `maatwebsite/excel:^3.1` |
 | 资源压缩 | `matthiasmullie/minify:^1.3` |
@@ -369,7 +368,9 @@ $form->image('banner', '横幅')->cropper(null, null, ['aspectRatio' => 16 / 9])
 
 处理期间阻止提交，取消裁剪会清空本次选择并保留已保存图片。JPEG、PNG、WebP 支持处理，PNG 保留透明通道；单独压缩未减小文件时保留原文件。GIF 压缩时原样上传，裁剪时提示更换格式。Canvas 重编码会移除原有 EXIF 元数据，前端处理不能替代服务端验证。
 
-需要支持 Canvas、`toBlob`、`File` 和可写 `DataTransfer` 的现代浏览器。`crop()`、`resize()`、`thumbnail()` 等服务端图片操作仍需可选依赖。
+需要支持 Canvas、`toBlob`、`File` 和可写 `DataTransfer` 的现代浏览器。图片处理统一在前端完成，后端只验证并保存上传结果，不再使用 `intervention/image`。
+
+旧的服务端图片操作已移除：`crop()`、`fit()` 请改用 `cropper($width, $height)`，`resize()` 请改用 `compress($quality, $maxWidth, $maxHeight)`（等比限制最大尺寸，不放大）。两者的交互和尺寸语义与旧 API 不完全相同，请按业务需求调整。`thumbnail()` 不再生成额外文件；如需独立的小图，请使用单独的图片字段，在前端裁剪后上传。历史缩略图可通过 `cleanupThumbnails(['small', 'medium'])` 注册名称，在替换或删除原图时一起清理。宿主项目无其他用途时可执行 `composer remove intervention/image`。
 
 ## 日志查看器
 

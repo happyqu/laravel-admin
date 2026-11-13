@@ -34,7 +34,7 @@ class RelatedFileCleanupTest extends TestCase
 
     private function field(): CleanupImages
     {
-        return (new CleanupImages('attachments'))->usingStorage($this->storage)->thumbnail('small', 20, 20);
+        return (new CleanupImages('attachments'))->usingStorage($this->storage)->cleanupThumbnails(['small']);
     }
 
     private function cleanup(CleanupImages $field): void
