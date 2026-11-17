@@ -131,6 +131,150 @@ test('action success dialog follows confirmation and refresh waits for acknowled
     }
 });
 
+test('a failed dialog action shows its result popup after the confirmation closes', async () => {
+    const dom = new JSDOM('<a data-admin-action="ticket" data-admin-mode="dialog" data-admin-execute="/action" data-admin-dialog="{}">Generate</a>', {
+        url: 'http://localhost/', runScripts: 'outside-only',
+    });
+    try {
+        const window = dom.window;
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'), 'utf8'));
+        const $ = window.jQuery;
+        const dialogs = [];
+        let confirmationClosed = false, refreshes = 0, toasts = 0;
+        $.admin = {
+            token: 'csrf', isResponseError: data => data.status === false,
+            responseMessage: () => '',
+            toastr: { error: () => { toasts++; }, success: () => { toasts++; } },
+            reload: () => { refreshes++; },
+            swal(settings) {
+                if (dialogs.length) assert.equal(confirmationClosed, true, 'The result cannot open while the confirmation is still on screen');
+                let resolve;
+                const promise = new Promise(done => { resolve = done; });
+                dialogs.push({ settings, resolve });
+                return promise;
+            },
+        };
+        $.ajax = () => Promise.resolve({
+            status: false,
+            swal: { type: 'error', title: '报告尚未完成，无法生成PDF报告' },
+            then: { action: 'refresh', value: true },
+        });
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/actions.js'), 'utf8'));
+        $('a').trigger('click');
+
+        const result = await dialogs[0].settings.preConfirm(true);
+        assert.equal(dialogs.length, 1);
+        assert.equal(refreshes, 0);
+        confirmationClosed = true;
+        dialogs[0].resolve({ value: result });
+        await new Promise(resolve => window.setTimeout(resolve, 0));
+
+        assert.equal(dialogs.length, 2, 'The failure message must reach the user');
+        assert.equal(dialogs[1].settings.type, 'error');
+        assert.equal(dialogs[1].settings.title, '报告尚未完成，无法生成PDF报告');
+        assert.equal(toasts, 0, 'A shown dialog does not also raise a toast');
+        assert.equal(refreshes, 0, 'A failed action does not refresh the page');
+
+        dialogs[1].resolve({ value: true });
+        await new Promise(resolve => window.setTimeout(resolve, 0));
+        assert.equal(refreshes, 0);
+    } finally {
+        dom.window.close();
+    }
+});
+
+test('a dialog result waits for the previous popup container to leave the DOM', async () => {
+    const dom = new JSDOM('<a data-admin-action="ticket" data-admin-mode="dialog" data-admin-execute="/action" data-admin-dialog="{}">Run</a>', {
+        url: 'http://localhost/', runScripts: 'outside-only',
+    });
+    try {
+        const window = dom.window;
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'), 'utf8'));
+        const $ = window.jQuery;
+        const dialogs = [];
+        const container = window.document.createElement('div');
+        container.className = 'swal2-container';
+        window.document.body.appendChild(container);
+        $.admin = {
+            token: 'csrf', isResponseError: data => data.status === false,
+            responseMessage: () => '', toastr: { error: () => assert.fail('unexpected toast') },
+            swal(settings) {
+                let resolve;
+                const promise = new Promise(done => { resolve = done; });
+                dialogs.push({ settings, resolve });
+                return promise;
+            },
+        };
+        $.ajax = () => Promise.resolve({ status: true, swal: { type: 'success', title: 'Done' }, then: {} });
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/actions.js'), 'utf8'));
+        $('a').trigger('click');
+        const result = await dialogs[0].settings.preConfirm(true);
+        dialogs[0].resolve({ value: result });
+
+        await new Promise(resolve => window.setTimeout(resolve, 40));
+        assert.equal(dialogs.length, 1, 'The result waits while the confirmation container is attached');
+
+        container.remove();
+        await new Promise(resolve => window.setTimeout(resolve, 40));
+        assert.equal(dialogs.length, 2);
+        assert.equal(dialogs[1].settings.title, 'Done');
+        dialogs[1].resolve({ value: true });
+    } finally {
+        dom.window.close();
+    }
+});
+
+test('an empty error dialog falls back to the response message', async () => {
+    const dom = new JSDOM('<a data-admin-action="ticket" data-admin-mode="direct" data-admin-keyed="0" data-admin-execute="/action">Run</a>', {
+        url: 'http://localhost/', runScripts: 'outside-only',
+    });
+    try {
+        const window = dom.window;
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'), 'utf8'));
+        const $ = window.jQuery;
+        let shown;
+        $.admin = {
+            token: 'csrf', isResponseError: data => data.status === false,
+            responseMessage: (data, fallback) => (data && data.message) || fallback,
+            toastr: { error: () => assert.fail('unexpected toast') },
+            swal: settings => { shown = settings; return Promise.resolve({ value: true }); },
+        };
+        $.ajax = () => Promise.resolve({ status: false, message: '报告尚未完成', swal: { type: 'error', title: '' } });
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/actions.js'), 'utf8'));
+        $('a').trigger('click');
+        await new Promise(resolve => window.setTimeout(resolve, 0));
+        assert.equal(shown.title, '报告尚未完成');
+    } finally {
+        dom.window.close();
+    }
+});
+
+test('an empty success dialog is skipped instead of shown blank', async () => {
+    const dom = new JSDOM('<a data-admin-action="ticket" data-admin-mode="direct" data-admin-keyed="0" data-admin-execute="/action">Run</a>', {
+        url: 'http://localhost/', runScripts: 'outside-only',
+    });
+    try {
+        const window = dom.window;
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js'), 'utf8'));
+        const $ = window.jQuery;
+        let dialogs = 0, refreshes = 0;
+        $.admin = {
+            token: 'csrf', isResponseError: data => data.status === false,
+            responseMessage: () => '', toastr: {},
+            swal: () => { dialogs++; return Promise.resolve({ value: true }); },
+            reload: () => { refreshes++; },
+        };
+        $.ajax = () => Promise.resolve({ status: true, swal: { type: null, title: null }, then: { action: 'refresh' } });
+        window.eval(fs.readFileSync(path.join(__dirname, '../../resources/assets/actions.js'), 'utf8'));
+        $('a').trigger('click');
+        await new Promise(resolve => window.setTimeout(resolve, 0));
+        assert.equal(dialogs, 0, 'A dialog with no content is not a notification');
+        assert.equal(refreshes, 1);
+    } finally {
+        dom.window.close();
+    }
+});
+
 test('resource delete confirmation posts multipart data with the DELETE override and signed ticket', async () => {
     const dom = new JSDOM('<a data-admin-action="signed" data-admin-mode="dialog" data-admin-execute="/admin/records/7" data-admin-method="DELETE" data-admin-dialog="{}" data-_key="7">Delete</a>', {
         url: 'http://localhost/admin/records', runScripts: 'outside-only',

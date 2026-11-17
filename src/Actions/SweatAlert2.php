@@ -29,10 +29,17 @@ class SweatAlert2
     }
 
     /**
+     * A response that only carries a redirect or refresh has no dialog to show;
+     * an empty `swal` payload would make the front end open a blank alert.
+     *
      * @return array
      */
     public function getOptions()
     {
+        if ($this->type === null && ($this->title === null || $this->title === '')) {
+            return [];
+        }
+
         return [
             'swal' => [
                 'type'  => $this->type,

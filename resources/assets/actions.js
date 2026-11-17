@@ -122,6 +122,28 @@
         notify(error);
         return true;
     }
+    // SweetAlert2 closes by clearing `.swal2-container`, and a popup opened while that
+    // container still exists reuses it, so the closing animation's `animationend` removes
+    // the new popup together with the old one. Render results only after it is gone.
+    function afterDialogClosed(callback) {
+        var document = root.document, observer = null, fallback = null, fired = false;
+        function done() {
+            if (fired) return;
+            fired = true;
+            if (observer) { observer.disconnect(); observer = null; }
+            if (fallback !== null) { root.clearTimeout(fallback); fallback = null; }
+            callback();
+        }
+        if (!document.querySelector('.swal2-container')) return done();
+        if (root.MutationObserver) {
+            observer = new root.MutationObserver(function () {
+                if (!document.querySelector('.swal2-container')) done();
+            });
+            observer.observe(document.body, {childList: true, subtree: true});
+        }
+        // Safety net for implementations that keep the container in place.
+        fallback = root.setTimeout(done, 600);
+    }
     function runThen(command) {
         if (command.action === 'refresh') { $.admin.reload({adminLoading: false}); }
         if (command.action === 'redirect') { $.admin.redirect(command.value); }
@@ -132,7 +154,19 @@
         if (data.html !== undefined) target.html(data.html);
         var command = $.admin.isResponseError(data) ? null : (data.then || null);
         if (data.swal) {
-            return Promise.resolve($.admin.swal(data.swal)).then(function () {
+            var settings = data.swal;
+            if (!settings.title && !settings.text && !settings.html) {
+                // An empty dialog tells the user nothing and only gets in the way.
+                if (!$.admin.isResponseError(data)) {
+                    if (command) runThen(command);
+                    return;
+                }
+                settings = Object.assign({}, settings, {
+                    title: $.admin.responseMessage(data) || (data.toastr && data.toastr.content)
+                        || 'Unable to complete this action.',
+                });
+            }
+            return Promise.resolve($.admin.swal(settings)).then(function () {
                 if (command) runThen(command);
             });
         }
@@ -154,10 +188,12 @@
         return Promise.resolve($.ajax({ url: current.url, method: method, data: multipart ? data : JSON.stringify(data),
             processData: false, contentType: multipart ? false : 'application/json', dataType: 'json' }))
             .then(function (result) {
-                if (!(deferDialogResponse && result.swal && !$.admin.isResponseError(result))) {
-                    response(result, current.target);
-                }
+                // A dialog action renders its own result once the confirmation is gone:
+                // `response()` cannot show it earlier without it being closed away again.
+                var deferred = !!(deferDialogResponse && result.swal);
+                if (!deferred) response(result, current.target);
                 if ($.admin.isResponseError(result)) {
+                    if (deferred) return result;
                     throw { responseJSON: result, adminActionReported: !!(result.toastr || result.swal) };
                 }
                 if (result.status === true && shell && current.mode === 'form') {
@@ -200,10 +236,10 @@
         settings.allowOutsideClick = function () { return !state.saving; };
         settings.allowEscapeKey = function () { return !state.saving; };
         Promise.resolve($.admin.swal(settings)).then(function (result) {
-            // preConfirm must finish closing the confirmation before opening its result.
-            if (result && result.value && result.value.swal && !$.admin.isResponseError(result.value)) {
-                response(result.value, current.target);
-            }
+            // preConfirm must finish closing the confirmation before opening its result,
+            // and a failed result deserves the same result popup as a successful one.
+            if (!result || !result.value || !result.value.swal) return;
+            afterDialogClosed(function () { response(result.value, current.target); });
         }).catch(function () {});
     }
     function open(button) {

@@ -137,6 +137,11 @@ class Response
      */
     protected function show($type, $title = '')
     {
+        // A bare Response (one built without response()) still owes the user a message.
+        if (!$this->plugin) {
+            $this->toastr();
+        }
+
         $this->getPlugin()->show($type, $title);
 
         return $this;
@@ -252,7 +257,7 @@ class Response
     {
         $data = array_merge(
             ['status' => $this->status, 'then' => $this->then],
-            $this->getPlugin()->getOptions()
+            $this->plugin ? $this->plugin->getOptions() : []
         );
 
         if ($this->html) {
@@ -270,7 +275,7 @@ class Response
      */
     public function __call($method, $arguments)
     {
-        if (in_array($method, $this->toastrMethods)) {
+        if (in_array($method, $this->toastrMethods) || !$this->plugin) {
             $this->toastr();
         }
 
