@@ -221,7 +221,7 @@ $.ajax($ajaxOptions).done(function(data) {
       $(this).find('option').each(function () { this.defaultSelected = this.selected; });
   }).removeAttr('data-admin-select-initializing').trigger("change");
 }).fail(function () {
-  $(".{$this->getElementClass()}").removeAttr('data-admin-select-initializing').trigger('admin:select-options-initialized');
+  $(".{$this->getElementClass()}").removeAttr('data-admin-select-initializing').trigger('admin:select-options-failed');
 });
 
 EOT;

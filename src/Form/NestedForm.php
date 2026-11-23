@@ -370,7 +370,8 @@ class NestedForm
     public function pushField(Field $field)
     {
         if ($field instanceof Field\Select) {
-            $field->setNestedForm($this);
+            // Resolve dependent-option parents among this row's siblings, not the outer form.
+            $field->setOptionScope($this->fields);
         }
         $this->fields->push($field);
 

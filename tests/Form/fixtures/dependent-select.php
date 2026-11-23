@@ -111,6 +111,18 @@ function renderForm(?string $province, ?string $city, bool $useDefaults = false,
     return '<form><div class="fields-group">'.$parent->default($province)->render().$child->default($city)->render().'</div></form>';
 }
 
+/** Dependent options declared inside embeds() resolve the parent from the same embed. */
+function renderEmbeddedForm(?string $province, ?string $city): string
+{
+    $form = new Form(new class extends Model {});
+    $form->embeds('address', function ($field) use ($province, $city) {
+        $field->select('province_id')->options([0 => 'First', 1 => 'Second'])->default($province);
+        $field->select('city_id')->optionsBy('province_id', DependentSelectCity::class, 'parent_id', 'city_name')->default($city);
+    });
+
+    return '<form data-admin-form>'.$form->render().'</form>';
+}
+
 function renderFilter(string $name, array $params, array|string|Closure $provinces = [0 => 'First', 1 => 'Second'], ?array $allowedParents = null): array
 {
     requestFor(parameters: $params);
@@ -143,11 +155,16 @@ function queryOptions(string $url, array $parameters): array
     return $result + ['queries' => $connection->queries];
 }
 
-function optionUrl(array $fixture): string
+function optionConfig(array $fixture): array
 {
     preg_match('/data-admin-select-options-by="([^"]+)"/', $fixture['html'], $match);
 
-    return json_decode(html_entity_decode($match[1], ENT_QUOTES, 'UTF-8'), true, flags: JSON_THROW_ON_ERROR)['url'];
+    return json_decode(html_entity_decode($match[1] ?? '', ENT_QUOTES, 'UTF-8'), true, flags: JSON_THROW_ON_ERROR) ?? [];
+}
+
+function optionUrl(array $fixture): string
+{
+    return optionConfig($fixture)['url'];
 }
 
 requestFor();
@@ -158,6 +175,9 @@ $out = [
     'defaults' => capture(fn () => renderForm('0', 'a', true)),
     'restrictedForm' => capture(fn () => renderForm('1', 'c', provinces: [0 => 'First'])),
     'asyncForm' => capture(fn () => renderForm('0', 'b', provinces: '/api/provinces', allowedParents: [0, 1])),
+    'embeddedForm' => capture(fn () => renderEmbeddedForm('0', 'b')),
+    // Parent options arrive over AJAX, so no parent ID is queryable server-side yet.
+    'unscopedForm' => capture(fn () => renderForm('0', 'b', provinces: '/api/provinces')),
     'firstFilter' => renderFilter('first', ['first_province_id' => '0', 'first_city_id' => 'b']),
     'secondFilter' => renderFilter('second', []),
     'restrictedFilter' => renderFilter('restricted', ['restricted_province_id' => '1', 'restricted_city_id' => 'c'], fn () => [0 => 'First']),
@@ -167,6 +187,27 @@ requestFor();
 $app['session']->flashInput(['province_id' => '1', 'city_id' => 'c']);
 $out['oldInput'] = capture(fn () => renderForm('0', 'b'));
 $app['session']->forget('_old_input');
+
+$out['embeddedConfig'] = optionConfig($out['embeddedForm']);
+$out['unscopedConfig'] = optionConfig($out['unscopedForm']);
+$out['unscopedHtml'] = $out['unscopedForm']['html'];
+$out['unscopedQueries'] = $out['unscopedForm']['queries'];
+// Keep the endpoint probe optional so a missing URL fails an assertion instead of this fixture.
+$out['embeddedEndpoint'] = [];
+if (is_string($out['embeddedConfig']['url'] ?? null)) {
+    $out['embeddedEndpoint'] = [
+        'first' => queryOptions($out['embeddedConfig']['url'], ['parent' => '0']),
+        'second' => queryOptions($out['embeddedConfig']['url'], ['parent' => '1']),
+        'outside' => queryOptions($out['embeddedConfig']['url'], ['parent' => '2']),
+    ];
+}
+
+try {
+    new Encore\Admin\Select\DependentOptions('province_id', [0 => 'First', 1 => 'Second'], 'parent_id', 'name', null);
+    $out['flatGroups'] = 'accepted';
+} catch (InvalidArgumentException $exception) {
+    $out['flatGroups'] = $exception->getMessage();
+}
 
 $url = optionUrl($out['fresh']);
 $out['endpoint'] = [

@@ -26,7 +26,7 @@
     }
 
     function localOptions(state, value) {
-        var groups = state.config.groups;
+        var groups = state.config.groups || {};
 
         return value !== '' && Object.prototype.hasOwnProperty.call(groups, value) ? groups[value] : [];
     }
@@ -105,11 +105,36 @@
         var $field = $(field);
         if ($field.data('adminDependentSelect')) return;
 
-        var config = JSON.parse(field.getAttribute(configAttribute));
+        var config;
+        try {
+            config = JSON.parse(field.getAttribute(configAttribute));
+        } catch (error) {
+            window.console && window.console.error('Invalid dependent select configuration:', field, error);
+            return;
+        }
+        if (!config || typeof config !== 'object') return;
+
+        if (config.static) {
+            // The server rendered the saved labels but cannot scope a parent query, so the
+            // options never follow the parent. Keep the value and tell the developer why.
+            window.console && window.console.warn(
+                'Dependent select "' + field.name + '" has no queryable parent scope; its saved value'
+                + ' is kept but options will not follow "' + config.parent + '".'
+                + ' Pass the allowed parent IDs as the fifth argument of optionsBy().'
+            );
+            return;
+        }
+
         var parent = fieldsIn(scope(field), 'select[' + column + ']:not([multiple])').filter(function () {
             return this !== field && this.getAttribute(column) === config.parent;
         })[0];
-        if (!parent) return;
+        if (!parent) {
+            window.console && window.console.warn(
+                'Dependent select "' + field.name + '" needs a single-select sibling named "' + config.parent + '"'
+                + ' in the same form or field group; options will not follow it.'
+            );
+            return;
+        }
 
         var state = {parent: parent, config: config};
         $field.data('adminDependentSelect', state);
@@ -152,6 +177,17 @@
         });
     });
 
+    // The parent's own option list never arrived: unlock the children but keep
+    // whatever they already show, so a failed request cannot blank saved values.
+    $(document).on('admin:select-options-failed.adminDependentSelect', 'select[' + column + ']', function () {
+        var parent = this;
+        fieldsIn(scope(parent), dependent).each(function () {
+            var state = $(this).data('adminDependentSelect');
+            if (!state || state.parent !== parent) return;
+            state.pendingParent = false;
+        });
+    });
+
     $(document).on('select2:opening.adminDependentSelect', dependent, function (event) {
         var state = $(this).data('adminDependentSelect');
         if (!state || event.isDefaultPrevented()) return;
@@ -166,16 +202,24 @@
     });
 
     document.addEventListener('submit', function (event) {
+        var blocked = null;
         $(event.target).find(dependent).each(function () {
             var state = $(this).data('adminDependentSelect');
             if (!state || !state.pendingParent || state.parent.value === state.initial.parentValue || this.matches(':disabled')) return;
             var selected = $(this).val();
             if (selected === null || selected === '' || !selected.length) return;
+            blocked = state;
 
-            event.preventDefault();
-            event.stopImmediatePropagation();
             return false;
         });
+        if (!blocked) return;
+
+        event.preventDefault();
+        if ($.admin.toastr) {
+            $.admin.toastr.warning(
+                blocked.config.loading || 'Loading...', '', {positionClass: 'toast-top-center'}
+            );
+        }
     }, true);
 
     $(document).on('reset.adminDependentSelect', 'form', function (event) {

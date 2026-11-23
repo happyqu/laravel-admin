@@ -296,6 +296,11 @@ class EmbeddedForm
     {
         $field = $this->formatField($field);
 
+        if ($field instanceof Field\Select) {
+            // Embedded fields are a separate browser scope; look for parents among them.
+            $field->setOptionScope($this->fields);
+        }
+
         $this->fields->push($field);
 
         return $this;

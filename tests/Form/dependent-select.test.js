@@ -8,12 +8,15 @@ const { JSDOM } = require('jsdom');
 const root = path.join(__dirname, '../..');
 const fixtures = JSON.parse(execFileSync('php', ['tests/Form/fixtures/dependent-select.php'], { cwd: root, encoding: 'utf8' }));
 
-function page(...views) {
+function page(...args) {
+    const prepare = typeof args[0] === 'function' ? args.shift() : () => {};
+    const views = args;
     const w = new JSDOM(views.map(view => view.html).join(''), {
         runScripts: 'outside-only', url: 'http://localhost/admin/records', pretendToBeVisual: true,
     }).window;
     for (const asset of ['AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js',
-        'AdminLTE/plugins/select2/select2.full.min.js', 'laravel-admin/dependent-select.js']) {
+        'AdminLTE/plugins/select2/select2.full.min.js', 'AdminLTE/plugins/iCheck/icheck.min.js',
+        'laravel-admin/dependent-select.js']) {
         w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
     }
     const requests = [];
@@ -27,6 +30,7 @@ function page(...views) {
         requests.push(response);
         return response;
     };
+    prepare(w);
     for (const view of views) for (const script of view.scripts) w.eval(script);
     return { w, requests };
 }
@@ -50,6 +54,65 @@ test('the built-in option route only accepts parent IDs in its server-issued con
         assert.deepEqual(view.queries, []);
         assert.doesNotMatch(view.html, /Gamma/);
     }
+});
+
+test('dependent options declared inside embeds() query the parent in their own scope', () => {
+    const { embeddedConfig, embeddedEndpoint } = fixtures;
+    assert.equal(embeddedConfig.parent, 'province_id');
+    assert.equal(embeddedConfig.initialParent, '0');
+    assert.equal(typeof embeddedConfig.url, 'string', 'an embeds() child must own a queryable parent scope');
+    assert.match(embeddedConfig.url, /_select_options_\?/);
+    assert.equal(embeddedEndpoint.first.status, 200);
+    assert.deepEqual(embeddedEndpoint.first.items.map(item => item.id), ['a', 'b']);
+    assert.deepEqual(embeddedEndpoint.second.items.map(item => item.id), ['c']);
+    assert.deepEqual(embeddedEndpoint.outside, { status: 403, queries: [] });
+    assert.ok(fixtures.embeddedForm.assets.some(asset => asset.includes('dependent-select.js')));
+
+    const { w, requests } = page(fixtures.embeddedForm);
+    try {
+        const province = w.$('select[name="address[province_id]"]');
+        const city = w.$('select[name="address[city_id]"]');
+        assert.equal(city.val(), 'b');
+        province.val('1').trigger('change');
+        assert.equal(requests.length, 1);
+        assert.equal(requests[0].value, '1');
+        assert.equal(city.val(), '');
+    } finally { w.close(); }
+});
+
+test('a child with no queryable parent keeps its saved value and never requests options', () => {
+    const { unscopedConfig, unscopedHtml, unscopedQueries } = fixtures;
+
+    // The parent list arrives over AJAX, so no parent ID is known server-side yet.
+    assert.equal(unscopedConfig.static, true);
+    assert.equal(unscopedConfig.url, undefined);
+    assert.equal(unscopedConfig.initialParent, '0');
+    assert.match(unscopedHtml, /<option value="b" selected>Beta<\/option>/);
+    assert.equal(unscopedQueries.length, 1);
+    assert.match(unscopedQueries[0][0], /`cities`\.`code` in \(\?\)/);
+
+    const warnings = [];
+    const { w, requests } = page(
+        w => { w.console.warn = (...args) => warnings.push(args); },
+        fixtures.unscopedForm
+    );
+    try {
+        assert.equal(warnings.length, 1);
+        assert.match(warnings[0][0], /fifth argument of optionsBy/);
+
+        const province = w.$('select[name="province_id"]');
+        const city = w.$('select[name="city_id"]');
+        assert.equal(city.val(), 'b');
+        province.val('1').trigger('change');
+        assert.deepEqual(requests.filter(request => request.url.includes('_select_options_')), []);
+        assert.deepEqual(ids(city), ['', 'b']);
+        assert.equal(city.val(), 'b');
+        assert.equal(city.siblings('[role="status"]').length, 0);
+    } finally { w.close(); }
+});
+
+test('an ungrouped local options array is rejected instead of rendering empty groups', () => {
+    assert.match(fixtures.flatGroups, /must be an array of \[childId => label\]/);
 });
 
 test('form query starts on province selection and stale responses cannot overwrite a later choice', () => {
@@ -191,5 +254,94 @@ test('reset restores the original province and city and discards a pending optio
         assert.deepEqual(ids(city), ['', 'b']);
         assert.equal(city.next().find('.select2-selection__rendered').text().includes('Beta'), true);
         assert.equal(requests.length, 2);
+    } finally { w.close(); }
+});
+
+for (const [fixture, prefix] of [[fixtures.asyncForm, ''], [fixtures.asyncFilter, 'async_']]) {
+    test(`a failed parent options request keeps the saved city (${prefix || 'form'})`, () => {
+        const { w, requests } = page(fixture);
+        try {
+            const parent = w.$(`select[name="${prefix}province_id"]`);
+            const city = w.$(`select[name="${prefix}city_id"]`);
+            const form = city.closest('form')[0];
+            assert.equal(city.val(), 'b');
+
+            // The parent list never arrives, so its value stays empty.
+            requests[0].reject();
+            assert.equal(parent.val(), '');
+            assert.equal(city.val(), 'b');
+            assert.deepEqual(ids(city), ['', 'b']);
+            assert.equal(city.attr('aria-busy'), undefined);
+            assert.equal(new w.FormData(form).getAll(`${prefix}city_id`).at(-1), 'b');
+            assert.equal(form.dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true })), true);
+
+            // Opening the child must not request options for an unknown parent.
+            city.select2('open');
+            assert.equal(requests.length, 1);
+        } finally { w.close(); }
+    });
+}
+
+test('a blocked submit keeps other submit listeners working and tells the user', () => {
+    const { w, requests } = page(fixtures.asyncForm);
+    try {
+        const city = w.$('select[name="city_id"]');
+        const form = city.closest('form')[0];
+        const seen = [];
+        const toast = [];
+        w.$.admin.toastr = { warning: message => toast.push(message) };
+        // Registered after the guard, so it only runs when propagation is not stopped.
+        w.document.addEventListener('submit', () => seen.push('later-listener'), true);
+
+        city.val('b').trigger('change');
+        assert.equal(form.dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true })), false);
+        assert.deepEqual(seen, ['later-listener']);
+        assert.equal(toast.length, 1);
+        assert.ok(toast[0].length > 0);
+        assert.deepEqual(requests.filter(request => request.url.includes('_select_options_')), []);
+    } finally { w.close(); }
+});
+
+test('one malformed configuration does not stop the other selects from initializing', () => {
+    const broken = {
+        html: `<form><div class="fields-group">
+            <select name="province_id" data-admin-select-column="province_id"><option value=""></option><option value="0">First</option></select>
+            <select name="city_id" data-admin-select-column="city_id" data-admin-select-options-by="{not json"><option value=""></option></select>
+            </div></form>`,
+        scripts: [],
+    };
+    const errors = [];
+    const { w, requests } = page(w => { w.console.error = (...args) => errors.push(args); }, broken);
+    try {
+        w.$.admin.initDependentSelects();
+        assert.equal(errors.length, 1);
+        assert.equal(w.$('select[name="city_id"]').data('adminDependentSelect'), undefined);
+        assert.deepEqual(requests, []);
+    } finally { w.close(); }
+
+    // The same run still initializes a healthy dependent select.
+    const { w: ok, requests: okRequests } = page(fixtures.fresh);
+    try {
+        assert.notEqual(ok.$('select[name="city_id"]').data('adminDependentSelect'), undefined);
+        ok.$('select[name="province_id"]').val('0').trigger('change');
+        assert.equal(okRequests.length, 1);
+    } finally { ok.close(); }
+});
+
+test('a dependent select without a resolvable parent warns instead of failing silently', () => {
+    const view = {
+        html: `<form><div class="fields-group">
+            <select name="city_id" data-admin-select-column="city_id" data-admin-select-options-by='{"parent":"province_id","initialParent":""}'>
+                <option value=""></option>
+            </select>
+            </div></form>`,
+        scripts: [],
+    };
+    const warnings = [];
+    const { w } = page(w => { w.console.warn = (...args) => warnings.push(args); }, view);
+    try {
+        w.$.admin.initDependentSelects();
+        assert.equal(warnings.length, 1);
+        assert.match(warnings[0][0], /province_id/);
     } finally { w.close(); }
 });

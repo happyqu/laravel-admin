@@ -134,7 +134,7 @@ $form->cascader(['province', 'city', 'district'], '所属地区')
 
 ### Select 选项联动
 
-Form 和 Grid Filter 的 `optionsBy()` 可以按上级单选框的值查询 Model 选项。选择上级后才查询下级数据，业务项目无需定义接口或路由。
+Form 和 Grid Filter 的 `optionsBy()` 可以按同一作用域内上级 Select 的值查询 Model 选项。选择上级后才查询下级数据，业务项目无需定义接口或路由。
 
 ```php
 $form->select('province_id', '省份')->options(Province::pluck('name', 'id'));
@@ -148,11 +148,17 @@ $grid->filter(function ($filter) {
 
 第一个参数是上级表单字段，第三个参数是下级表的外键，省略时使用第一个参数的字段名。第四个参数是显示字段，默认 `name`。选项值使用 Model 主键，查询应用 Model 的全局作用域。
 
-编辑或筛选回显只查询当前选项，打开下拉框时再取当前上级的完整列表。切换或清空上级会清空下级值。组件使用 `Admin::routes()` 注册的内置接口。升级已有安装后需[重新发布资源](#更新资源)。
+上级必须是同一作用域内的单选 Select：表单普通字段、`fieldset()`、`tab()`、`hasMany`/`table` 的行、`embeds()` 分组各算一个作用域，`radio()`、`multipleSelect()` 或跨分组、跨表单的字段不能作为上级。
 
-Model 联动从上级 Select 在服务端提供的选项推导可查询的上级 ID。上级选项通过 URL 或 AJAX 搜索加载时，可用第 5 个参数显式传入当前用户可选的上级 ID，例如 `->optionsBy('province_id', City::class, 'parent_id', 'city_name', $allowedProvinceIds)`。下级的列表查询和回显都使用该范围。
+编辑或筛选回显只查询当前选项，打开下拉框时再取当前上级的完整列表。切换或清空上级会清空下级值；上级的值已经被改动、下级仍保留旧值时，下级显示为空并在保存时按空值处理。上级选项列表请求失败时保留下级已回显的值，不会静默清空。组件使用 `Admin::routes()` 注册的内置接口。升级已有安装后需[重新发布资源](#更新资源)。
 
-数据量较小的场景也可以传入 `[上级 ID => [下级 ID => 标签]]` 形式的数组或集合。分组选项随页面加载，切换时在浏览器内更新。
+Model 联动从上级 Select 在服务端提供的选项推导可查询的上级 ID。上级选项通过 URL 或 AJAX 搜索加载、或使用 `model()`/`belongsTo()` 只回显当前值时，推导结果只覆盖已回显的 ID，此时应用第 5 个参数显式传入当前用户可选的上级 ID，例如 `->optionsBy('province_id', City::class, 'parent_id', 'city_name', $allowedProvinceIds)`。下级的列表查询和回显都使用该范围。
+
+省略该参数且无法推导时，下级不再查询也不再跟随上级：页面只渲染已保存的选项标签，切换上级不会改变它，保存时保留原值。浏览器控制台会给出一条开发提示。
+
+数据量较小的场景也可以传入 `[上级 ID => [下级 ID => 标签]]` 形式的数组或集合，分组选项随页面加载，切换时在浏览器内更新。传入未分组的普通选项数组会抛出 `InvalidArgumentException`。
+
+Model 源的联动只覆盖两级。中间层自身也是 `optionsBy()` 时，页面上只渲染它当前选中的一项，据此推不出可查询范围，`A → B → C` 会在第三级退化为不查询：第三级始终显示已保存的值，不跟随 `B` 变化，此时中间层用 Model 源还是本地分组都一样。多级联动有两种可行写法：中间层改用普通全量 `options()`（选项都在页面上，范围可推导），或为下一级显式传入第 5 个参数，例如 `$form->select('city')->optionsBy('province', City::class, 'province_id', 'city_name', $provinceIds)`。
 
 ### 条件联动
 

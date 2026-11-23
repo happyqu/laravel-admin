@@ -4,7 +4,6 @@ namespace Encore\Admin\Form\Field;
 
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Form\Field;
-use Encore\Admin\Form\NestedForm;
 use Encore\Admin\Select\DependentOptions;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
@@ -41,7 +40,13 @@ class Select extends Field
     protected $config = [];
 
     protected ?DependentOptions $dependentOptions = null;
-    protected ?NestedForm $nestedForm = null;
+
+    /**
+     * Sibling fields used to resolve the parent of dependent options.
+     *
+     * @var iterable|null
+     */
+    protected $optionScope = null;
 
     /**
      * @var string
@@ -95,9 +100,17 @@ class Select extends Field
         return $this;
     }
 
-    public function setNestedForm(NestedForm $form): void
+    /**
+     * Restrict the sibling fields this select resolves its parent from.
+     *
+     * Nested and embedded forms inject their own field list, matching the scope
+     * the browser uses when it looks for the parent select.
+     *
+     * @param iterable $fields
+     */
+    public function setOptionScope(iterable $fields): void
     {
-        $this->nestedForm = $form;
+        $this->optionScope = $fields;
     }
 
     protected function addDependentOptions(): ?array
@@ -108,12 +121,27 @@ class Select extends Field
         }
 
         $selected = $this->variables['choiceValues'];
-        $fields = $this->nestedForm?->fields() ?? $this->form?->fields();
-        $parent = $fields?->first(fn ($field) => $field instanceof self && $field->column() === $this->dependentOptions->parent);
+        $parent = $this->dependentParent();
         [$config, $options] = $this->dependentOptions->render($parent?->choiceValue(), $selected, fn () => $parent?->optionValues() ?? []);
         $this->attribute('data-admin-select-options-by', $config);
 
         return $options;
+    }
+
+    /**
+     * Find the sibling select this field depends on inside the same scope.
+     */
+    protected function dependentParent(): ?self
+    {
+        $fields = $this->optionScope ?? $this->form?->fields();
+
+        if ($fields === null) {
+            return null;
+        }
+
+        return collect($fields)->first(
+            fn ($field) => $field instanceof self && $field->column() === $this->dependentOptions->parent
+        );
     }
 
     protected function optionValues(): array
@@ -141,10 +169,6 @@ class Select extends Field
 
         return $this->options = array_filter($this->options, 'strlen');
     }
-
-    /**
-     * @param array $groups
-     */
 
     /**
      * Set option groups.
@@ -387,7 +411,7 @@ $.ajax($ajaxOptions).done(function(data) {
       $(element).removeAttr('data-admin-select-initializing').trigger("change");
   });
 }).fail(function () {
-  $("{$this->getElementClassSelector()}").removeAttr('data-admin-select-initializing').trigger('admin:select-options-initialized');
+  $("{$this->getElementClassSelector()}").removeAttr('data-admin-select-initializing').trigger('admin:select-options-failed');
 });
 
 EOT;
