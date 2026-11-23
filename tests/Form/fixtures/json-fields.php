@@ -76,6 +76,20 @@ $out['selectLoad'] = fixture(new Encore\Admin\Form\Field\Table('locations', ['Lo
     $f->select('town');
 }]), ['locations' => [['province' => '1', 'region' => '1']]]);
 
+$locationField = fn () => new Encore\Admin\Form\Field\Table('locations', ['Locations', function ($f) {
+    $f->select('city')->config('minimumResultsForSearch', 99)->optionsBy('province', collect([
+        0 => [10 => 'Zero City'],
+        1 => [21 => '<strong>First City</strong>', 20 => 'Second City'],
+    ]));
+    $f->select('province')->options([0 => 'Zero Province', 1 => 'First Province']);
+}]);
+$locations = ['locations' => [['province' => '0', 'city' => '10'], ['province' => '1', 'city' => '20']]];
+$out['dependentSelect'] = fixture($locationField(), $locations);
+$app['request']->setLaravelSession($app['session']);
+$app['session']->flashInput(['locations' => [['province' => '1', 'city' => '21'], ['province' => '1', 'city' => '']]]);
+$out['dependentSelectOld'] = fixture($locationField(), $locations);
+$app['session']->forget('_old_input');
+
 class JsonFixturePicker extends Encore\Admin\Form\Field\Text
 {
     public function setupPicker()

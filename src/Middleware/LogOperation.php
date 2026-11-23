@@ -195,7 +195,8 @@ class LogOperation
         return $request->is(
             '*_load_action_',
             '*_handle_selectable_',
-            '*_handle_renderable_'
+            '*_handle_renderable_',
+            '*_select_options_'
         );
     }
 

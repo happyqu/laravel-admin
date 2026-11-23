@@ -18,7 +18,11 @@ function page(fixture) {
         w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
     }
     w.pending = [];
-    w.$.ajax = () => ({ done(callback) { w.pending.push(callback); } });
+    w.$.ajax = () => {
+        const request = w.$.Deferred();
+        w.pending.push(request.resolve);
+        return request.promise();
+    };
     for (const script of fixture.scripts) w.eval(script);
     w.respond = () => {
         for (const callback of w.pending.splice(0)) {

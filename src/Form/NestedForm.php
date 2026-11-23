@@ -369,6 +369,9 @@ class NestedForm
      */
     public function pushField(Field $field)
     {
+        if ($field instanceof Field\Select) {
+            $field->setNestedForm($this);
+        }
         $this->fields->push($field);
 
         return $this;

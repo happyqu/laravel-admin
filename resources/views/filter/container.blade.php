@@ -1,5 +1,5 @@
 <div class="box-header with-border {{ $expand?'':'hide' }} filter-box" id="{{ $filterID }}">
-    <form action="{!! $action !!}" class="form-horizontal" method="get">
+    <form action="{!! $action !!}" class="form-horizontal" method="get" data-admin-filter>
 
         <div class="row">
             @foreach($layout->columns() as $column)

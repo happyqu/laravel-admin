@@ -132,6 +132,28 @@ $form->cascader(['province', 'city', 'district'], '所属地区')
 
 `readonly()` 表示只读，`disable()` 表示禁用。内置表单在服务端过滤这些字段的客户端修改；自定义提交接口需要自行执行同等校验。数值字段允许清空，完成编辑或提交时处理上下限，业务规则仍应通过 `rules()` 声明。
 
+### Select 选项联动
+
+Form 和 Grid Filter 的 `optionsBy()` 可以按上级单选框的值查询 Model 选项。选择上级后才查询下级数据，业务项目无需定义接口或路由。
+
+```php
+$form->select('province_id', '省份')->options(Province::pluck('name', 'id'));
+$form->select('city_id', '城市')->optionsBy('province_id', City::class, 'parent_id', 'city_name');
+
+$grid->filter(function ($filter) {
+    $filter->equal('province_id', '省份')->select(Province::pluck('name', 'id'));
+    $filter->equal('city_id', '城市')->select()->optionsBy('province_id', City::class, 'parent_id', 'city_name');
+});
+```
+
+第一个参数是上级表单字段，第三个参数是下级表的外键，省略时使用第一个参数的字段名。第四个参数是显示字段，默认 `name`。选项值使用 Model 主键，查询应用 Model 的全局作用域。
+
+编辑或筛选回显只查询当前选项，打开下拉框时再取当前上级的完整列表。切换或清空上级会清空下级值。组件使用 `Admin::routes()` 注册的内置接口。升级已有安装后需[重新发布资源](#更新资源)。
+
+Model 联动从上级 Select 在服务端提供的选项推导可查询的上级 ID。上级选项通过 URL 或 AJAX 搜索加载时，可用第 5 个参数显式传入当前用户可选的上级 ID，例如 `->optionsBy('province_id', City::class, 'parent_id', 'city_name', $allowedProvinceIds)`。下级的列表查询和回显都使用该范围。
+
+数据量较小的场景也可以传入 `[上级 ID => [下级 ID => 标签]]` 形式的数组或集合。分组选项随页面加载，切换时在浏览器内更新。
+
 ### 条件联动
 
 `select`、`multipleSelect`、`belongsTo`、`belongsToMany` 及上述单选、复选变体支持 `when()`：

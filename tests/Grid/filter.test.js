@@ -36,7 +36,7 @@ test('remote filter options keep a selected zero value', () => {
     const fixture = fixtures.remoteZero;
     const w = page(fixture.html);
     try {
-        w.$.ajax = () => ({ done(callback) { callback([{ id: '0', text: 'Disabled' }, { id: '1', text: 'Enabled' }]); } });
+        w.$.ajax = () => w.$.Deferred().resolve([{ id: '0', text: 'Disabled' }, { id: '1', text: 'Enabled' }]).promise();
         w.eval(fixture.script);
         assert.equal(w.$('.status').val(), '0');
         assert.equal(new w.FormData(w.document.querySelector('form')).get('status'), '0');

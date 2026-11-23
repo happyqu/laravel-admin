@@ -28,6 +28,16 @@ class ComponentSubmission
 
     public static function verify(Request $request, string $kind, string $class, array $payload): array
     {
+        return static::verifyTicket($request, $kind, $class, $payload);
+    }
+
+    public static function verifyIssued(Request $request, string $kind, string $class): array
+    {
+        return static::verifyTicket($request, $kind, $class, null);
+    }
+
+    private static function verifyTicket(Request $request, string $kind, string $class, ?array $payload): array
+    {
         $token = $request->input('_component_token_');
         abort_unless(is_string($token) && preg_match('/^[a-f0-9]{48}$/D', $token), 419, 'Invalid component ticket.');
         $ticket = session('admin.component_submissions.'.$token);
@@ -35,8 +45,10 @@ class ComponentSubmission
         abort_unless($ticket['identity'] === static::identity() && Admin::user()
             && $ticket['kind'] === $kind
             && str_replace('\\', '_', $ticket['class']) === str_replace('\\', '_', $class), 403);
-        $normalize = static fn ($value) => (string) (is_bool($value) ? (int) $value : $value);
-        abort_unless(array_map($normalize, $ticket['payload']) === array_map($normalize, $payload), 403);
+        if ($payload !== null) {
+            $normalize = static fn ($value) => (string) (is_bool($value) ? (int) $value : $value);
+            abort_unless(array_map($normalize, $ticket['payload']) === array_map($normalize, $payload), 403);
+        }
         FormSubmission::authorizeSource(...$ticket['source']);
         $request->attributes->set('_admin_component_source', $ticket['source']);
         $request->attributes->set('_admin_component_class', $ticket['class']);

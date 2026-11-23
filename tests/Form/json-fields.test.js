@@ -14,7 +14,7 @@ function page(fixture, configure = () => {}) {
     }).window;
     for (const asset of ['AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js', 'AdminLTE/bootstrap/js/bootstrap.min.js',
         'AdminLTE/plugins/select2/select2.full.min.js', 'AdminLTE/plugins/iCheck/icheck.min.js', 'laravel-admin/flatpickr-local.js',
-        'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js']) {
+        'laravel-admin/flatpickr-locales.js', 'laravel-admin/datepicker.js', 'laravel-admin/dependent-select.js']) {
         w.eval(fs.readFileSync(path.join(root, 'resources/assets', asset), 'utf8'));
     }
     configure(w);
@@ -72,6 +72,44 @@ test('Table load and loads bindings work once per change on existing and new row
             }
         }
         assert.equal(w.$('[name="locations[0][town]"] option[value="loaded"]').length, 0);
+    } finally { w.close(); }
+});
+
+test('local Select options restore saved values and clear only the changed row', () => {
+    const w = page(fixtures.dependentSelect, w => {
+        w.$.ajax = () => assert.fail('Local options must not request data');
+    });
+    try {
+        const field = (row, column) => w.$(`select[name="locations[${row}][${column}]"]`);
+        const cityOptions = row => Array.from(field(row, 'city').find('option'), option => option.value);
+        assert.equal(field(0, 'city').val(), '10');
+        assert.equal(field(1, 'city').val(), '20');
+        assert.deepEqual(cityOptions(1), ['', '21', '20']);
+        assert.equal(field(1, 'city').find('option[value="21"]').text(), '<strong>First City</strong>');
+
+        const select2 = field(0, 'city').data('select2');
+        field(0, 'province').val('1').trigger('change');
+        assert.equal(field(0, 'city').val(), '');
+        assert.deepEqual(cityOptions(0), ['', '21', '20']);
+        assert.equal(field(1, 'city').val(), '20');
+        assert.equal(field(0, 'city').data('select2'), select2);
+        assert.equal(select2.options.get('minimumResultsForSearch'), 99);
+        field(0, 'province').val('').trigger('change');
+        assert.deepEqual(cityOptions(0), ['']);
+
+        w.$('#has-many-locations .add').trigger('click');
+        field('new_1', 'province').val('0').trigger('change');
+        assert.deepEqual(cityOptions('new_1'), ['', '10']);
+        assert.equal(field('new_1', 'city').val(), '');
+    } finally { w.close(); }
+});
+
+test('local Select options restore old input, including an explicitly cleared choice', () => {
+    const w = page(fixtures.dependentSelectOld);
+    try {
+        assert.equal(w.$('select[name="locations[0][province]"]').val(), '1');
+        assert.equal(w.$('select[name="locations[0][city]"]').val(), '21');
+        assert.equal(w.$('select[name="locations[1][city]"]').val(), '');
     } finally { w.close(); }
 });
 

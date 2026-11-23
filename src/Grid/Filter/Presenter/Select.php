@@ -3,8 +3,10 @@
 namespace Encore\Admin\Grid\Filter\Presenter;
 
 use Encore\Admin\Facades\Admin;
+use Encore\Admin\Select\DependentOptions;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 
 class Select extends Presenter
 {
@@ -24,6 +26,8 @@ class Select extends Presenter
      * @var string
      */
     protected $script = '';
+
+    protected ?DependentOptions $dependentOptions = null;
 
     /**
      * Select constructor.
@@ -53,22 +57,51 @@ class Select extends Presenter
     }
 
     /**
-     * Build options.
-     *
-     * @return array
+     * Use grouped local options or load model options by a sibling select.
      */
-    protected function buildOptions(): array
-    {
-        if (is_string($this->options)) {
-            $this->loadRemoteOptions($this->options);
-        }
+    public function optionsBy(
+        string $parent,
+        array|Arrayable|string $options,
+        ?string $foreignKey = null,
+        string $textField = 'name',
+        ?iterable $allowedParents = null
+    ): self {
+        $this->dependentOptions = new DependentOptions($parent, $options, $foreignKey, $textField, $allowedParents);
 
+        return $this;
+    }
+
+    public function optionValues(): array
+    {
+        return $this->dependentOptions || $this instanceof MultipleSelect ? [] : array_keys($this->resolveOptions());
+    }
+
+    protected function resolveOptions(): array
+    {
         if ($this->options instanceof \Closure) {
             $this->options = $this->options->call($this->filter, $this->filter->getValue());
         }
 
         if ($this->options instanceof Arrayable) {
             $this->options = $this->options->toArray();
+        }
+
+        return is_array($this->options) ? $this->options : [];
+    }
+
+    /**
+     * Build options.
+     *
+     * @return array
+     */
+    protected function buildOptions(): array
+    {
+        $options = [];
+        if ($this->dependentOptions === null) {
+            if (is_string($this->options)) {
+                $this->loadRemoteOptions($this->options);
+            }
+            $options = $this->resolveOptions();
         }
 
         if (empty($this->script)) {
@@ -97,7 +130,7 @@ SCRIPT;
 
         Admin::script($this->script);
 
-        return is_array($this->options) ? $this->options : [];
+        return $options;
     }
 
     /**
@@ -184,8 +217,11 @@ $.ajax($ajaxOptions).done(function(data) {
   $(".{$this->getElementClass()}").select2({
     data: data,
     $configs
-  }).val($values).trigger("change");
-  
+  }).val($values).each(function () {
+      $(this).find('option').each(function () { this.defaultSelected = this.selected; });
+  }).removeAttr('data-admin-select-initializing').trigger("change");
+}).fail(function () {
+  $(".{$this->getElementClass()}").removeAttr('data-admin-select-initializing').trigger('admin:select-options-initialized');
 });
 
 EOT;
@@ -249,10 +285,23 @@ EOT;
      */
     public function variables(): array
     {
-        return [
+        $variables = [
             'options' => $this->buildOptions(),
             'class'   => $this->getElementClass(),
+            'selectColumn' => $this->filter->getOriginalColumn(),
+            'selectInitializing' => $this->dependentOptions === null && is_string($this->options),
         ];
+
+        if ($this->dependentOptions) {
+            $parent = Arr::first($this->filter->siblings(), fn ($filter) => $filter->getOriginalColumn() === $this->dependentOptions->parent);
+            $parentValue = $parent ? request()->input($parent->getColumn(), $parent->getValue()) : null;
+            $selected = request()->input($this->filter->getColumn(), $this->filter->getValue());
+            [$variables['dependentSelect'], $variables['options']] = $this->dependentOptions->render(
+                $parentValue, $selected, fn () => $parent?->selectOptionValues() ?? []
+            );
+        }
+
+        return $variables;
     }
 
     /**

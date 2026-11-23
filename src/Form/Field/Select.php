@@ -4,6 +4,8 @@ namespace Encore\Admin\Form\Field;
 
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Form\Field;
+use Encore\Admin\Form\NestedForm;
+use Encore\Admin\Select\DependentOptions;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -37,6 +39,9 @@ class Select extends Field
      * @var array
      */
     protected $config = [];
+
+    protected ?DependentOptions $dependentOptions = null;
+    protected ?NestedForm $nestedForm = null;
 
     /**
      * @var string
@@ -73,6 +78,68 @@ class Select extends Field
         }
 
         return $this;
+    }
+
+    /**
+     * Use grouped local options or load model options by a sibling select.
+     */
+    public function optionsBy(
+        string $parent,
+        array|Arrayable|string $options,
+        ?string $foreignKey = null,
+        string $textField = 'name',
+        ?iterable $allowedParents = null
+    ): self {
+        $this->dependentOptions = new DependentOptions($parent, $options, $foreignKey, $textField, $allowedParents);
+
+        return $this;
+    }
+
+    public function setNestedForm(NestedForm $form): void
+    {
+        $this->nestedForm = $form;
+    }
+
+    protected function addDependentOptions(): ?array
+    {
+        $this->attribute('data-admin-select-column', $this->column);
+        if (!$this->dependentOptions || !$this->shouldRender()) {
+            return null;
+        }
+
+        $selected = $this->variables['choiceValues'];
+        $fields = $this->nestedForm?->fields() ?? $this->form?->fields();
+        $parent = $fields?->first(fn ($field) => $field instanceof self && $field->column() === $this->dependentOptions->parent);
+        [$config, $options] = $this->dependentOptions->render($parent?->choiceValue(), $selected, fn () => $parent?->optionValues() ?? []);
+        $this->attribute('data-admin-select-options-by', $config);
+
+        return $options;
+    }
+
+    protected function optionValues(): array
+    {
+        if ($this->dependentOptions || $this instanceof MultipleSelect || !$this->shouldRender()) {
+            return [];
+        }
+
+        if (!$this->groups) {
+            return array_keys($this->resolveOptions());
+        }
+
+        return array_merge(...array_map(static fn ($group) => array_keys($group['options']), array_values($this->groups)));
+    }
+
+    protected function resolveOptions(): array
+    {
+        if ($this->options instanceof \Closure) {
+            if ($this->form) {
+                $this->options = $this->options->bindTo($this->form->model());
+            }
+
+            $this->options(call_user_func($this->options, $this->choiceValue(), $this));
+        }
+
+        return $this->options = array_filter($this->options, 'strlen');
     }
 
     /**
@@ -287,6 +354,7 @@ EOT;
      */
     protected function loadRemoteOptions($url, $parameters = [], $options = [])
     {
+        $this->attribute('data-admin-select-initializing', '1');
         $ajaxOptions = [
             'url' => $url.'?'.http_build_query($parameters),
         ];
@@ -313,8 +381,13 @@ $.ajax($ajaxOptions).done(function(data) {
         $configs
       });
       var value = $(element).attr('data-value') || '';
-      $(element).val(value === '' ? null : value.split(',')).trigger("change");
+      $(element).val(value === '' ? null : value.split(',')).find('option').each(function () {
+          this.defaultSelected = this.selected;
+      });
+      $(element).removeAttr('data-admin-select-initializing').trigger("change");
   });
+}).fail(function () {
+  $("{$this->getElementClassSelector()}").removeAttr('data-admin-select-initializing').trigger('admin:select-options-initialized');
 });
 
 EOT;
@@ -410,6 +483,7 @@ EOT;
     public function render()
     {
         $this->initChoiceInput();
+        $dependentOptions = $this->addDependentOptions();
         $configs = array_merge([
             'allowClear'  => true,
             'placeholder' => [
@@ -424,19 +498,9 @@ EOT;
             $this->script = "$(\"{$this->getElementClassSelector()}\").select2($configs);";
         }
 
-        if ($this->options instanceof \Closure) {
-            if ($this->form) {
-                $this->options = $this->options->bindTo($this->form->model());
-            }
-
-            $this->options(call_user_func($this->options, $this->choiceValue(), $this));
-        }
-
-        $this->options = array_filter($this->options, 'strlen');
-
         $this->addVariables([
-            'options' => $this->options,
-            'groups'  => $this->groups,
+            'options' => $this->dependentOptions === null ? $this->resolveOptions() : ($dependentOptions ?? []),
+            'groups'  => $this->dependentOptions === null ? $this->groups : [],
         ]);
 
         $this->addCascadeScript();

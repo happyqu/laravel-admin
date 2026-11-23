@@ -390,6 +390,11 @@ abstract class AbstractFilter
         return $this->presenter;
     }
 
+    public function selectOptionValues(): array
+    {
+        return $this->presenter instanceof Select ? $this->presenter->optionValues() : [];
+    }
+
     /**
      * Set default value for filter.
      *
