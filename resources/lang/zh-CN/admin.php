@@ -50,6 +50,11 @@ return [
     'collapse'              => '收起',
     'filter'                => '筛选',
     'search'                => '搜索',
+    'menu_search' => [
+        'title' => '搜索菜单',
+        'clear' => '清空菜单搜索',
+        'empty' => '没有找到匹配的菜单',
+    ],
     'close'                 => '关闭',
     'show'                  => '显示',
     'entries'               => '条',

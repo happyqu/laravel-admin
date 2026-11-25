@@ -47,6 +47,10 @@ class MenuSearchPermissionTest extends TestCase
             $app->register($provider);
         }
         $app['view']->addNamespace('admin', dirname(__DIR__, 2).'/resources/views');
+        $app['translator']->addLines([
+            'admin.menu_titles.reports_folder' => '第三方管理',
+            'admin.menu_titles.daily_report' => '每日报表',
+        ], 'en');
         Facade::clearResolvedInstances();
         Facade::setFacadeApplication($app);
         $aliases = AliasLoader::getInstance();
@@ -68,7 +72,7 @@ class MenuSearchPermissionTest extends TestCase
     }
 
     #[DataProvider('navigationModes')]
-    public function test_classic_search_only_renders_visible_leaf_menus(bool $globalNavigation): void
+    public function test_classic_search_uses_only_the_visible_sidebar_menu_tree(bool $globalNavigation): void
     {
         config(['admin.navigation.enabled' => $globalNavigation]);
 
@@ -88,19 +92,26 @@ class MenuSearchPermissionTest extends TestCase
         ];
 
         $html = $this->renderSidebar($tree, 'operator', [new Permission(['slug' => 'reports.view'])]);
-        $this->assertSame(['Overview', 'Daily report'], $this->searchTitles($html));
+        $this->assertSame(['Overview', '每日报表'], $this->sidebarLeafTitles($html));
         $this->assertStringContainsString('http://localhost/admin/daily-report', $html);
+        $this->assertStringContainsString('<span>第三方管理</span>', $html);
+        $this->assertStringContainsString('data-menu-search-title="Reports folder"', $html);
+        $this->assertStringContainsString('data-menu-search-title="Daily report"', $html);
+        $this->assertStringContainsString('data-menu-search-uri="daily-report"', $html);
+        $this->assertStringContainsString('aria-controls="classic-sidebar-menu"', $html);
         foreach ([$wrongRole, $wrongPermission, $hiddenChild] as $hidden) {
             $this->assertStringNotContainsString($hidden['title'], $html);
             $this->assertStringNotContainsString($hidden['uri'], $html);
         }
 
         $html = $this->renderSidebar($tree, 'administrator');
-        $this->assertSame(['Overview', 'Daily report', 'Billing roles', 'Payroll export', 'Hidden descendant'], $this->searchTitles($html));
+        $this->assertSame(['Overview', '每日报表', 'Billing roles', 'Payroll export', 'Hidden descendant'], $this->sidebarLeafTitles($html));
 
         config(['admin.enable_menu_search' => false]);
         $html = view('admin::partials.sidebar')->render();
-        $this->assertStringNotContainsString('class="sidebar-form"', $html);
+        $this->assertStringNotContainsString('data-menu-search-input', $html);
+        $this->assertStringNotContainsString('classic-menu-search.js', $html);
+        $this->assertStringNotContainsString('data-menu-search-title', $html);
         $this->assertStringContainsString('http://localhost/admin/daily-report', $html);
     }
 
@@ -123,12 +134,12 @@ class MenuSearchPermissionTest extends TestCase
         return view('admin::partials.sidebar')->render();
     }
 
-    private function searchTitles(string $html): array
+    private function sidebarLeafTitles(string $html): array
     {
         $document = new DOMDocument();
-        $document->loadHTML($html, LIBXML_NOERROR | LIBXML_NOWARNING);
+        $document->loadHTML('<meta charset="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
         $titles = [];
-        foreach ((new DOMXPath($document))->query('//form[@class="sidebar-form"]//li/a') as $link) {
+        foreach ((new DOMXPath($document))->query('//ul[@id="classic-sidebar-menu"]//li[not(ul)]/a/span') as $link) {
             $titles[] = trim($link->textContent);
         }
 

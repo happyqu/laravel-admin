@@ -1,6 +1,6 @@
 @if(\Encore\Admin\Navigation\AdminMenuPresenter::isVisible($item, Admin::user()))
     @if(!isset($item['children']))
-        <li>
+        <li @if(config('admin.enable_menu_search')) data-menu-search-title="{{ $item['title'] }}" data-menu-search-uri="{{ $item['uri'] }}" @endif>
             @if(url()->isValidUrl($item['uri']))
                 <a href="{{ $item['uri'] }}" target="_blank">
             @else
@@ -15,7 +15,7 @@
             </a>
         </li>
     @else
-        <li class="treeview">
+        <li class="treeview" @if(config('admin.enable_menu_search')) data-menu-search-title="{{ $item['title'] }}" @endif>
             <a href="#">
                 <i class="fa {{ $item['icon'] }}"></i>
                 @if (Lang::has($titleTranslation = 'admin.menu_titles.' . trim(str_replace(' ', '_', strtolower($item['title'])))))

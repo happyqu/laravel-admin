@@ -1,3 +1,17 @@
+@php
+    $menuSearchEnabled = config('admin.enable_menu_search');
+@endphp
+
+@if($menuSearchEnabled)
+    @php
+        $cssPath = 'vendor/laravel-admin/classic-menu-search.css';
+        $jsPath = 'vendor/laravel-admin/classic-menu-search.js';
+        $cssVersion = is_file(public_path($cssPath)) ? filemtime(public_path($cssPath)) : '1';
+        $jsVersion = is_file(public_path($jsPath)) ? filemtime(public_path($jsPath)) : '1';
+    @endphp
+    <link rel="stylesheet" href="{{ url('/'.$cssPath) }}?v={{ $cssVersion }}">
+@endif
+
 <aside class="main-sidebar{{ empty($navigationClass) ? '' : ' '.$navigationClass }}">
     <section class="sidebar">
         <div class="user-panel">
@@ -10,28 +24,27 @@
             </div>
         </div>
 
-        @if(config('admin.enable_menu_search'))
-            @php
-                $searchLinks = (new \Encore\Admin\Navigation\AdminMenuPresenter())->classicSearchLinks(Admin::menu(), Admin::user());
-            @endphp
-            <form class="sidebar-form" style="overflow: initial;" onsubmit="return false;">
-                <div class="input-group">
-                    <input type="text" autocomplete="off" class="form-control autocomplete" placeholder="Search...">
-                    <span class="input-group-btn">
-                        <button type="submit" name="search" id="search-btn" class="btn btn-flat"><i class="fa fa-search"></i></button>
-                    </span>
-                    <ul class="dropdown-menu" role="menu" style="min-width: 210px;max-height: 300px;overflow: auto;">
-                        @foreach($searchLinks as $link)
-                            <li><a href="{{ admin_url($link['uri']) }}"><i class="fa {{ $link['icon'] }}"></i>{{ admin_trans($link['title']) }}</a></li>
-                        @endforeach
-                    </ul>
-                </div>
-            </form>
+        @if($menuSearchEnabled)
+            <div class="classic-menu-search" role="search" data-menu-search hidden>
+                <i class="fa fa-search" aria-hidden="true"></i>
+                <input type="search" data-menu-search-input autocomplete="off" aria-controls="classic-sidebar-menu"
+                       aria-label="{{ trans('admin.menu_search.title') }}" placeholder="{{ trans('admin.menu_search.title') }}">
+                <button type="button" data-menu-search-clear aria-label="{{ trans('admin.menu_search.clear') }}" hidden>
+                    <i class="fa fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
         @endif
 
-        <ul class="sidebar-menu">
+        <ul class="sidebar-menu" id="classic-sidebar-menu">
             <li class="header">{{ trans('admin.menu') }}</li>
             @each('admin::partials.menu', Admin::menu(), 'item')
         </ul>
+        @if($menuSearchEnabled)
+            <p class="classic-menu-search-empty" data-menu-search-empty role="status" hidden>{{ trans('admin.menu_search.empty') }}</p>
+        @endif
     </section>
 </aside>
+
+@if($menuSearchEnabled)
+    <script src="{{ url('/'.$jsPath) }}?v={{ $jsVersion }}" defer></script>
+@endif

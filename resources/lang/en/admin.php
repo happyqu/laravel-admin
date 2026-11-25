@@ -50,6 +50,11 @@ return [
     'collapse'              => 'Collapse',
     'filter'                => 'Filter',
     'search'                => 'Search',
+    'menu_search' => [
+        'title' => 'Search menus',
+        'clear' => 'Clear menu search',
+        'empty' => 'No matching menus',
+    ],
     'close'                 => 'Close',
     'show'                  => 'Show',
     'entries'               => 'entries',

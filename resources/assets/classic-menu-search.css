@@ -1,0 +1,107 @@
+.classic-menu-search {
+    --menu-search-text: #d7e1e8;
+    --menu-search-muted: #b4c4cf;
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 12px 12px;
+    padding: 0 6px 0 10px;
+    border: 1px solid rgba(126, 148, 170, .38);
+    border-radius: 6px;
+    background: rgba(126, 148, 170, .12);
+    color: var(--menu-search-muted);
+}
+
+body[class*="-light"] .classic-menu-search {
+    --menu-search-text: #273142;
+    --menu-search-muted: #556477;
+}
+
+.classic-menu-search:focus-within {
+    border-color: #5ca4fa;
+}
+
+.classic-menu-search input {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    padding: 5px 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--menu-search-text);
+    font-size: 14px;
+}
+
+.classic-menu-search input::placeholder {
+    color: var(--menu-search-muted);
+    opacity: 1;
+}
+
+.classic-menu-search input::-webkit-search-cancel-button {
+    appearance: none;
+}
+
+.classic-menu-search button {
+    flex: 0 0 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--menu-search-muted);
+}
+
+.classic-menu-search button:hover,
+.classic-menu-search button:focus-visible {
+    background: rgba(126, 148, 170, .24);
+    color: var(--menu-search-text);
+}
+
+.classic-menu-search[hidden],
+.classic-menu-search [hidden],
+.classic-menu-search-empty[hidden] {
+    display: none;
+}
+
+.classic-menu-search-empty {
+    margin: 0;
+    padding: 12px 15px;
+    color: #b4c4cf;
+    font-size: 13px;
+}
+
+body[class*="-light"] .classic-menu-search-empty {
+    color: #556477;
+}
+
+#classic-sidebar-menu.is-menu-search-active .is-menu-search-hidden,
+#classic-sidebar-menu.is-menu-search-active .treeview:not(.is-menu-search-expanded) > .treeview-menu {
+    display: none !important;
+}
+
+#classic-sidebar-menu.is-menu-search-active .is-menu-search-expanded > .treeview-menu {
+    display: block !important;
+}
+
+#classic-sidebar-menu.is-menu-search-active .treeview > a .fa-angle-left {
+    transform: none;
+}
+
+#classic-sidebar-menu.is-menu-search-active .is-menu-search-expanded > a .fa-angle-left {
+    transform: rotate(-90deg);
+}
+
+@media (min-width: 768px) {
+    .sidebar-mini.sidebar-collapse .classic-menu-search,
+    .sidebar-mini.sidebar-collapse .classic-menu-search-empty {
+        display: none;
+    }
+}
+
+@media (max-width: 767px) {
+    .classic-menu-search input {
+        font-size: 16px;
+    }
+}
