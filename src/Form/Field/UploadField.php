@@ -379,13 +379,13 @@ trait UploadField
     {
         return function ($attribute, $value, $fail) {
             if (!$value instanceof UploadedFile) {
-                $fail(trans('admin.upload_invalid'));
+                $fail(trans('admin.upload_missing'));
                 return;
             }
             try {
                 $this->validateUpload($value);
             } catch (\Illuminate\Validation\ValidationException $exception) {
-                $fail(trans('admin.upload_invalid'));
+                $fail(collect($exception->errors())->flatten()->first() ?: trans('admin.upload_invalid'));
             }
         };
     }
