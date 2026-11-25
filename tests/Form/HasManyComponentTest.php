@@ -163,7 +163,7 @@ class HasManyChild extends Model
 
 class HasManyMemoryConnection extends \Illuminate\Database\MySqlConnection
 {
-    public function select($query, $bindings = [], $useReadPdo = true)
+    public function select($query, $bindings = [], $useReadPdo = true, array $fetchUsing = [])
     {
         return str_contains($query, '0 = 1') ? [] : array_map(static fn ($row) => (object) $row, HasManyChild::ROWS);
     }

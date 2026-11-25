@@ -5,7 +5,10 @@ namespace Encore\Admin\Tests\Layout;
 use Encore\Admin\Layout\Column;
 use Encore\Admin\Layout\Content;
 use Encore\Admin\Layout\Row;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
 use PHPUnit\Framework\TestCase;
 
 class LayoutTest extends TestCase
@@ -111,17 +114,16 @@ class LayoutTest extends TestCase
 
     public function test_view_mode_does_not_render_unused_rows(): void
     {
-        $previous = \Illuminate\Container\Container::getInstance();
-        $container = new \Illuminate\Container\Container();
-        $container->instance(\Illuminate\Contracts\View\Factory::class, new class {
-            public function make($view, $items, $merge = []) {
-                return new class($items) {
-                    public function __construct(private array $items) {}
-                    public function render() { return $this->items['_content_'] === '' ? 'view' : 'rows'; }
-                };
-            }
-        });
-        \Illuminate\Container\Container::setInstance($container);
+        $previous = Container::getInstance();
+        $container = new Container();
+        $view = $this->createMock(View::class);
+        $view->expects($this->once())->method('render')->willReturn('view');
+        $factory = $this->createMock(Factory::class);
+        $factory->expects($this->once())->method('make')
+            ->with('admin::content', $this->callback(static fn (array $items) => $items['_content_'] === ''))
+            ->willReturn($view);
+        $container->instance(Factory::class, $factory);
+        Container::setInstance($container);
         try {
             $content = new class extends Content {
                 public function build() { throw new \RuntimeException('Unused rows rendered.'); }
@@ -129,7 +131,7 @@ class LayoutTest extends TestCase
             };
             $this->assertSame('view', $content->view('custom')->render());
         } finally {
-            \Illuminate\Container\Container::setInstance($previous);
+            Container::setInstance($previous);
         }
     }
 }

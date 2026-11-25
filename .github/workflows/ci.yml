@@ -36,6 +36,12 @@ jobs:
       - name: Validate composer.json
         run: composer validate --strict --no-check-publish
 
+      - name: Allow end-of-life Laravel versions in compatibility tests
+        if: ${{ matrix.laravel == '^10.0' || matrix.laravel == '^11.0' }}
+        run: >-
+          composer config --json policy.advisories.ignore
+          '{"laravel/framework":{"on-audit":false,"reason":"Required for Laravel 10/11 compatibility tests."}}'
+
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" --no-update --no-interaction

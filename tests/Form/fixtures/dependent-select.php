@@ -29,7 +29,7 @@ class DependentSelectCity extends Model
 $connection = new class(static fn () => null, 'test') extends MySqlConnection {
     public array $queries = [];
 
-    public function select($query, $bindings = [], $useReadPdo = true)
+    public function select($query, $bindings = [], $useReadPdo = true, array $fetchUsing = [])
     {
         $this->queries[] = [$query, $bindings];
         $ids = array_slice($bindings, 1, -1);

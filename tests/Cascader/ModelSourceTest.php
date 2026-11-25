@@ -25,7 +25,10 @@ class ModelSourceTest extends TestCase
         // Use the real query compiler and Eloquent hydration, with an in-memory result set.
         $connection = new class($this) extends MySqlConnection {
             public function __construct(private ModelSourceTest $test) { parent::__construct(static fn () => null, 'test'); }
-            public function select($query, $bindings = [], $useReadPdo = true) { return $this->test->selectRows($query, $bindings); }
+            public function select($query, $bindings = [], $useReadPdo = true, array $fetchUsing = [])
+            {
+                return $this->test->selectRows($query, $bindings);
+            }
         };
         $resolver = new ConnectionResolver(['test' => $connection]);
         $resolver->setDefaultConnection('test');
