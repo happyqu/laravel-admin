@@ -52,6 +52,28 @@ class AdminMenuPresenter
         ];
     }
 
+    public function classicSearchLinks(iterable $menu, $user): iterable
+    {
+        foreach ($menu as $item) {
+            if (!self::isVisible($item, $user)) {
+                continue;
+            }
+
+            if (isset($item['children'])) {
+                yield from $this->classicSearchLinks($item['children'], $user);
+            } else {
+                yield Arr::only($item, ['title', 'uri', 'icon']);
+            }
+        }
+    }
+
+    public static function isVisible(array $item, $user): bool
+    {
+        return $user
+            && $user->visible((array) Arr::get($item, 'roles', []))
+            && $user->can(Arr::get($item, 'permission'));
+    }
+
     private function normalizeNode(
         array $item,
         $user,
@@ -60,7 +82,7 @@ class AdminMenuPresenter
         callable $urlGenerator,
         callable $titleTranslator
     ): ?array {
-        if (!$this->isVisible($item, $user)) {
+        if (!self::isVisible($item, $user)) {
             return null;
         }
 
@@ -103,13 +125,6 @@ class AdminMenuPresenter
             'path' => $path,
             'children' => $children,
         ];
-    }
-
-    private function isVisible(array $item, $user): bool
-    {
-        return $user
-            && $user->visible((array) Arr::get($item, 'roles', []))
-            && $user->can(Arr::get($item, 'permission'));
     }
 
     private function isExternalUrl(string $uri): bool

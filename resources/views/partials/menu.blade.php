@@ -1,4 +1,4 @@
-@if(Admin::user()->visible(\Illuminate\Support\Arr::get($item, 'roles', [])) && Admin::user()->can(\Illuminate\Support\Arr::get($item, 'permission')))
+@if(\Encore\Admin\Navigation\AdminMenuPresenter::isVisible($item, Admin::user()))
     @if(!isset($item['children']))
         <li>
             @if(url()->isValidUrl($item['uri']))
