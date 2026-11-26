@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 use Spatie\EloquentSortable\Sortable;
 use Symfony\Component\HttpFoundation\Response;
@@ -497,14 +498,14 @@ class Form implements Renderable
      */
     protected function prepare($data = [])
     {
-        if (($response = $this->callSubmitted()) instanceof Response) {
+        if (($response = $this->callBeforeSaveHook($this->callSubmitted(...))) instanceof Response) {
             return $response;
         }
 
         $this->inputs = array_merge($this->removeIgnoredFields($data), $this->inputs);
         $this->inputs = Form\Cascade::filterInput($this->fields(), $this->inputs, $this->cascadeInputContext($this->inputs));
 
-        if (($response = $this->callSaving()) instanceof Response) {
+        if (($response = $this->callBeforeSaveHook($this->callSaving(...))) instanceof Response) {
             return $response;
         }
 
@@ -513,6 +514,24 @@ class Form implements Renderable
         $this->relations = $this->getRelationInputs($this->inputs);
 
         $this->updates = Arr::except($this->inputs, array_keys($this->relations));
+    }
+
+    private function callBeforeSaveHook(callable $hook)
+    {
+        try {
+            return $hook();
+        } catch (ValidationException $exception) {
+            if ($exception::class !== ValidationException::class
+                || $exception->getResponse() !== null
+                || $exception->status !== 422
+                || $exception->errorBag !== 'default'
+                || $exception->redirectTo !== null
+                || request()->input('_error_bag', 'default') !== 'default') {
+                throw $exception;
+            }
+
+            return $this->responseValidationError(new MessageBag($exception->errors()));
+        }
     }
 
     /**
@@ -897,6 +916,8 @@ class Form implements Renderable
     /** Save the submitted relations without bypassing model events. */
     protected function updateRelation($relationsData)
     {
+        $relationsToReload = [];
+
         foreach ($relationsData as $name => $values) {
             if (!method_exists($this->model, $name)) {
                 continue;
@@ -917,8 +938,12 @@ class Form implements Renderable
             switch (true) {
                 case $relation instanceof Relations\BelongsToMany:
                 case $relation instanceof Relations\MorphToMany:
-                    if (isset($prepared[$name])) {
-                        $relation->sync($prepared[$name]);
+                    if (!isset($prepared[$name])) {
+                        continue 2;
+                    }
+                    $changes = $relation->sync($prepared[$name]);
+                    if (is_array($changes) && !array_filter($changes)) {
+                        continue 2;
                     }
                     break;
                 case $relation instanceof Relations\HasOne:
@@ -954,6 +979,7 @@ class Form implements Renderable
                     $relation = $this->model->$name();
 
                     $data = $prepared[$name];
+                    $written = false;
                     if ($this->getFieldByColumn($name) instanceof Field\HasMany) {
                         $keyName = $relation->getRelated()->getKeyName();
                         $ids = array_filter(array_column($data, $keyName), static fn ($id) => $id !== null && $id !== '');
@@ -966,9 +992,13 @@ class Form implements Renderable
                             $child = $id !== null && $id !== '' ? $children->get($id) : $relation->make();
 
                             if (Arr::get($related, static::REMOVE_FLAG_NAME) == 1) {
-                                if ($child->exists && $child->delete() === false) {
+                                if (!$child->exists) {
+                                    continue;
+                                }
+                                if ($child->delete() === false) {
                                     throw new \RuntimeException('Related model deletion was cancelled.');
                                 }
+                                $written = true;
                                 continue;
                             }
 
@@ -977,6 +1007,7 @@ class Form implements Renderable
                             $child->fill($related);
 
                             $this->saveModel($child);
+                            $written = true;
                         }
                     } else { //relation updated via MultipleSelect field
                         $foreignKeyName = $relation->getForeignKeyName();
@@ -994,6 +1025,7 @@ class Form implements Renderable
                             } else {
                                 $child->$foreignKeyName = null;
                                 $this->saveModel($child);
+                                $written = true;
                             }
                         }
 
@@ -1001,10 +1033,24 @@ class Form implements Renderable
                             $child = $selected->get($id);
                             $child->$foreignKeyName = $this->model->$localKeyName;
                             $this->saveModel($child);
+                            $written = true;
                         }
                     }
+                    if (!$written) {
+                        continue 2;
+                    }
                     break;
+                default:
+                    continue 2;
             }
+
+            if ($this->model->relationLoaded($name)) {
+                $relationsToReload[] = $name;
+            }
+        }
+
+        if ($relationsToReload) {
+            $this->model->load($relationsToReload);
         }
     }
 

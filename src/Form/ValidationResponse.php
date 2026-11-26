@@ -19,6 +19,6 @@ class ValidationResponse
             ], 422);
         }
 
-        return back()->withInput($request->except(['password', 'password_confirmation']))->withErrors($errors);
+        return back()->withInput($request->except(['current_password', 'password', 'password_confirmation']))->withErrors($errors);
     }
 }

@@ -132,6 +132,43 @@ $form->cascader(['province', 'city', 'district'], '所属地区')
 
 `readonly()` 表示只读，`disable()` 表示禁用。内置表单在服务端过滤这些字段的客户端修改；自定义提交接口需要自行执行同等校验。数值字段允许清空，完成编辑或提交时处理上下限，业务规则仍应通过 `rules()` 声明。
 
+### 模型表单回调
+
+新增和更新依次执行字段校验、`submitted`、输入整理、`saving`、事务内保存模型与关联、`saved`。字段校验失败时直接返回字段错误。
+
+- `submitted` 在字段校验通过后、表单输入合并前执行。用 `request()->input('字段')` 读取请求值。更新时，`$form->model()` 可以读取原记录。
+- `saving` 在输入整理后、表单写入前执行。用 `$form->input('字段')` 读取待保存值，用 `$form->input('字段', $value)` 修改值。若转换结果也受业务规则约束，在回调中显式校验，表单字段规则只执行最初的一轮。
+- `saved` 在表单自己的事务结束后执行。用 `$form->model()->getKey()` 取得主键，直接读取本次更新的表单关联。若调用方使用外层事务，需要在最终提交后发送的通知或任务可以注册到模型数据库连接的 `afterCommit()`。
+
+同一阶段的回调按注册顺序执行，遇到首个 HTTP 响应时结束该阶段。`submitted` 和 `saving` 返回响应会中止表单保存，`saved` 返回响应会替换默认成功响应。`submitted` 或 `saving` 抛出普通 `ValidationException` 会返回表单字段错误。浏览器返回上一页并保留输入，JSON 请求收到 422。带有自定义响应、状态、错误包或跳转地址的异常交由 Laravel 处理。
+
+```php
+use Encore\Admin\Form;
+
+$form->text('code', '编码')->rules('required|string');
+
+// 字段校验通过后、表单输入整理前调用。
+$form->submitted(function (Form $form) {
+    // 可以通过 request()->input('code') 读取请求值。
+});
+
+$form->saving(function (Form $form) {
+    $code = $form->input('code');
+    if ($code === null) {
+        return;
+    }
+
+    $code = strtoupper(trim($code));
+    validator(['code' => $code], ['code' => ['required', 'alpha_dash', 'max:32']])->validate();
+    $form->input('code', $code);
+});
+
+$form->saved(function (Form $form) {
+    $id = $form->model()->getKey();
+    // 可用主键构造自定义成功响应。
+});
+```
+
 ### Select 选项联动
 
 Form 和 Grid Filter 的 `optionsBy()` 可以按同一作用域内上级 Select 的值查询 Model 选项。选择上级后才查询下级数据，业务项目无需定义接口或路由。
