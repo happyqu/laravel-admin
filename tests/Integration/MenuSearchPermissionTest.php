@@ -71,6 +71,16 @@ class MenuSearchPermissionTest extends TestCase
         return ['classic' => [false], 'global with classic sidebar' => [true]];
     }
 
+    public function test_classic_search_assets_use_the_configured_asset_url(): void
+    {
+        config(['app.asset_url' => 'https://assets.example.com/prefix']);
+
+        $html = $this->renderSidebar([], 'administrator');
+
+        $this->assertStringContainsString('href="https://assets.example.com/prefix/vendor/laravel-admin/classic-menu-search.css?v=', $html);
+        $this->assertStringContainsString('src="https://assets.example.com/prefix/vendor/laravel-admin/classic-menu-search.js?v=', $html);
+    }
+
     #[DataProvider('navigationModes')]
     public function test_classic_search_uses_only_the_visible_sidebar_menu_tree(bool $globalNavigation): void
     {

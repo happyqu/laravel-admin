@@ -9,7 +9,7 @@
         $cssVersion = is_file(public_path($cssPath)) ? filemtime(public_path($cssPath)) : '1';
         $jsVersion = is_file(public_path($jsPath)) ? filemtime(public_path($jsPath)) : '1';
     @endphp
-    <link rel="stylesheet" href="{{ url('/'.$cssPath) }}?v={{ $cssVersion }}">
+    <link rel="stylesheet" href="{{ admin_asset($cssPath) }}?v={{ $cssVersion }}">
 @endif
 
 <aside class="main-sidebar{{ empty($navigationClass) ? '' : ' '.$navigationClass }}">
@@ -46,5 +46,5 @@
 </aside>
 
 @if($menuSearchEnabled)
-    <script src="{{ url('/'.$jsPath) }}?v={{ $jsVersion }}" defer></script>
+    <script src="{{ admin_asset($jsPath) }}?v={{ $jsVersion }}" defer></script>
 @endif

@@ -76,8 +76,9 @@
         if (!window.layer) {
             window.layer = {
                 load: function () {
-                    var html = '<div style="z-index:999;margin:0 auto;position:fixed;top:90px;left:50%;" class="loading-message"><img src="/vendor/laravel-admin/iframe-tabs/images/loading-spinner-grey.gif" /></div>';
-                    $('.tab-content').append(html);
+                    var $indicator = $('<div style="z-index:999;margin:0 auto;position:fixed;top:90px;left:50%;" class="loading-message"><img alt=""></div>');
+                    $indicator.find('img').attr('src', @json(admin_asset('vendor/laravel-admin/iframe-tabs/images/loading-spinner-grey.gif')));
+                    $('.tab-content').append($indicator);
                     return 1;
                 },
                 close: function (index) {
